@@ -4,10 +4,12 @@ import { antrenorleriGetir, type AntrenorOzet } from "../api/antrenor";
 import { grupGetir, grupGuncelle, grupOlustur, programGuncelle, type ProgramSlot } from "../api/grup";
 import { hataMesaji } from "../lib/dogrulama";
 import { dakikaEkle, GUNLER, saat } from "../lib/program";
+import Kart from "../components/Kart";
+import SayfaBasligi from "../components/SayfaBasligi";
+import { birincilDugme, dugme, girdi } from "../lib/stil";
 
 type Satir = { anahtar: number; id?: string; gun: number; baslangic: string; bitis: string };
 let sayac = 0;
-const girdi = "mt-1 w-full rounded-lg bg-zemin border border-cizgi px-3 py-2.5 outline-none focus:border-altin";
 
 export default function GrupForm() {
   const { id } = useParams();
@@ -105,53 +107,55 @@ export default function GrupForm() {
   if (yukleniyor) return <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>;
 
   return (
-    <form onSubmit={gonder} noValidate className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{duzenleme ? "Grubu düzenle" : "Yeni grup"}</h1>
-        <Link to={id ? `/gruplar/${id}` : "/gruplar"} className="text-sm text-metin-soluk hover:text-metin">Vazgeç</Link>
-      </div>
+    <form onSubmit={gonder} noValidate className="max-w-4xl space-y-4">
+      <SayfaBasligi
+        baslik={duzenleme ? "Grubu düzenle" : "Yeni grup"}
+        aciklama="Ad, antrenör, kontenjan ve haftalık program"
+        eylemler={<Link to={id ? `/gruplar/${id}` : "/gruplar"} className={dugme}>Vazgeç</Link>}
+      />
 
-      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6 grid gap-4 sm:grid-cols-2">
-        <label className="block sm:col-span-2"><span className="text-sm text-metin-soluk">Grup adı</span>
-          <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} /></label>
-        <label className="block"><span className="text-sm text-metin-soluk">Antrenör</span>
-          <select className={girdi} value={antrenorId} onChange={(e) => setAntrenorId(e.target.value)}>
-            <option value="">Atanmamış</option>
-            {antrenorler.map((a) => <option key={a.id} value={a.id}>{a.ad_soyad}</option>)}
-          </select></label>
-        <label className="block"><span className="text-sm text-metin-soluk">Kontenjan</span>
-          <input className={girdi} type="number" min={1} inputMode="numeric" value={kontenjan} onChange={(e) => setKontenjan(e.target.value)} /></label>
-      </section>
+      <Kart baslik="Grup bilgileri">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block sm:col-span-2"><span className="text-[13px] text-metin-soluk">Grup adı</span>
+            <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} /></label>
+          <label className="block"><span className="text-[13px] text-metin-soluk">Antrenör</span>
+            <select className={girdi} value={antrenorId} onChange={(e) => setAntrenorId(e.target.value)}>
+              <option value="">Atanmamış</option>
+              {antrenorler.map((a) => <option key={a.id} value={a.id}>{a.ad_soyad}</option>)}
+            </select></label>
+          <label className="block"><span className="text-[13px] text-metin-soluk">Kontenjan</span>
+            <input className={`${girdi} num`} type="number" min={1} inputMode="numeric" value={kontenjan} onChange={(e) => setKontenjan(e.target.value)} /></label>
+        </div>
+      </Kart>
 
-      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
-        <h2 className="font-semibold mb-3">Haftalık program</h2>
+      <Kart baslik="Haftalık program">
         {satirlar.length === 0 && <p className="text-sm text-metin-soluk mb-3">Henüz program satırı yok.</p>}
         <div className="space-y-3">
           {satirlar.map((s) => (
-            <div key={s.anahtar} className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end rounded-xl border border-cizgi p-3">
+            <div key={s.anahtar} className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end rounded-[3px] border border-cizgi bg-yuzey-yuksek p-3">
               <label className="block col-span-2 sm:col-span-1"><span className="text-xs text-metin-soluk">Gün</span>
                 <select className={girdi} value={s.gun} onChange={(e) => satirGuncelle(s.anahtar, { gun: Number(e.target.value) })}>
                   {GUNLER.map((g, i) => <option key={g} value={i + 1}>{g}</option>)}
                 </select></label>
               <label className="block"><span className="text-xs text-metin-soluk">Başlangıç</span>
-                <input className={girdi} type="time" value={s.baslangic} onChange={(e) => baslangicDegisti(s, e.target.value)} /></label>
+                <input className={`${girdi} num`} type="time" value={s.baslangic} onChange={(e) => baslangicDegisti(s, e.target.value)} /></label>
               <label className="block"><span className="text-xs text-metin-soluk">Bitiş</span>
-                <input className={girdi} type="time" value={s.bitis} onChange={(e) => satirGuncelle(s.anahtar, { bitis: e.target.value })} /></label>
+                <input className={`${girdi} num`} type="time" value={s.bitis} onChange={(e) => satirGuncelle(s.anahtar, { bitis: e.target.value })} /></label>
               <button type="button" onClick={() => setSatirlar((l) => l.filter((x) => x.anahtar !== s.anahtar))}
-                className="col-span-2 sm:col-span-1 rounded-lg border border-cizgi px-2.5 py-2.5 text-sm text-metin-soluk hover:border-hata hover:text-hata">
+                className={`${dugme} col-span-2 sm:col-span-1 text-metin-soluk hover:border-hata hover:text-hata`}>
                 Çıkar
               </button>
             </div>
           ))}
         </div>
         <button type="button" onClick={() => setSatirlar((l) => [...l, { anahtar: ++sayac, gun: 1, baslangic: "", bitis: "" }])}
-          className="mt-3 rounded-lg border border-cizgi px-3 py-1.5 text-sm hover:border-altin">
+          className={`${dugme} mt-3`}>
           Satır ekle
         </button>
-      </section>
+      </Kart>
 
-      {hata && <p role="alert" className="text-sm text-hata">{hata}</p>}
-      <button type="submit" disabled={gonderiliyor} className="rounded-lg bg-altin text-zemin font-semibold px-5 py-2.5 hover:bg-altin-acik disabled:opacity-50">
+      {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
+      <button type="submit" disabled={gonderiliyor} className={birincilDugme}>
         {gonderiliyor ? "Kaydediliyor…" : "Kaydet"}
       </button>
     </form>

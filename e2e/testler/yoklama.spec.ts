@@ -2,6 +2,8 @@ import { arayuzdenGiris, expect, test, yoklamaOrtamiKur, YONETICI_GIRIS, YONETIC
 
 test.describe("Yoklama", () => {
   test("antrenör takvimden oturumu açar, yoklamayı alır; yönetici bakiyeyi düşmüş görür", async ({ page }) => {
+    // Giriş hız sınırı beklemesi (20 sn) gerekebilir; süre üç katına çıkar.
+    test.slow();
     const o = await yoklamaOrtamiKur(page);
 
     await arayuzdenGiris(page, o.antrenor.giris, o.antrenor.sifre);
@@ -30,7 +32,7 @@ test.describe("Yoklama", () => {
     // Yönetici: geldi olan öğrencinin kalan dersi -1'dir (paket henüz yüklenmedi).
     await page.getByRole("button", { name: "Çıkış" }).click();
     await arayuzdenGiris(page, YONETICI_GIRIS, YONETICI_SIFRE);
-    await expect(page).toHaveURL(/\/ogrenciler$/);
+    await expect(page).toHaveURL(/\/genel-bakis$/);
     await page.goto(`/ogrenciler/${o.geldi.id}`);
     await expect(page.getByText("Kalan ders").locator("xpath=following-sibling::div")).toHaveText("-1");
     await expect(page.getByText("Paket yüklemesi bekleniyor")).toBeVisible();

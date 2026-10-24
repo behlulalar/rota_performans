@@ -6,9 +6,9 @@ import {
 import { telafiGeriAl, telafiPlanla } from "../api/takvim";
 import { hataMesaji } from "../lib/dogrulama";
 import { bugun, gunEkle, tarihCoz, yyyyAyGun } from "../lib/tarih";
+import { birincilDugme, dugme, girdi, rozetBasari, rozetHata, rozetNotr } from "../lib/stil";
+import Kart from "./Kart";
 
-const dugme = "rounded-lg border border-cizgi px-3 py-1.5 text-sm hover:border-altin disabled:opacity-50";
-const girdi = "mt-1 w-full rounded-lg bg-zemin border border-cizgi px-3 py-2.5 outline-none focus:border-altin";
 
 const TUR_ETIKET: Record<HakTur, string> = {
   paket_yuklemesi: "Paket yüklemesi",
@@ -26,12 +26,12 @@ const saat = (s: string) => s.slice(0, 5);
 function Pencere({ baslik, onKapat, children }: { baslik: string; onKapat: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-30 bg-black/70 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={baslik}>
-      <div className="w-full max-w-md max-h-full overflow-y-auto bg-yuzey border border-cizgi rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold">{baslik}</h2>
-          <button onClick={onKapat} className="text-sm text-metin-soluk hover:text-metin" aria-label="Kapat">Kapat</button>
+      <div className="w-full max-w-md max-h-full overflow-y-auto bg-yuzey border border-cizgi-guclu rounded-[5px]">
+        <div className="flex items-center justify-between px-4 min-h-11 border-b border-cizgi">
+          <h2 className="font-display font-medium text-[19px] leading-6">{baslik}</h2>
+          <button onClick={onKapat} className="px-2 min-h-11 text-[13px] text-metin-soluk hover:text-metin" aria-label="Kapat">Kapat</button>
         </div>
-        {children}
+        <div className="p-4">{children}</div>
       </div>
     </div>
   );
@@ -82,7 +82,7 @@ function DuzeltmeFormu({ ogrenciId, onKapat, onTamam }: { ogrenciId: string; onK
           <input className={girdi} value={neden} onChange={(e) => setNeden(e.target.value)} maxLength={500} /></label>
         <p className="text-xs text-metin-soluk">Düzeltmeler silinemez, kayıt altına alınır.</p>
         {hata && <p role="alert" className="text-sm text-hata">{hata}</p>}
-        <button type="submit" disabled={gonderiliyor} className="rounded-lg bg-altin text-zemin font-semibold px-5 py-2.5 hover:bg-altin-acik disabled:opacity-50">
+        <button type="submit" disabled={gonderiliyor} className={birincilDugme}>
           {gonderiliyor ? "Kaydediliyor…" : "Düzeltmeyi kaydet"}
         </button>
       </form>
@@ -126,7 +126,7 @@ function TelafiPenceresi({ ogrenciId, onKapat, onTamam }: { ogrenciId: string; o
       ) : (
         <ul className="space-y-2">
           {adaylar.map((a) => (
-            <li key={a.oturum.id} className="rounded-xl border border-cizgi px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            <li key={a.oturum.id} className="rounded-[3px] border border-cizgi px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm min-w-0">
                 <div className="font-medium">{gunMetni(a.oturum.tarih)} · {saat(a.oturum.baslangic)}–{saat(a.oturum.bitis)}</div>
                 <div className="text-metin-soluk">
@@ -143,9 +143,9 @@ function TelafiPenceresi({ ogrenciId, onKapat, onTamam }: { ogrenciId: string; o
 }
 
 const YOKLAMA_ROZET = {
-  null: { ad: "Bekliyor", sinif: "border-cizgi text-metin-soluk" },
-  geldi: { ad: "Geldi", sinif: "border-green-500/50 text-green-400" },
-  gelmedi: { ad: "Gelmedi", sinif: "border-red-500/50 text-hata" },
+  null: { ad: "Bekliyor", sinif: rozetNotr },
+  geldi: { ad: "Geldi", sinif: rozetBasari },
+  gelmedi: { ad: "Gelmedi", sinif: rozetHata },
 } as const;
 
 export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay; onYenile: (o: OgrenciDetay) => void }) {
@@ -202,48 +202,46 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
   const neden = !aktif ? "Öğrenci pasif olduğu için telafi planlanamaz." : h.kullanilabilir_telafi <= 0 ? "Planlanabilir telafi hakkı yok." : null;
   const sayi = (n: number) => (n < 0 ? "text-hata" : "");
 
+  const hucre = (etiket: string, deger: number) => (
+    <div className="bg-yuzey px-6 py-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk">{etiket}</div>
+      <div className={`num font-display font-medium text-[28px] leading-[1.15] mt-1 ${sayi(deger)}`}>{deger}</div>
+    </div>
+  );
+
   return (
-    <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6 space-y-5">
-      <div>
-        <h2 className="font-semibold mb-3">Ders hakkı</h2>
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-3 max-w-xl">
-          <div className="rounded-xl border border-cizgi px-4 py-3">
-            <div className="text-xs text-metin-soluk">Kalan ders</div>
-            <div className={`text-2xl font-semibold ${sayi(h.normal)}`}>{h.normal}</div>
-          </div>
-          <div className="rounded-xl border border-cizgi px-4 py-3">
-            <div className="text-xs text-metin-soluk">Telafi</div>
-            <div className={`text-2xl font-semibold ${sayi(h.telafi)}`}>{h.telafi}</div>
-          </div>
-          <div className="rounded-xl border border-cizgi px-4 py-3">
-            <div className="text-xs text-metin-soluk">Kullanılabilir telafi</div>
-            <div className={`text-2xl font-semibold ${sayi(h.kullanilabilir_telafi)}`}>{h.kullanilabilir_telafi}</div>
-          </div>
-        </div>
-        {(h.normal < 0 || h.telafi < 0) && <p className="mt-3 text-sm text-hata">Paket yüklemesi bekleniyor</p>}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+    <Kart baslik="Ders hakkı" bosluksuz>
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-px bg-cizgi border-y border-cizgi">
+        {hucre("Kalan ders", h.normal)}
+        {hucre("Telafi", h.telafi)}
+        {hucre("Kullanılabilir telafi", h.kullanilabilir_telafi)}
+      </div>
+
+      <div className="px-6 py-4 border-b border-cizgi">
+        {(h.normal < 0 || h.telafi < 0) && <p className="mb-3 text-[13px] text-hata">Paket yüklemesi bekleniyor</p>}
+        <div className="flex flex-wrap items-center gap-2">
           <button className={dugme} disabled={!planlanabilir || mesgul} onClick={() => { setHata(null); setPencere("telafi"); }}>Telafi planla</button>
           <button className={dugme} onClick={() => { setHata(null); setPencere("duzeltme"); }}>Elle düzeltme</button>
           {neden && <span className="text-xs text-metin-soluk">{neden}</span>}
         </div>
-        {hata && <p role="alert" className="mt-3 text-sm text-hata">{hata}</p>}
+        {hata && <p role="alert" className="mt-3 text-[13px] text-hata">{hata}</p>}
       </div>
 
-      <div>
-        <h3 className="text-sm font-semibold mb-2">Planlanan telafiler</h3>
+      <div className="px-6 py-4 border-b border-cizgi">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk mb-2">Planlanan telafiler</h3>
         {planlar === null ? (
           <p className="text-sm text-metin-soluk">Yükleniyor…</p>
         ) : planlar.length === 0 ? (
           <p className="text-sm text-metin-soluk">Planlanmış telafi dersi yok.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="divide-y divide-cizgi border-y border-cizgi">
             {planlar.map((p) => {
               const r = YOKLAMA_ROZET[p.yoklama ?? "null"];
               return (
-                <li key={p.oturum_id} className="rounded-xl border border-cizgi px-3 py-2.5 flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span>{gunMetni(p.tarih)} · {saat(p.baslangic)}–{saat(p.bitis)} · {p.grup.ad}</span>
+                <li key={p.oturum_id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="num">{gunMetni(p.tarih)} · {saat(p.baslangic)}–{saat(p.bitis)} · {p.grup.ad}</span>
                   <span className="flex items-center gap-2">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-xs ${r.sinif}`}>{r.ad}</span>
+                    <span className={r.sinif}>{r.ad}</span>
                     {p.yoklama === null && <button className={dugme} disabled={mesgul} onClick={() => void geriAl(p)}>Geri al</button>}
                   </span>
                 </li>
@@ -253,8 +251,8 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
         )}
       </div>
 
-      <div>
-        <button className="text-sm font-semibold hover:text-altin" aria-expanded={gecmisAcik} onClick={() => setGecmisAcik((v) => !v)}>
+      <div className="px-6 py-4">
+        <button className="text-[13px] font-semibold hover:text-altin-metin min-h-11 md:min-h-0" aria-expanded={gecmisAcik} onClick={() => setGecmisAcik((v) => !v)}>
           {gecmisAcik ? "▾" : "▸"} Hareket geçmişi
         </button>
         {gecmisAcik && (
@@ -264,16 +262,16 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
             ) : defter.hareketler.length === 0 ? (
               <p className="text-sm text-metin-soluk">Henüz hareket yok.</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="divide-y divide-cizgi border-y border-cizgi">
                 {defter.hareketler.map((x) => (
-                  <li key={x.id} className="rounded-xl border border-cizgi px-3 py-2 text-sm">
+                  <li key={x.id} className="py-2 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-medium">{TUR_ETIKET[x.tur] ?? x.tur}</span>
-                      <span className={`font-semibold ${x.miktar > 0 ? "text-green-400" : "text-hata"}`}>
+                      <span className={`num font-semibold ${x.miktar > 0 ? "text-basari" : "text-hata"}`}>
                         {x.miktar > 0 ? `+${x.miktar}` : `−${Math.abs(x.miktar)}`} <span className="font-normal text-metin-soluk">({SAYAC_ETIKET[x.sayac]})</span>
                       </span>
                     </div>
-                    <div className="text-xs text-metin-soluk">
+                    <div className="num text-xs text-metin-soluk">
                       {new Date(x.zaman).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}
                       {x.oturum && ` · ${x.oturum.tarih} · ${x.oturum.grup_ad}`}
                     </div>
@@ -288,6 +286,6 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
 
       {pencere === "duzeltme" && <DuzeltmeFormu ogrenciId={id} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
       {pencere === "telafi" && <TelafiPenceresi ogrenciId={id} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
-    </section>
+    </Kart>
   );
 }

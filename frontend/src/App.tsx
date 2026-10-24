@@ -19,7 +19,7 @@ function KorumaliRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to="/giris" replace />;
-  if (kullanici.rol === "admin") return <Navigate to="/ogrenciler" replace />;
+  if (kullanici.rol === "admin") return <Navigate to="/genel-bakis" replace />;
   if (kullanici.rol === "antrenor") return <Navigate to="/takvim" replace />;
   return <Panel />;
 }

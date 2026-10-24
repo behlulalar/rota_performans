@@ -7,10 +7,10 @@ test.describe("Giriş", () => {
     await expect(page).toHaveURL(/\/giris$/);
   });
 
-  test("doğru şifre yöneticiyi öğrenci listesine yönlendirir, çıkış giriş sayfasına döner", async ({ page }) => {
+  test("doğru şifre yöneticiyi genel bakışa yönlendirir, çıkış giriş sayfasına döner", async ({ page }) => {
     await arayuzdenGiris(page, YONETICI_GIRIS, YONETICI_SIFRE);
-    await expect(page).toHaveURL(/\/ogrenciler$/);
-    await expect(page.getByRole("heading", { name: "Öğrenciler" })).toBeVisible();
+    await expect(page).toHaveURL(/\/genel-bakis$/);
+    await expect(page.getByRole("heading", { name: "Genel bakış" })).toBeVisible();
 
     await page.getByRole("button", { name: "Çıkış" }).click();
     await expect(page).toHaveURL(/\/giris$/);

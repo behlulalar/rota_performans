@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from decimal import Decimal
 
 from app.db import SessionLocal
@@ -16,7 +16,7 @@ from app.models import (
     PaketTuru,
     Rol,
 )
-from app.models.program import OgrenciGrup
+from app.models.program import GrupProgrami, OgrenciGrup
 from tests.conftest import SIFRE, kullanici_olustur
 
 
@@ -73,6 +73,15 @@ async def test_sayaclar(istemci):
         pasif_grup = Grup(ad="Eski", kontenjan=9, aktif=False)
         s.add_all([aktif_grup, dolu_grup, pasif_grup, Antrenor(ad_soyad="H1"), Antrenor(ad_soyad="H2", aktif=False)])
         await s.flush()
+        # Program bilerek sırasız eklenir; yanıt gün + saat sıralı olmalı.
+        s.add_all(
+            [
+                GrupProgrami(grup_id=aktif_grup.id, gun=5, baslangic=time(17, 30), bitis=time(19, 0)),
+                GrupProgrami(grup_id=aktif_grup.id, gun=3, baslangic=time(17, 30), bitis=time(19, 0)),
+                GrupProgrami(grup_id=aktif_grup.id, gun=1, baslangic=time(7, 0), bitis=time(8, 30)),
+                GrupProgrami(grup_id=pasif_grup.id, gun=2, baslangic=time(10, 0), bitis=time(11, 0)),
+            ]
+        )
         s.add_all(
             [
                 OgrenciGrup(ogrenci_id=a.id, grup_id=aktif_grup.id),
@@ -112,6 +121,13 @@ async def test_sayaclar(istemci):
         ("U12", 1, 2),
         ("U10", 1, 4),
     ]
+    programlar = {g["ad"]: g["program"] for g in j["gruplar"]["doluluk_listesi"]}
+    assert programlar["U10"] == [
+        {"gun": 1, "baslangic": "07:00:00", "bitis": "08:30:00"},
+        {"gun": 3, "baslangic": "17:30:00", "bitis": "19:00:00"},
+        {"gun": 5, "baslangic": "17:30:00", "bitis": "19:00:00"},
+    ]
+    assert programlar["U12"] == []
     assert j["antrenor"] == {"aktif": 1}
     assert j["bekleyen_odeme"] == {"adet": 2, "toplam_tutar": "1234.50"}
     assert {k["ad"] for k in j["son_kayitlar"]} == {"A", "B", "C"}  # aynı işlemde oluştuklarından sıra belirsiz

@@ -6,8 +6,10 @@ import DolulukCubugu from "../components/DolulukCubugu";
 import OgrenciFoto from "../components/OgrenciFoto";
 import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
 import { GUNLER, saat } from "../lib/program";
+import Kart from "../components/Kart";
+import SayfaBasligi from "../components/SayfaBasligi";
+import { dugme, girdi, rozetBasari, rozetNotr } from "../lib/stil";
 
-const dugme = "rounded-lg border border-cizgi px-3 py-1.5 text-sm hover:border-altin disabled:opacity-50";
 
 export default function GrupDetay() {
   const { id } = useParams();
@@ -90,85 +92,88 @@ export default function GrupDetay() {
     });
 
   return (
-    <div className="max-w-3xl space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <Link to="/gruplar" className="text-sm text-metin-soluk hover:text-metin">← Gruplar</Link>
-        <div className="flex gap-2">
-          <button className={dugme} onClick={() => git(`/gruplar/${id}/duzenle`)}>Düzenle</button>
-          <button className={dugme} disabled={mesgul} onClick={() => void durumDegistir()}>{g.aktif ? "Pasife al" : "Aktif et"}</button>
-        </div>
+    <div className="max-w-4xl space-y-4">
+      <div>
+        <Link to="/gruplar" className="inline-flex items-center min-h-11 md:min-h-0 text-[13px] text-metin-soluk hover:text-metin">← Gruplar</Link>
       </div>
+      <SayfaBasligi
+        baslik={g.ad}
+        aciklama={`${g.antrenor?.ad_soyad ?? "Antrenör atanmamış"} · ${g.ogrenci_sayisi}/${g.kontenjan} öğrenci`}
+        rozet={<span className={g.aktif ? rozetBasari : rozetNotr}>{g.aktif ? "Aktif" : "Pasif"}</span>}
+        eylemler={
+          <>
+            <button className={dugme} onClick={() => git(`/gruplar/${id}/duzenle`)}>Düzenle</button>
+            <button className={dugme} disabled={mesgul} onClick={() => void durumDegistir()}>{g.aktif ? "Pasife al" : "Aktif et"}</button>
+          </>
+        }
+      />
 
-      {hata && <p role="alert" className="text-sm text-hata">{hata}</p>}
+      {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
 
-      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6 space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold">{g.ad}</h1>
-          <span className={`inline-block rounded-full border px-2.5 py-0.5 text-xs ${g.aktif ? "border-basari/50 text-basari" : "border-cizgi text-metin-soluk"}`}>
-            {g.aktif ? "Aktif" : "Pasif"}
-          </span>
+      <Kart baslik="Grup bilgileri">
+        <div className="space-y-4">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+            <dt className="text-metin-soluk">Antrenör</dt><dd>{g.antrenor?.ad_soyad ?? "Atanmamış"}</dd>
+            <dt className="text-metin-soluk">Program</dt>
+            <dd>
+              {g.program.length === 0 ? "Program yok" : (
+                <ul className="num">
+                  {[...g.program].sort((a, b) => a.gun - b.gun || a.baslangic.localeCompare(b.baslangic)).map((s, i) => (
+                    <li key={s.id ?? i}>{GUNLER[s.gun - 1]} {saat(s.baslangic)}–{saat(s.bitis)}</li>
+                  ))}
+                </ul>
+              )}
+            </dd>
+          </dl>
+          <DolulukCubugu dolu={g.ogrenci_sayisi} kontenjan={g.kontenjan} />
         </div>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt className="text-metin-soluk">Antrenör</dt><dd>{g.antrenor?.ad_soyad ?? "Atanmamış"}</dd>
-          <dt className="text-metin-soluk">Program</dt>
-          <dd>
-            {g.program.length === 0 ? "Program yok" : (
-              <ul>
-                {[...g.program].sort((a, b) => a.gun - b.gun || a.baslangic.localeCompare(b.baslangic)).map((s, i) => (
-                  <li key={s.id ?? i}>{GUNLER[s.gun - 1]} {saat(s.baslangic)}–{saat(s.bitis)}</li>
-                ))}
-              </ul>
-            )}
-          </dd>
-        </dl>
-        <DolulukCubugu dolu={g.ogrenci_sayisi} kontenjan={g.kontenjan} />
-      </section>
+      </Kart>
 
-      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
-        <h2 className="font-semibold mb-3">Öğrenciler ({g.ogrenciler.length})</h2>
+      <Kart baslik={`Öğrenciler (${g.ogrenciler.length})`} bosluksuz>
         {g.ogrenciler.length === 0 ? (
-          <p className="text-sm text-metin-soluk">Gruba kayıtlı öğrenci yok.</p>
+          <p className="px-6 pb-6 text-sm text-metin-soluk">Gruba kayıtlı öğrenci yok.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="border-t border-cizgi">
             {g.ogrenciler.map((o) => (
-              <li key={o.id} className="flex items-center gap-3 rounded-xl border border-cizgi px-3 py-2 text-sm">
-                <OgrenciFoto id={o.id} fotoVar={o.foto_var} ad={o.ad} soyad={o.soyad} boyut="kucuk" />
+              <li key={o.id} className="flex items-center gap-3 px-6 py-1.5 min-h-[52px] border-t border-cizgi first:border-t-0 text-sm">
+                <OgrenciFoto id={o.id} fotoVar={o.foto_var} ad={o.ad} soyad={o.soyad} boyut="kucuk" sinif="size-8 rounded-full text-[11px]" />
                 <div className="min-w-0 flex-1">
-                  <Link to={`/ogrenciler/${o.id}`} className="font-medium hover:text-altin">{o.ad} {o.soyad}</Link>
-                  <div className="text-metin-soluk">{o.yas} yaş · Katılım: {tarihBicimle(o.katilim_baslangic)}</div>
+                  <Link to={`/ogrenciler/${o.id}`} className="font-medium hover:text-altin-metin">{o.ad} {o.soyad}</Link>
+                  <div className="num text-xs text-metin-soluk">{o.yas} yaş · Katılım: {tarihBicimle(o.katilim_baslangic)}</div>
                 </div>
                 <button className={dugme} disabled={mesgul} onClick={() => void cikar(o.id, `${o.ad} ${o.soyad}`)}>Gruptan çıkar</button>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </Kart>
 
-      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
-        <h2 className="font-semibold mb-3">Öğrenci ekle</h2>
-        <input
-          type="search"
-          value={arama}
-          onChange={(e) => setArama(e.target.value)}
-          placeholder="Aktif öğrenci ara…"
-          className="w-full rounded-lg bg-zemin border border-cizgi px-3 py-2.5 outline-none focus:border-altin"
-        />
-        {aramaYapildi && adaylar.length === 0 && <p className="mt-3 text-sm text-metin-soluk">Eklenebilecek öğrenci bulunamadı.</p>}
+      <Kart baslik="Öğrenci ekle" bosluksuz>
+        <div className="px-6 pb-4">
+          <input
+            type="search"
+            value={arama}
+            onChange={(e) => setArama(e.target.value)}
+            placeholder="Aktif öğrenci ara…"
+            className={`${girdi} mt-0`}
+          />
+          {aramaYapildi && adaylar.length === 0 && <p className="mt-3 text-sm text-metin-soluk">Eklenebilecek öğrenci bulunamadı.</p>}
+        </div>
         {adaylar.length > 0 && (
-          <ul className="mt-3 space-y-2">
+          <ul className="border-t border-cizgi">
             {adaylar.map((o) => (
-              <li key={o.id} className="flex items-center gap-3 rounded-xl border border-cizgi px-3 py-2 text-sm">
-                <OgrenciFoto id={o.id} fotoVar={o.foto_var} ad={o.ad} soyad={o.soyad} boyut="kucuk" />
+              <li key={o.id} className="flex items-center gap-3 px-6 py-1.5 min-h-[52px] border-t border-cizgi first:border-t-0 text-sm">
+                <OgrenciFoto id={o.id} fotoVar={o.foto_var} ad={o.ad} soyad={o.soyad} boyut="kucuk" sinif="size-8 rounded-full text-[11px]" />
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{o.ad} {o.soyad}</div>
-                  <div className="text-metin-soluk">{o.yas} yaş</div>
+                  <div className="num text-xs text-metin-soluk">{o.yas} yaş</div>
                 </div>
                 <button className={dugme} disabled={mesgul} onClick={() => void ekle(o)}>Ekle</button>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </Kart>
     </div>
   );
 }

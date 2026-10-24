@@ -1,14 +1,32 @@
+import re
+from datetime import date, timedelta
+
 from sqlalchemy import select
 
 from app.db import SessionLocal
-from app.models import DenetimKaydi, Kullanici, Oturum, Rol
+from app.models import Antrenor, DenetimKaydi, IletisimKisisi, Kullanici, Ogrenci, Oturum, Rol
+from app.models.ogrenci import IletisimRolu
+from app.security import simdi
 from tests.conftest import SIFRE, kullanici_olustur
 
 GENEL_HATA = "Giriş bilgileri hatalı veya hesap geçici olarak kilitli."
 
 
-async def giris_yap(istemci, giris="yonetici@kulup.com", sifre=SIFRE):
-    return await istemci.post("/api/auth/login", json={"giris": giris, "sifre": sifre})
+async def giris_yap(istemci, giris="yonetici@kulup.com", sifre=SIFRE, hatirla=None):
+    govde = {"giris": giris, "sifre": sifre}
+    if hatirla is not None:
+        govde["beni_hatirla"] = hatirla
+    return await istemci.post("/api/auth/login", json=govde)
+
+
+def _max_age(yanit) -> int | None:
+    eslesme = re.search(r"max-age=(\d+)", yanit.headers["set-cookie"].lower())
+    return int(eslesme.group(1)) if eslesme else None
+
+
+async def _tek_oturum() -> Oturum:
+    async with SessionLocal() as session:
+        return (await session.execute(select(Oturum).order_by(Oturum.olusturma.desc()))).scalars().first()
 
 
 async def test_saglik(istemci):
@@ -145,3 +163,105 @@ async def test_guvenlik_basliklari(istemci):
     assert yanit.headers["x-content-type-options"] == "nosniff"
     assert yanit.headers["x-frame-options"] == "DENY"
     assert yanit.headers["cache-control"] == "no-store"
+
+
+async def test_beni_hatirla_acik_kalici_cerez_ve_30_gunluk_oturum(istemci):
+    await kullanici_olustur()
+    yanit = await giris_yap(istemci, hatirla=True)
+    assert yanit.status_code == 200
+    assert _max_age(yanit) == 30 * 86400
+    oturum = await _tek_oturum()
+    assert oturum.hatirla is True
+    fark = oturum.bitis - simdi()
+    assert timedelta(days=29, hours=23) < fark <= timedelta(days=30)
+
+
+async def test_beni_hatirla_kapali_oturum_cerezi_ve_12_saatlik_oturum(istemci):
+    await kullanici_olustur()
+    for hatirla in (None, False):
+        yanit = await giris_yap(istemci, hatirla=hatirla)
+        assert yanit.status_code == 200
+        ayar = yanit.headers["set-cookie"].lower()
+        assert "max-age" not in ayar
+        assert "expires" not in ayar
+        assert "httponly" in ayar and "samesite=strict" in ayar and "path=/api/auth" in ayar
+        oturum = await _tek_oturum()
+        assert oturum.hatirla is False
+        fark = oturum.bitis - simdi()
+        assert timedelta(hours=11, minutes=55) < fark <= timedelta(hours=12)
+
+
+async def test_yenileme_hatirla_modunu_ve_cerez_turunu_korur(istemci):
+    await kullanici_olustur()
+    await giris_yap(istemci, hatirla=True)
+    yanit = await istemci.post("/api/auth/refresh")
+    assert yanit.status_code == 200
+    assert _max_age(yanit) == 30 * 86400
+    oturum = await _tek_oturum()
+    assert oturum.hatirla is True
+    assert oturum.bitis - simdi() > timedelta(days=29, hours=23)
+
+    istemci.cookies.clear()
+    await giris_yap(istemci, hatirla=False)
+    yanit = await istemci.post("/api/auth/refresh")
+    assert yanit.status_code == 200
+    ayar = yanit.headers["set-cookie"].lower()
+    assert "max-age" not in ayar and "expires" not in ayar
+    oturum = await _tek_oturum()
+    assert oturum.hatirla is False
+    assert timedelta(hours=11, minutes=55) < oturum.bitis - simdi() <= timedelta(hours=12)
+
+
+async def test_12_saati_gecmis_hatirlamasiz_oturum_yenilenemez(istemci):
+    await kullanici_olustur()
+    await giris_yap(istemci, hatirla=False)
+    async with SessionLocal() as session:
+        oturum = (await session.execute(select(Oturum))).scalar_one()
+        oturum.bitis = simdi() - timedelta(minutes=1)
+        await session.commit()
+    assert (await istemci.post("/api/auth/refresh")).status_code == 401
+
+
+async def test_me_ad_soyad_yonetici_antrenor_veli(istemci):
+    async def me(giris):
+        belirtec = (await giris_yap(istemci, giris=giris)).json()["access_token"]
+        yanit = await istemci.get("/api/auth/me", headers={"Authorization": f"Bearer {belirtec}"})
+        assert yanit.status_code == 200
+        return yanit.json()["ad_soyad"]
+
+    # Yönetici: kullanıcının kendi adı; yoksa null.
+    yonetici = await kullanici_olustur()
+    assert await me("yonetici@kulup.com") is None
+    async with SessionLocal() as session:
+        (await session.get(Kullanici, yonetici.id)).ad_soyad = "Ayşe Yönetici"
+        await session.commit()
+    assert await me("yonetici@kulup.com") == "Ayşe Yönetici"
+
+    # Antrenör: kullanıcıda ad yoksa antrenör kaydından.
+    antrenor = await kullanici_olustur("antrenor@kulup.com", Rol.antrenor)
+    async with SessionLocal() as session:
+        session.add(Antrenor(kullanici_id=antrenor.id, ad_soyad="Mehmet Antrenör"))
+        await session.commit()
+    assert await me("antrenor@kulup.com") == "Mehmet Antrenör"
+
+    # Veli: birincil iletişim kişisinin adı.
+    veli = await kullanici_olustur("veli@kulup.com", Rol.veli)
+    async with SessionLocal() as session:
+        ogrenci = Ogrenci(ad="Can", soyad="Yılmaz", dogum_tarihi=date(2015, 5, 10))
+        session.add(ogrenci)
+        await session.flush()
+        session.add_all(
+            [
+                IletisimKisisi(ogrenci_id=ogrenci.id, rol=IletisimRolu.baba, ad_soyad="Baba Yılmaz", telefon="05550000001"),
+                IletisimKisisi(
+                    ogrenci_id=ogrenci.id,
+                    rol=IletisimRolu.anne,
+                    ad_soyad="Fatma Yılmaz",
+                    telefon="05550000002",
+                    birincil=True,
+                    kullanici_id=veli.id,
+                ),
+            ]
+        )
+        await session.commit()
+    assert await me("veli@kulup.com") == "Fatma Yılmaz"

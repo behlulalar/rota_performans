@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     kimlik_ozet_anahtari: str
     access_token_minutes: int = 15
     refresh_token_days: int = 14
+    # "Beni hatırla": açıkken oturum bu kadar gün (kayan) sürer, çerez kalıcıdır.
+    hatirla_gun: int = 30
+    # Kapalıyken oturum bu kadar saat sürer, çerez oturum çerezidir.
+    hatirlamasiz_saat: int = 12
     cookie_secure: bool = True
     cors_origins: str = ""
     # Yüklenen fotoğrafların kök dizini (herkese açık sunulmaz, yalnızca API üzerinden okunur).

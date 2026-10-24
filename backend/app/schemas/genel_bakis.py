@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, time
 
 from pydantic import BaseModel
 
@@ -10,11 +10,18 @@ class OgrenciSayilari(BaseModel):
     bu_ay_kayit: int
 
 
+class ProgramSlotu(BaseModel):
+    gun: int
+    baslangic: time
+    bitis: time
+
+
 class GrupDolulugu(BaseModel):
     id: uuid.UUID
     ad: str
     ogrenci_sayisi: int
     kontenjan: int
+    program: list[ProgramSlotu] = []
 
 
 class GrupOzeti(BaseModel):

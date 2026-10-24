@@ -32,7 +32,7 @@ test.describe("Telafi", () => {
 
     await page.context().clearCookies();
     await arayuzdenGiris(page, YONETICI_GIRIS, YONETICI_SIFRE);
-    await expect(page).toHaveURL(/\/ogrenciler$/);
+    await expect(page).toHaveURL(/\/genel-bakis$/);
     await page.goto(`/ogrenciler/${ogr.id}`);
 
     const deger = (etiket: string) => page.getByText(etiket, { exact: true }).locator("xpath=following-sibling::div");

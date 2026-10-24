@@ -12,6 +12,8 @@ from app.config import settings
 from app.db import get_session
 from app.deps import aktif_kullanici
 from app.models.kullanici import Kullanici, Oturum, Rol
+from app.models.ogrenci import IletisimKisisi
+from app.models.program import Antrenor
 from app.ratelimit import get_redis, izin_var_mi
 from app.security import (
     belirtec_ozeti,
@@ -41,6 +43,7 @@ GENEL_HATA = "Giriş bilgileri hatalı veya hesap geçici olarak kilitli."
 class LoginIstegi(BaseModel):
     giris: str = Field(min_length=3, max_length=255)
     sifre: str = Field(min_length=1, max_length=256)
+    beni_hatirla: bool = False
 
 
 class BelirtecYaniti(BaseModel):
@@ -53,17 +56,23 @@ class KullaniciYaniti(BaseModel):
     id: uuid.UUID
     rol: Rol
     giris: str
+    ad_soyad: str | None = None
 
 
 def _istemci_ip(request: Request) -> str:
     return request.client.host if request.client else "bilinmiyor"
 
 
-def _cookie_yaz(response: Response, belirtec: str) -> None:
+def _sure(hatirla: bool) -> timedelta:
+    return timedelta(days=settings.hatirla_gun) if hatirla else timedelta(hours=settings.hatirlamasiz_saat)
+
+
+def _cookie_yaz(response: Response, belirtec: str, hatirla: bool) -> None:
+    # Hatırlamasızda max_age/expires verilmez: tarayıcı kapanınca silinen oturum çerezi olur.
     response.set_cookie(
         COOKIE_ADI,
         belirtec,
-        max_age=settings.refresh_token_days * 86400,
+        max_age=int(_sure(True).total_seconds()) if hatirla else None,
         httponly=True,
         secure=settings.cookie_secure,
         samesite="strict",
@@ -75,13 +84,14 @@ def _cookie_sil(response: Response) -> None:
     response.delete_cookie(COOKIE_ADI, path=COOKIE_YOLU)
 
 
-async def _oturum_ac(session: AsyncSession, kullanici: Kullanici) -> str:
+async def _oturum_ac(session: AsyncSession, kullanici: Kullanici, hatirla: bool) -> str:
     belirtec, ozet = yenileme_belirteci_uret()
     session.add(
         Oturum(
             kullanici_id=kullanici.id,
             token_ozeti=ozet,
-            bitis=simdi() + timedelta(days=settings.refresh_token_days),
+            bitis=simdi() + _sure(hatirla),
+            hatirla=hatirla,
         )
     )
     return belirtec
@@ -139,11 +149,11 @@ async def login(
     kullanici.basarisiz_deneme = 0
     kullanici.kilit_bitis = None
     kullanici.son_giris = simdi_
-    belirtec = await _oturum_ac(session, kullanici)
+    belirtec = await _oturum_ac(session, kullanici, govde.beni_hatirla)
     await audit.kaydet(session, "giris_basarili", kullanici_id=kullanici.id, ip=ip)
     await session.commit()
 
-    _cookie_yaz(response, belirtec)
+    _cookie_yaz(response, belirtec, govde.beni_hatirla)
     return _belirtec_yaniti(kullanici)
 
 
@@ -183,10 +193,10 @@ async def yenile(
         raise reddet()
 
     oturum.iptal = True
-    yeni = await _oturum_ac(session, kullanici)
+    yeni = await _oturum_ac(session, kullanici, oturum.hatirla)
     await session.commit()
 
-    _cookie_yaz(response, yeni)
+    _cookie_yaz(response, yeni, oturum.hatirla)
     return _belirtec_yaniti(kullanici)
 
 
@@ -205,5 +215,19 @@ async def cikis(
 
 
 @router.get("/me", response_model=KullaniciYaniti)
-async def ben(kullanici: Kullanici = Depends(aktif_kullanici)):
-    return KullaniciYaniti(id=kullanici.id, rol=kullanici.rol, giris=kullanici.giris)
+async def ben(kullanici: Kullanici = Depends(aktif_kullanici), session: AsyncSession = Depends(get_session)):
+    ad = kullanici.ad_soyad
+    if not ad:
+        ad = (
+            await session.execute(select(Antrenor.ad_soyad).where(Antrenor.kullanici_id == kullanici.id).limit(1))
+        ).scalar_one_or_none()
+    if not ad:
+        ad = (
+            await session.execute(
+                select(IletisimKisisi.ad_soyad)
+                .where(IletisimKisisi.kullanici_id == kullanici.id)
+                .order_by(IletisimKisisi.birincil.desc(), IletisimKisisi.olusturma)
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+    return KullaniciYaniti(id=kullanici.id, rol=kullanici.rol, giris=kullanici.giris, ad_soyad=ad or None)

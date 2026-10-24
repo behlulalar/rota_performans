@@ -1,6 +1,12 @@
 import { api } from "../lib/api";
 
-export type GrupDoluluk = { id: string; ad: string; ogrenci_sayisi: number; kontenjan: number };
+export type GrupDoluluk = {
+  id: string;
+  ad: string;
+  ogrenci_sayisi: number;
+  kontenjan: number;
+  program: { gun: number; baslangic: string; bitis: string }[];
+};
 
 export type SonKayit = { id: string; ad: string; soyad: string; kayit_tarihi: string; foto_var: boolean };
 

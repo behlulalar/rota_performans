@@ -1,16 +1,24 @@
-import type { ProgramSlot } from "../api/grup";
-
 export const GUNLER = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
 const KISA = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
 export const saat = (s: string) => s.slice(0, 5);
 
-export function programOzeti(p: ProgramSlot[]): string {
+/**
+ * Haftalık programı kısa yazar: aynı saatli günler birleşir ("Çar · Cum 17:30–19:00");
+ * farklı saatli slotlar " · " ile ayrı yazılır ("Pzt 07:00–08:30 · Çar 17:30–19:00").
+ */
+export function programOzeti(p: { gun: number; baslangic: string; bitis: string }[]): string {
   if (p.length === 0) return "Program yok";
-  return [...p]
+  const gruplar = new Map<string, number[]>();
+  [...p]
     .sort((a, b) => a.gun - b.gun || a.baslangic.localeCompare(b.baslangic))
-    .map((s) => `${KISA[s.gun - 1]} ${saat(s.baslangic)}–${saat(s.bitis)}`)
-    .join(", ");
+    .forEach((s) => {
+      const anahtar = `${saat(s.baslangic)}–${saat(s.bitis)}`;
+      gruplar.set(anahtar, [...(gruplar.get(anahtar) ?? []), s.gun]);
+    });
+  return [...gruplar.entries()]
+    .map(([aralik, gunler]) => `${gunler.map((g) => KISA[g - 1]).join(" · ")} ${aralik}`)
+    .join(" · ");
 }
 
 export function dakikaEkle(hhmm: string, dk: number): string | null {

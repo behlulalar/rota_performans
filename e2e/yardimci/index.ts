@@ -118,7 +118,14 @@ export async function arayuzdenGiris(page: Page, giris: string, sifre: string): 
   await page.goto("/giris");
   await page.getByLabel("Telefon veya e-posta").fill(giris);
   await page.getByLabel("Şifre", { exact: true }).fill(sifre);
-  await page.getByRole("button", { name: "Giriş yap" }).click();
+  await page.getByRole("button", { name: "Giriş yap", exact: true }).click();
+  // Giriş hız sınırına (IP başına dakikada 20) takılırsa pencere dolunca yeniden dener.
+  const sinir = page.getByRole("alert").filter({ hasText: "Çok fazla deneme" });
+  for (let i = 0; i < 3; i++) {
+    if (!(await sinir.waitFor({ state: "visible", timeout: 2000 }).then(() => true, () => false))) break;
+    await page.waitForTimeout(20_000);
+    await page.getByRole("button", { name: "Giriş yap", exact: true }).click();
+  }
 }
 
 export type SahteOgrenci = { id: string; ad: string; soyad: string; telefon: string; tc: string };

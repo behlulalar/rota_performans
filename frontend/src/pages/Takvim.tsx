@@ -6,8 +6,9 @@ import { oturumlariUret, takvimGetir, type OturumOzet } from "../api/takvim";
 import { hataMesaji } from "../lib/dogrulama";
 import { GUNLER, saat } from "../lib/program";
 import { bugun, gunEkle, haftaBasi, kisaTarih, yyyyAyGun } from "../lib/tarih";
+import SayfaBasligi from "../components/SayfaBasligi";
+import { basariKutusu, dugme, rozetBasari, rozetNotr, rozetUyari, secimKutusu } from "../lib/stil";
 
-const dugme = "rounded-lg border border-cizgi px-3 py-2 text-sm hover:border-altin disabled:opacity-50";
 
 function OturumKarti({ o, bugunStr }: { o: OturumOzet; bugunStr: string }) {
   const iptal = o.durum === "iptal";
@@ -15,23 +16,19 @@ function OturumKarti({ o, bugunStr }: { o: OturumOzet; bugunStr: string }) {
   return (
     <Link
       to={`/oturum/${o.id}`}
-      className={`block rounded-xl border border-cizgi bg-yuzey-yuksek px-3 py-3 hover:border-altin transition-colors ${iptal ? "opacity-50" : ""}`}
+      className={`block rounded-[3px] border border-cizgi bg-yuzey-yuksek px-3 py-2.5 hover:border-altin transition-colors ${iptal ? "opacity-50" : ""}`}
     >
-      <div className="text-sm font-semibold">
+      <div className="num text-[13px] font-semibold">
         {saat(o.baslangic)}–{saat(o.bitis)}
       </div>
       <div className={`mt-0.5 text-sm ${iptal ? "line-through" : ""}`}>{o.grup.ad}</div>
-      <div className="mt-1 text-xs text-metin-soluk">
+      <div className="num mt-1 text-xs text-metin-soluk">
         {o.ogrenci_sayisi} öğrenci{o.antrenor ? ` · ${o.antrenor.ad_soyad}` : ""}
       </div>
-      <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-        {iptal && <span className="rounded-full border border-cizgi px-2 py-0.5 text-metin-soluk">İptal</span>}
-        {!iptal && o.yoklama_alindi && (
-          <span className="rounded-full border border-basari/50 text-basari px-2 py-0.5">Yoklama alındı</span>
-        )}
-        {bekliyor && (
-          <span className="rounded-full border border-altin/60 bg-altin/10 text-altin-acik px-2 py-0.5">Yoklama bekliyor</span>
-        )}
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {iptal && <span className={rozetNotr}>İptal</span>}
+        {!iptal && o.yoklama_alindi && <span className={rozetBasari}>Yoklama alındı</span>}
+        {bekliyor && <span className={rozetUyari}>Yoklama bekliyor</span>}
       </div>
     </Link>
   );
@@ -105,44 +102,51 @@ export default function Takvim() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold mr-auto">Takvim</h1>
-        {admin && (
-          <>
-            <select
-              aria-label="Antrenör filtresi"
-              value={antrenorId}
-              onChange={(e) => setAntrenorId(e.target.value)}
-              className="rounded-lg bg-zemin border border-cizgi px-3 py-2 text-sm outline-none focus:border-altin"
-            >
-              <option value="">Tüm antrenörler</option>
-              {antrenorler.map((a) => (
-                <option key={a.id} value={a.id}>{a.ad_soyad}</option>
-              ))}
-            </select>
-            <button className={dugme} disabled={mesgul} onClick={() => void uret()}>
-              Oturumları üret
-            </button>
-          </>
-        )}
-      </div>
+      <SayfaBasligi
+        baslik="Takvim"
+        aciklama={
+          oturumlar
+            ? `${kisaTarih(gunler[0])} – ${kisaTarih(gunler[6])} haftası · ${oturumlar.filter((o) => o.durum !== "iptal").length} ders`
+            : "Haftalık ders programı ve yoklama durumu"
+        }
+        eylemler={
+          admin ? (
+            <>
+              <select
+                aria-label="Antrenör filtresi"
+                value={antrenorId}
+                onChange={(e) => setAntrenorId(e.target.value)}
+                className={secimKutusu}
+              >
+                <option value="">Tüm antrenörler</option>
+                {antrenorler.map((a) => (
+                  <option key={a.id} value={a.id}>{a.ad_soyad}</option>
+                ))}
+              </select>
+              <button className={dugme} disabled={mesgul} onClick={() => void uret()}>
+                Oturumları üret
+              </button>
+            </>
+          ) : undefined
+        }
+      />
 
       <div className="flex items-center gap-2">
         <button className={dugme} aria-label="Önceki hafta" onClick={() => setHafta((h) => gunEkle(h, -7))}>←</button>
-        <div className="flex-1 text-center text-sm font-medium">
+        <div className="num flex-1 text-center text-[13px] font-medium">
           {kisaTarih(gunler[0])} – {kisaTarih(gunler[6])}
         </div>
         <button className={dugme} aria-label="Sonraki hafta" onClick={() => setHafta((h) => gunEkle(h, 7))}>→</button>
         <button className={dugme} disabled={bugunHaftada} onClick={() => setHafta(haftaBasi(new Date()))}>Bugün</button>
       </div>
 
-      {bilgi && <p role="status" className="rounded-lg border border-basari/50 bg-basari/10 text-basari text-sm px-3 py-2">{bilgi}</p>}
-      {hata && <p role="alert" className="text-sm text-hata">{hata}</p>}
+      {bilgi && <p role="status" className={basariKutusu}>{bilgi}</p>}
+      {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
 
       {oturumlar === null && !hata && <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>}
 
       {oturumlar !== null && oturumlar.length === 0 && (
-        <p className="rounded-xl border border-cizgi bg-yuzey px-4 py-6 text-sm text-metin-soluk text-center">
+        <p className="rounded-[5px] border border-cizgi bg-yuzey px-4 py-6 text-sm text-metin-soluk text-center">
           {admin
             ? "Bu hafta için ders oturumu yok. Oturumları üret butonuyla grup programlarından oluşturabilirsiniz."
             : "Bu hafta için ders oturumu yok."}
@@ -150,7 +154,7 @@ export default function Takvim() {
       )}
 
       {oturumlar !== null && oturumlar.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 min-[1360px]:grid-cols-7 gap-2 items-start">
           {gunler.map((g, i) => {
             const s = yyyyAyGun(g);
             const liste = oturumlar
@@ -164,12 +168,12 @@ export default function Takvim() {
                   type="button"
                   onClick={() => gunToggle(s)}
                   aria-expanded={acik}
-                  className={`md:cursor-default w-full flex items-center justify-between rounded-lg px-3 py-3 md:py-2 text-left text-sm border ${
-                    buGun ? "border-altin text-altin" : "border-cizgi text-metin-soluk"
+                  className={`md:cursor-default w-full flex items-center justify-between rounded-[3px] px-3 min-h-11 md:min-h-9 text-left text-[13px] border bg-yuzey ${
+                    buGun ? "border-altin text-altin-metin" : "border-cizgi text-metin-soluk"
                   }`}
                 >
-                  <span className="font-medium">{GUNLER[i]} <span className="font-normal">{kisaTarih(g)}</span></span>
-                  <span className="md:hidden text-xs">{liste.length} ders {acik ? "▲" : "▼"}</span>
+                  <span className="font-medium">{GUNLER[i]} <span className="num font-normal">{kisaTarih(g)}</span></span>
+                  <span className="num md:hidden text-xs">{liste.length} ders {acik ? "▲" : "▼"}</span>
                 </button>
                 <div className={`${acik ? "block" : "hidden"} md:block mt-2 space-y-2`}>
                   {liste.length === 0 ? (

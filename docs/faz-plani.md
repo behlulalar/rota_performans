@@ -59,6 +59,8 @@ Veri
 
 Arayüz
 - [x] Koyu tema renk paleti (altın sarısı / siyah / beyaz), giriş ve boş panel sayfası
+- [x] Yeni arayüz: bölüm şeridi + kapanabilir alt menü, editoryal görünüm (Fraunces/Work Sans), koyu ve açık tema, telefonda alt sekme çubuğu
+- [x] Girişte "Beni hatırla" (30 gün / tarayıcı oturumu), "Tekrar hoş geldiniz" kartı; yönetici girişte Genel bakış'a düşer
 - [ ] Bileşen kütüphanesi (shadcn/ui), her dilimde ihtiyaç oldukça eklenir
 
 Dış işler

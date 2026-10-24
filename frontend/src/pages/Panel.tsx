@@ -1,4 +1,7 @@
 import { useAuth, type Rol } from "../auth/AuthProvider";
+import Kart from "../components/Kart";
+import TemaDugmesi from "../components/TemaDugmesi";
+import { rozetBirincil } from "../lib/stil";
 
 const ROL_ADI: Record<Rol, string> = {
   admin: "Yönetici",
@@ -13,31 +16,42 @@ export default function Panel() {
   if (!kullanici) return null;
 
   return (
-    <main className="min-h-dvh px-4 py-8 max-w-3xl mx-auto">
-      <header className="flex items-center justify-between mb-8">
-        <div>
-          <div className="text-altin text-xs tracking-[0.3em] uppercase">Rota Performans</div>
-          <h1 className="text-xl font-semibold">Hoş geldiniz</h1>
-        </div>
+    <div className="min-h-dvh">
+      <header className="h-14 bg-serit text-white flex items-center gap-3 px-4">
+        <span
+          aria-hidden="true"
+          className="size-8 rounded-[3px] border border-serit-ikon-secili/50 grid place-items-center text-serit-ikon-secili text-[11px] font-semibold tracking-wider"
+        >
+          RP
+        </span>
+        <span className="flex-1 font-display font-medium text-[19px]">Rota Performans</span>
+        <TemaDugmesi gorunum="serit" />
         <button
           onClick={() => void cikisYap()}
-          className="rounded-lg border border-cizgi px-3 py-1.5 text-sm text-metin-soluk hover:border-altin hover:text-metin transition-colors"
+          className="rounded-[3px] border border-serit-ikon/50 px-3 min-h-11 text-[13px] text-white hover:border-serit-ikon-secili transition-colors"
         >
           Çıkış yap
         </button>
       </header>
 
-      <section className="bg-yuzey border border-cizgi rounded-2xl p-6">
-        <p className="text-metin-soluk text-sm">Oturum açan hesap</p>
-        <p className="mt-1 font-medium">{kullanici.giris}</p>
-        <p className="mt-3 inline-block rounded-full bg-yuzey-yuksek border border-cizgi px-3 py-1 text-xs text-altin">
-          {ROL_ADI[kullanici.rol]}
-        </p>
-      </section>
+      <main className="px-4 py-6 max-w-3xl mx-auto">
+        <div className="mb-7">
+          <div className="eyebrow">Panel</div>
+          <h1 className="mt-1.5 font-display font-medium text-[28px] md:text-[38px] leading-[1.1]">Hoş geldiniz</h1>
+          <p className="mt-2 text-[15px] text-metin-soluk">Hesabınızla oturum açıldı: {ROL_ADI[kullanici.rol]}</p>
+        </div>
 
-      {(kullanici.rol === "veli" || kullanici.rol === "ogrenci") && (
-        <p className="mt-4 text-sm text-metin-soluk">Veli paneli yakında burada olacak.</p>
-      )}
-    </main>
+        <Kart baslik="Oturum açan hesap">
+          <p className="font-medium">{kullanici.giris}</p>
+          <p className="mt-3">
+            <span className={rozetBirincil}>{ROL_ADI[kullanici.rol]}</span>
+          </p>
+        </Kart>
+
+        {(kullanici.rol === "veli" || kullanici.rol === "ogrenci") && (
+          <p className="mt-4 text-sm text-metin-soluk">Veli paneli yakında burada olacak.</p>
+        )}
+      </main>
+    </div>
   );
 }

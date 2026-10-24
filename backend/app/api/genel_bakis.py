@@ -10,7 +10,7 @@ from app.deps import rol_gerekli
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import IletisimKisisi, Ogrenci, OgrenciDurum
 from app.models.paket import OgrenciPaketi, OgrenciPaketiDurum
-from app.models.program import Antrenor, Grup, OgrenciGrup
+from app.models.program import Antrenor, Grup, GrupProgrami, OgrenciGrup
 from app.schemas.genel_bakis import (
     AntrenorSayisi,
     BekleyenOdeme,
@@ -18,6 +18,7 @@ from app.schemas.genel_bakis import (
     GrupDolulugu,
     GrupOzeti,
     OgrenciSayilari,
+    ProgramSlotu,
     SonKayit,
 )
 
@@ -83,6 +84,22 @@ async def getir(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_ses
         key=lambda g: (-g.ogrenci_sayisi / g.kontenjan, g.ad, str(g.id)),
     )
 
+    gosterilen = liste[:DOLULUK_LISTESI_SINIRI]
+    # Programlar tek sorguda alınır (N+1 yok); gün ve saat sırasıyla.
+    programlar: dict = {g.id: [] for g in gosterilen}
+    if gosterilen:
+        program_satirlari = (
+            await session.execute(
+                select(GrupProgrami.grup_id, GrupProgrami.gun, GrupProgrami.baslangic, GrupProgrami.bitis)
+                .where(GrupProgrami.grup_id.in_(programlar))
+                .order_by(GrupProgrami.gun, GrupProgrami.baslangic)
+            )
+        ).all()
+        for grup_id, gun, baslangic, bitis in program_satirlari:
+            programlar[grup_id].append(ProgramSlotu(gun=gun, baslangic=baslangic, bitis=bitis))
+        for g in gosterilen:
+            g.program = programlar[g.id]
+
     antrenor_sayisi = (await session.execute(select(func.count()).where(Antrenor.aktif.is_(True)))).scalar_one()
 
     adet, toplam = (
@@ -110,7 +127,7 @@ async def getir(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_ses
             aktif_grup=len(liste),
             toplam_kontenjan=sum(g.kontenjan for g in liste),
             dolu=sum(g.ogrenci_sayisi for g in liste),
-            doluluk_listesi=liste[:DOLULUK_LISTESI_SINIRI],
+            doluluk_listesi=gosterilen,
         ),
         antrenor=AntrenorSayisi(aktif=antrenor_sayisi),
         bekleyen_odeme=BekleyenOdeme(adet=adet, toplam_tutar=f"{Decimal(toplam):.2f}"),

@@ -13,6 +13,9 @@ import {
 import { ApiHata } from "../lib/api";
 import { hataMesaji, ROL_ETIKET, tcGecerli, yasHesapla } from "../lib/dogrulama";
 import { fotoKucult } from "../lib/fotoKucult";
+import Kart from "../components/Kart";
+import SayfaBasligi from "../components/SayfaBasligi";
+import { birincilDugme, dugme, girdi } from "../lib/stil";
 
 type Kisi = { anahtar: number; rol: IletisimRol; ad_soyad: string; telefon: string; birincil: boolean };
 type Hatalar = Record<string, string>;
@@ -20,14 +23,13 @@ type Hatalar = Record<string, string>;
 let sayac = 0;
 const yeniKisi = (rol: IletisimRol, birincil = false): Kisi => ({ anahtar: ++sayac, rol, ad_soyad: "", telefon: "", birincil });
 
-const girdi = "mt-1 w-full rounded-lg bg-zemin border border-cizgi px-3 py-2.5 outline-none focus:border-altin";
 
 function Alan({ etiket, hata, children }: { etiket: string; hata?: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="text-sm text-metin-soluk">{etiket}</span>
+      <span className="text-[13px] text-metin-soluk">{etiket}</span>
       {children}
-      {hata && <span className="block mt-1 text-sm text-hata">{hata}</span>}
+      {hata && <span className="block mt-1 text-[13px] text-hata">{hata}</span>}
     </label>
   );
 }
@@ -182,13 +184,15 @@ export default function OgrenciForm() {
   if (yukleniyor) return <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>;
 
   return (
-    <form onSubmit={gonder} noValidate className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{duzenleme ? "Öğrenciyi düzenle" : "Yeni öğrenci"}</h1>
-        <Link to={duzenleme ? `/ogrenciler/${id}` : "/ogrenciler"} className="text-sm text-metin-soluk hover:text-metin">Vazgeç</Link>
-      </div>
+    <form onSubmit={gonder} noValidate className="max-w-4xl space-y-4">
+      <SayfaBasligi
+        baslik={duzenleme ? "Öğrenciyi düzenle" : "Yeni öğrenci"}
+        aciklama={duzenleme ? "Kayıt bilgilerini güncelleyin" : "Kişisel bilgiler, iletişim kişileri ve rızalar"}
+        eylemler={<Link to={duzenleme ? `/ogrenciler/${id}` : "/ogrenciler"} className={dugme}>Vazgeç</Link>}
+      />
 
-      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6 grid sm:grid-cols-2 gap-4">
+      <Kart baslik="Kişisel bilgiler">
+      <div className="grid sm:grid-cols-2 gap-4">
         <Alan etiket="Ad" hata={hatalar.ad}>
           <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} autoComplete="off" />
         </Alan>
@@ -212,7 +216,7 @@ export default function OgrenciForm() {
           </select>
         </Alan>
         {yas !== null && yas >= 0 && yas < 5 && (
-          <p className="sm:col-span-2 rounded-lg border border-altin/60 bg-altin/10 text-altin-acik text-sm px-3 py-2">
+          <p className="sm:col-span-2 rounded-[3px] border border-uyari/40 bg-uyari-zemin text-uyari text-[13px] px-3 py-2">
             Dikkat: Öğrenci 5 yaşından küçük ({yas} yaş). Doğum tarihini kontrol edin; kayda devam edebilirsiniz.
           </p>
         )}
@@ -232,14 +236,14 @@ export default function OgrenciForm() {
             autoComplete="off"
           />
         </Alan>
-      </section>
+      </div>
+      </Kart>
 
-      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
-        <h2 className="font-semibold">İletişim kişileri</h2>
-        <p className="text-sm text-metin-soluk mt-1">Öğrenciyle ilgili tüm bildirimler yalnızca birincil iletişim kişisine gider.</p>
+      <Kart baslik="İletişim kişileri">
+        <p className="text-sm text-metin-soluk">Öğrenciyle ilgili tüm bildirimler yalnızca birincil iletişim kişisine gider.</p>
         <div className="mt-4 space-y-3">
           {kisiler.map((k) => (
-            <div key={k.anahtar} className="rounded-xl border border-cizgi p-3 grid gap-3 sm:grid-cols-[8rem_1fr_1fr_auto] items-end">
+            <div key={k.anahtar} className="rounded-[3px] border border-cizgi bg-yuzey-yuksek p-3 grid gap-3 sm:grid-cols-[8rem_1fr_1fr_auto] items-end">
               <label className="block">
                 <span className="text-xs text-metin-soluk">Rol</span>
                 <select className={girdi} value={k.rol} onChange={(e) => kisiGuncelle(k.anahtar, { rol: e.target.value as IletisimRol })}>
@@ -257,11 +261,11 @@ export default function OgrenciForm() {
                 <input className={girdi} type="tel" inputMode="tel" value={k.telefon} onChange={(e) => kisiGuncelle(k.anahtar, { telefon: e.target.value })} />
               </label>
               <div className="flex items-center justify-between gap-3 sm:justify-end">
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-2 text-sm min-h-11 md:min-h-0">
                   <input type="radio" name="birincil" checked={k.birincil} onChange={() => birincilSec(k.anahtar)} className="accent-altin size-4" />
                   Birincil iletişim
                 </label>
-                <button type="button" onClick={() => kisiSil(k.anahtar)} className="rounded-lg border border-cizgi px-2.5 py-1.5 text-sm text-metin-soluk hover:border-hata hover:text-hata">
+                <button type="button" onClick={() => kisiSil(k.anahtar)} className={`${dugme} text-metin-soluk hover:border-hata hover:text-hata`}>
                   Sil
                 </button>
               </div>
@@ -269,14 +273,14 @@ export default function OgrenciForm() {
           ))}
         </div>
         {hatalar.kisiler && <p className="mt-2 text-sm text-hata">{hatalar.kisiler}</p>}
-        <button type="button" onClick={() => setKisiler((l) => [...l, yeniKisi("diger", l.length === 0)])} className="mt-3 rounded-lg border border-cizgi px-3 py-1.5 text-sm hover:border-altin">
+        <button type="button" onClick={() => setKisiler((l) => [...l, yeniKisi("diger", l.length === 0)])} className={`${dugme} mt-3`}>
           Kişi ekle
         </button>
-      </section>
+      </Kart>
 
       {!duzenleme && (
-        <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6 space-y-3">
-          <h2 className="font-semibold">Rızalar</h2>
+        <Kart baslik="Rızalar">
+          <div className="space-y-3">
           {([
             ["aydinlatma", "KVKK aydınlatma metnini okudum, onaylıyorum (zorunlu)"],
             ["foto", "Fotoğraf çekimi ve kullanımına izin veriyorum"],
@@ -295,22 +299,22 @@ export default function OgrenciForm() {
               <span>{metin}</span>
             </label>
           ))}
-          {hatalar.aydinlatma && <p className="text-sm text-hata">{hatalar.aydinlatma}</p>}
-        </section>
+          {hatalar.aydinlatma && <p className="text-[13px] text-hata">{hatalar.aydinlatma}</p>}
+          </div>
+        </Kart>
       )}
 
       {!duzenleme ? (
-        <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
-          <h2 className="font-semibold">Fotoğraf</h2>
+        <Kart baslik="Fotoğraf">
           {!rizalar.foto ? (
-            <p className="mt-1 text-sm text-metin-soluk">Fotoğraf eklemek için yukarıda fotoğraf rızasının işaretlenmesi gerekir.</p>
+            <p className="text-sm text-metin-soluk">Fotoğraf eklemek için yukarıda fotoğraf rızasının işaretlenmesi gerekir.</p>
           ) : (
             <div className="mt-3 flex items-center gap-4">
-              <div className="size-20 rounded-full overflow-hidden bg-yuzey-yuksek border border-cizgi shrink-0">
+              <div className="size-20 rounded-[3px] overflow-hidden bg-yuzey-yuksek border border-cizgi shrink-0">
                 {onizleme && <img src={onizleme} alt="Seçilen fotoğraf önizlemesi" className="size-full object-cover" />}
               </div>
               <div>
-                <input type="file" accept="image/*" onChange={(e) => void fotoSec(e.target.files?.[0])} className="text-sm text-metin-soluk file:mr-3 file:rounded-lg file:border file:border-cizgi file:bg-yuzey-yuksek file:px-3 file:py-1.5 file:text-metin" />
+                <input type="file" accept="image/*" onChange={(e) => void fotoSec(e.target.files?.[0])} className="text-sm text-metin-soluk file:mr-3 file:rounded-[3px] file:border file:border-cizgi file:bg-yuzey-yuksek file:px-3 file:py-1.5 file:text-metin" />
                 {foto && (
                   <button type="button" onClick={() => setFoto(null)} className="mt-2 block text-sm text-metin-soluk hover:text-hata">Fotoğrafı kaldır</button>
                 )}
@@ -318,18 +322,18 @@ export default function OgrenciForm() {
               </div>
             </div>
           )}
-        </section>
+        </Kart>
       ) : (
         <p className="text-sm text-metin-soluk">Fotoğrafı değiştirmek için öğrenci detay sayfasını kullanın.</p>
       )}
 
-      {genelHata && <p role="alert" className="text-sm text-hata">{genelHata}</p>}
+      {genelHata && <p role="alert" className="text-[13px] text-hata">{genelHata}</p>}
 
       <div className="flex gap-3">
-        <button type="submit" disabled={gonderiliyor} className="rounded-lg bg-altin text-zemin font-semibold px-5 py-2.5 hover:bg-altin-acik disabled:opacity-50">
+        <button type="submit" disabled={gonderiliyor} className={birincilDugme}>
           {gonderiliyor ? "Kaydediliyor…" : "Kaydet"}
         </button>
-        <Link to={duzenleme ? `/ogrenciler/${id}` : "/ogrenciler"} className="rounded-lg border border-cizgi px-5 py-2.5 text-metin-soluk hover:text-metin">
+        <Link to={duzenleme ? `/ogrenciler/${id}` : "/ogrenciler"} className={dugme}>
           Vazgeç
         </Link>
       </div>

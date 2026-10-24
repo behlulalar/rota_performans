@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Integer, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -45,6 +45,8 @@ class Oturum(Base):
     token_ozeti: Mapped[str] = mapped_column(String(64), unique=True)
     bitis: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     iptal: Mapped[bool] = mapped_column(Boolean, default=False)
+    # "Beni hatırla" ile açılmış oturum (kalıcı çerez, uzun süre).
+    hatirla: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

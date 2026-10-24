@@ -1,24 +1,70 @@
 @import "tailwindcss";
 
-/* Marka paleti: koyu tema, altın sarısı, siyah, beyaz. Renkler yalnızca burada tanımlanır. */
-@theme {
-  --color-zemin: #0b0b0c;
-  --color-yuzey: #141416;
-  --color-yuzey-yuksek: #1c1c20;
-  --color-cizgi: #2a2a2f;
-  --color-metin: #f5f5f0;
-  --color-metin-soluk: #a1a19a;
-  --color-altin: #d4a72c;
-  --color-altin-acik: #e6bc4a;
-  --color-altin-koyu: #a8821c;
-  --color-hata: #ef6b5f;
-  --color-basari: #5fbf8a;
+/*
+ * Renkler yalnızca burada tanımlanır. @theme varsayılan (koyu) değerleri verir;
+ * açık tema aynı değişkenleri :root[data-theme="light"] altında geçersiz kılar.
+ */
+@theme static {
+  --color-zemin: #0f0f10;
+  --color-yuzey: #161617;
+  --color-yuzey-yuksek: #24221e;
+  --color-menu: #121213;
+  --color-serit: #0a0a0b;
+  --color-cizgi: #262627;
+  --color-cizgi-guclu: #35342f;
+  --color-metin: #ede8dd;
+  --color-metin-orta: #b7b2a8;
+  --color-metin-soluk: #8c8a85;
+  --color-altin: #c9a23e;
+  --color-altin-acik: #e2be5a;
+  --color-altin-metin: #e2be5a;
+  --color-birincil: #c9a23e;
+  --color-birincil-metin: #0f0f10;
+  --color-basari: #7fbf9a;
+  --color-uyari: #e0a458;
+  --color-hata: #e2786b;
+  --color-basari-zemin: #18291f;
+  --color-uyari-zemin: #2e2616;
+  --color-hata-zemin: #33201d;
+  --color-serit-ikon: #8c8a85;
+  --color-serit-ikon-secili: #e2be5a;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Work Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+}
+
+:root[data-theme="light"] {
+  --color-zemin: #f4f3ef;
+  --color-yuzey: #ffffff;
+  --color-yuzey-yuksek: #f1efea;
+  --color-menu: #ffffff;
+  --color-serit: #14202e;
+  --color-cizgi: #e4e2dc;
+  --color-cizgi-guclu: #d6d3cc;
+  --color-metin: #17191c;
+  --color-metin-orta: #3e4248;
+  --color-metin-soluk: #61656c;
+  --color-altin: #c9a227;
+  --color-altin-acik: #e9d9a6;
+  --color-altin-metin: #6e5410;
+  --color-birincil: #14202e;
+  --color-birincil-metin: #ffffff;
+  /* Belirtilen #2E7D4F, açık yeşil rozet zemininde 4.39:1 verdiği için hafifçe koyultuldu (4.76:1). */
+  --color-basari: #2a774a;
+  --color-uyari: #8a5a00;
+  --color-hata: #a1291b;
+  --color-basari-zemin: #e6f2ea;
+  --color-uyari-zemin: #fbefd9;
+  --color-hata-zemin: #fbe7e4;
+  --color-serit-ikon: #b8c2ce;
+  --color-serit-ikon-secili: #e9d9a6;
 }
 
 html {
   color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 body {
@@ -26,7 +72,37 @@ body {
   background: var(--color-zemin);
   color: var(--color-metin);
   font-family: var(--font-sans);
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Alt sekme çubuğu varken (mobil) sayfa içi sabit öğeler çubuğun üstünde durur. */
+.sekmeli-kabuk {
+  --sekme-yuk: calc(3.5rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .sekmeli-kabuk {
+    --sekme-yuk: 0px;
+  }
+}
+
+/* Üst etiket (eyebrow): bölüm adı, kart üst etiketi. */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-altin-metin);
+}
+
+/* Fraunces: optik boyut tarayıcıda otomatik seçilir. */
+.font-display {
+  font-optical-sizing: auto;
+}
+
+/* Rakamlar sabit genişlikte hizalansın. */
+.num {
+  font-variant-numeric: tabular-nums;
 }
 
 :focus-visible {
