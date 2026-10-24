@@ -6,11 +6,13 @@
 import argparse
 import asyncio
 import getpass
+import os
 import sys
 
 from email_validator import EmailNotValidError, validate_email
 from sqlalchemy import select
 
+from app.config import settings
 from app.db import SessionLocal, engine
 from app.models.kullanici import Kullanici, Rol
 from app.security import normalize_giris, sifre_ozeti
@@ -48,16 +50,55 @@ async def admin_olustur(giris: str) -> int:
     return 0
 
 
+async def e2e_tohum() -> int:
+    """E2E testleri için yönetici hesabını oluşturur (varsa şifresini günceller).
+
+    Üretimde ve geliştirmede ÇALIŞMAZ: yalnızca ENV=test veya ENV=e2e iken.
+    """
+    if settings.env not in ("test", "e2e"):
+        print(f"e2e-tohum yalnızca ENV=test veya ENV=e2e iken çalışır (şu an ENV={settings.env}).", file=sys.stderr)
+        return 1
+    giris = normalize_giris(os.environ.get("E2E_ADMIN_GIRIS", ""))
+    sifre = os.environ.get("E2E_ADMIN_SIFRE", "")
+    if not giris or not sifre:
+        print("E2E_ADMIN_GIRIS ve E2E_ADMIN_SIFRE ortam değişkenleri zorunlu.", file=sys.stderr)
+        return 1
+    if len(sifre) < MIN_SIFRE_UZUNLUK:
+        print(f"Şifre en az {MIN_SIFRE_UZUNLUK} karakter olmalı.", file=sys.stderr)
+        return 1
+
+    async with SessionLocal() as session:
+        var = (await session.execute(select(Kullanici).where(Kullanici.giris == giris))).scalar_one_or_none()
+        if var is None:
+            session.add(Kullanici(rol=Rol.admin, giris=giris, sifre_ozeti=sifre_ozeti(sifre)))
+            mesaj = "E2E yöneticisi oluşturuldu."
+        else:
+            if var.rol != Rol.admin:
+                print("Bu giriş yönetici olmayan bir hesaba ait.", file=sys.stderr)
+                return 1
+            var.sifre_ozeti = sifre_ozeti(sifre)
+            var.aktif = True
+            var.basarisiz_deneme = 0
+            var.kilit_bitis = None
+            mesaj = "E2E yöneticisinin şifresi güncellendi."
+        await session.commit()
+    print(mesaj)
+    return 0
+
+
 async def main() -> int:
     ayrac = argparse.ArgumentParser(prog="app.cli")
     alt = ayrac.add_subparsers(dest="komut", required=True)
     admin = alt.add_parser("admin-olustur", help="Yönetici hesabı oluşturur")
     admin.add_argument("giris", help="E-posta veya telefon")
+    alt.add_parser("e2e-tohum", help="E2E test yöneticisini oluşturur (yalnız ENV=test|e2e)")
     argumanlar = ayrac.parse_args()
 
     try:
         if argumanlar.komut == "admin-olustur":
             return await admin_olustur(argumanlar.giris)
+        if argumanlar.komut == "e2e-tohum":
+            return await e2e_tohum()
         return 2
     finally:
         await engine.dispose()

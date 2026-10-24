@@ -34,6 +34,14 @@ docker compose exec backend pytest -q
 ```
 Testler `rota_test` veritabanını ve Redis 1. dizinini kullanır, geliştirme verisine dokunmaz.
 
+### E2E testleri (Playwright)
+Tarayıcı testleri `e2e/` klasöründedir. Geliştirme verisine dokunmamak için ayrı veritabanı (`rota_e2e`), ayrı Redis dizini (2), ayrı backend (`127.0.0.1:8101`) ve ayrı Vite sunucusu (`127.0.0.1:5175`) kullanılır.
+```bash
+cd e2e && npm install && npx playwright install chromium && cd ..   # bir kez
+bash e2e/yerel-calistir.sh            # ortamı kurar, testleri çalıştırır, konteynerleri kapatır
+```
+Betik her çalıştırmada `rota_e2e` veritabanını sıfırlar ve yöneticiyi `python -m app.cli e2e-tohum` ile oluşturur. Bu komut yalnızca `ENV=test` veya `ENV=e2e` iken çalışır, aksi halde hata verir. Rapor: `e2e/playwright-report/`. CI'da aynı testler `e2e` işinde çalışır.
+
 ### Yeni veritabanı geçişi
 ```bash
 docker compose exec backend alembic revision --autogenerate -m "aciklama"
