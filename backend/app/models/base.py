@@ -13,3 +13,16 @@ NAMING = {
 
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING)
+
+
+def enum_kolon(enum_sinifi, uzunluk: int = 24):
+    """Metin olarak saklanan, veritabanında CHECK ile korunan enum sütunu."""
+    from sqlalchemy import Enum
+
+    return Enum(
+        enum_sinifi,
+        native_enum=False,
+        length=uzunluk,
+        create_constraint=True,
+        name=enum_sinifi.__name__.lower(),
+    )

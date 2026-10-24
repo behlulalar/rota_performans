@@ -1,9 +1,14 @@
 name: CI
 
+# Her dal gönderiminde testler çalışır. `ozellik/*` dallarında testler geçerse son adım
+# dalı main'e aktarır. main'e doğrudan gönderim de test edilir.
 on:
   push:
-    branches: [main]
-  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
@@ -32,6 +37,9 @@ jobs:
       REDIS_URL: redis://localhost:6379/0
       TEST_REDIS_URL: redis://localhost:6379/1
       JWT_SECRET: ci-icin-gecici-gizli-anahtar
+      # Yalnızca CI için üretilmiş, hiçbir gerçek veriyi korumayan anahtarlar.
+      KIMLIK_SIFRELEME_ANAHTARI: rU31a7PGqRiEJ_EaFsP3QLSadL_01VORfg67NFxZWh0=
+      KIMLIK_OZET_ANAHTARI: JIo_qTVHzqIb7fx4qtBiStMzcUeeim7o86UEDeqM5QM=
     defaults:
       run:
         working-directory: backend
@@ -43,8 +51,8 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
-      - name: Geçişler boş veritabanına uygulanabiliyor mu
-        run: alembic upgrade head && alembic downgrade base
+      - name: Geçişler boş veritabanına uygulanabiliyor, geri alınabiliyor ve modelle uyumlu mu
+        run: alembic upgrade head && alembic check && alembic downgrade base
       - run: pytest -q
 
   frontend:
@@ -61,3 +69,25 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build
+
+  birlestir:
+    name: Testler geçtiyse main'e aktar
+    needs: [backend, frontend]
+    if: startsWith(github.ref, 'refs/heads/ozellik/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Yalnızca ileri sarma: main bu daldan sonra ilerlemişse birleştirme yapılmaz, böylece
+      # test edilen commit ile main'e giren commit her zaman birebir aynıdır.
+      - name: main'e ileri sar
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "::error::main bu daldan sonra ilerlemiş. Dalı güncelleyip tekrar gönder: git rebase origin/main && git push --force-with-lease"
+            exit 1
+          fi
+          git push origin HEAD:main

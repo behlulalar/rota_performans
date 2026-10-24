@@ -6,6 +6,9 @@ os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 os.environ["REDIS_URL"] = os.environ["TEST_REDIS_URL"]
 os.environ["COOKIE_SECURE"] = "true"
 
+import asyncio  # noqa: E402
+
+import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 from redis.asyncio import Redis  # noqa: E402
@@ -18,6 +21,18 @@ from app.models import Base, Kullanici, Rol  # noqa: E402
 from app.security import sifre_ozeti  # noqa: E402
 
 SIFRE = "Dogru-sifre-123"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def sema_sifirla():
+    """Oturum başında test şemasını modellerden baştan kurar, eski kalıntı şema testi yanıltmasın."""
+
+    async def _sifirla():
+        async with engine.begin() as baglanti:
+            await baglanti.run_sync(Base.metadata.drop_all)
+            await baglanti.run_sync(Base.metadata.create_all)
+
+    asyncio.run(_sifirla())
 
 
 @pytest_asyncio.fixture(autouse=True)

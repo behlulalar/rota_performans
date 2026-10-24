@@ -24,6 +24,8 @@ class Kullanici(Base):
     # Telefon veya e-posta. Küçük harfe çevrilmiş ve kırpılmış saklanır.
     giris: Mapped[str] = mapped_column(String(255), unique=True)
     sifre_ozeti: Mapped[str] = mapped_column(String(255))
+    # Görünen ad (yönetici işlemlerinde ve denetim ekranında). Veli ve öğrencinin adı kendi kayıtlarında.
+    ad_soyad: Mapped[str | None] = mapped_column(String(200))
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
     basarisiz_deneme: Mapped[int] = mapped_column(Integer, default=0)
     kilit_bitis: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -1,6 +1,12 @@
-# Veri Modeli Taslağı (v0.1)
+# Veri Modeli (v0.2)
 
-Kaynak: müşterinin kayıt formu alanları ve konuşulan kararlar. **Taslaktır**, ders hakkı kurallarının kalan cevapları geldikten sonra kesinleşir. Kod yazılmadan önce senin onayından geçecek.
+**Durum: kodlandı.** Tüm tablolar `backend/app/models/` altında modellendi ve `alembic/versions/fa8de04c0f64_is_verisi_tablolari.py` geçişiyle kuruldu. Kurallar veritabanı düzeyinde (CHECK, UNIQUE, kısmi indeks, tetikleyici) uygulanır ve `tests/test_sema.py` ile kanıtlanır. Müşteriden gelen bilgilere göre değişirse yeni bir geçişle güncellenir.
+
+Taslaktan farklar:
+- Birincil kişi, `ogrenci.birincil_iletisim_id` yerine `iletisim_kisisi.birincil` işaretiyle tutulur (döngüsel yabancı anahtar olmasın diye). Öğrenci başına en çok bir birincil kişi veritabanında garantidir, "en az bir" kuralı kayıt servisinde zorunlu tutulacak.
+- `telafi_plani` tablosu eklendi (telafi için kendi grubu dışındaki derse eklenme).
+- `bildirim` mesaj metni yerine `sablon` ve kişisel veri içermeyen `parametreler` saklar.
+- `kullanici.ad_soyad` eklendi. `ogrenci.is_synthetic` adı `sentetik` oldu. `odeme.not` adı `aciklama` oldu.
 
 ## 1. Alınan kararlar
 - Kayıt formu **sistemde yok**. Müşteri kağıt formu kendisi doldurur, yönetici bilgileri kayıt sırasında sisteme girer.
@@ -30,8 +36,8 @@ Kaynak: müşterinin kayıt formu alanları ve konuşulan kararlar. **Taslaktır
 ### Öğrenci ve iletişim
 | Tablo | Önemli alanlar | Not |
 |---|---|---|
-| `ogrenci` | id (UUID), ad, soyad, anne_adi, baba_adi, dogum_tarihi, cinsiyet (`kadin`/`erkek`), kimlik_tur (`tc`/`pasaport`), kimlik_no_sifreli, kimlik_no_ozet (tekillik), foto_anahtar, durum (`aktif`/`pasif`), kayit_tarihi, birincil_iletisim_id, kullanici_id (reşit için), is_synthetic | Kimlik no şifreli. Yinelenen kayıt `kimlik_no_ozet` ile yakalanır. Yaş < 5 ise uyarı |
-| `iletisim_kisisi` | id, ogrenci_id, rol (`anne`/`baba`/`diger`/`kendisi`), ad_soyad, telefon, kullanici_id (**yalnızca birincil kişide dolu**), whatsapp_izni, push_izni | Formdaki 3 telefon sütunu + "diğer" kişiler. Birden çok `diger` olabilir |
+| `ogrenci` | id (UUID), ad, soyad, anne_adi, baba_adi, dogum_tarihi, cinsiyet (`kadin`/`erkek`), kimlik_tur (`tc`/`pasaport`), kimlik_no_sifreli, kimlik_no_ozet (tekillik), foto_anahtar, durum (`aktif`/`pasif`), kayit_tarihi, kullanici_id (reşit için), sentetik | Kimlik no şifreli. Yinelenen kayıt `kimlik_no_ozet` ile yakalanır. Yaş < 5 ise uyarı |
+| `iletisim_kisisi` | id, ogrenci_id, rol (`anne`/`baba`/`diger`/`kendisi`), ad_soyad, telefon, kullanici_id (**yalnızca birincil kişide dolu**), birincil, whatsapp_izni, push_izni | Formdaki 3 telefon sütunu + "diğer" kişiler. Birden çok `diger` olabilir |
 
 **Kurallar**
 - Her öğrencinin **tam olarak bir** birincil iletişim kişisi olur (kayıt tamamlanmaz aksi halde).
@@ -57,7 +63,8 @@ Kaynak: müşterinin kayıt formu alanları ve konuşulan kararlar. **Taslaktır
 | `grup` | id, ad, antrenor_id, kontenjan, aktif | |
 | `grup_programi` | id, grup_id, gun, baslangic, bitis | Haftalık yineleyen slot (1 giriş = 90 dk) |
 | `ogrenci_grup` | ogrenci_id, grup_id, baslangic, bitis | Bir öğrenci birden fazla slota bağlanabilir (örn. Çarşamba ve Cuma) |
-| `ders_oturumu` | id, grup_programi_id, tarih, durum | Programdan üretilen somut ders |
+| `ders_oturumu` | id, grup_id, grup_programi_id, tarih, baslangic, bitis, antrenor_id (yerine bakan), durum | Programdan üretilen somut ders |
+| `telafi_plani` | id, oturum_id, ogrenci_id, olusturan_id | Öğrencinin kendi grubu dışındaki bir derse telafi için eklenmesi. Yoklamada `telafi_mi` ile eşleşir |
 
 ### Yoklama ve ders hakkı (defter)
 | Tablo | Önemli alanlar | Not |
@@ -95,7 +102,7 @@ Her hareket tek veritabanı işleminde yazılır. Aynı yoklama iki kez hareket 
 ### Bildirim
 | Tablo | Önemli alanlar | Not |
 |---|---|---|
-| `bildirim` | id, ogrenci_id, alici_iletisim_id, kanal (`whatsapp`/`push`), tur, durum, planli_zaman, deneme, hata | `planli_zaman` geri alma penceresini taşır |
+| `bildirim` | id, ogrenci_id, alici_iletisim_id, kanal (`whatsapp`/`push`), sablon, parametreler, yoklama_id, durum, planli_zaman, gonderim_zamani, deneme, hata | `planli_zaman` geri alma penceresini taşır |
 | `push_abonelik` | id, kullanici_id, endpoint, anahtarlar, cihaz | Çıkışta silinir |
 
 Alıcı her zaman öğrencinin birincil iletişim kişisidir. Birincil kişinin hesabı yoksa yalnızca WhatsApp gider.

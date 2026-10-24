@@ -38,6 +38,19 @@ docker compose exec backend alembic revision --autogenerate -m "aciklama"
 docker compose exec backend alembic upgrade head
 ```
 
+## Çalışma şekli: dal ve otomatik birleştirme
+- Her özellik `ozellik/<kisa-ad>` adlı bir dalda geliştirilir ve GitHub'a gönderilir.
+- GitHub Actions testleri çalıştırır (backend testleri, geçişlerin geri alınabilirliği, frontend derlemesi).
+- **Testler geçerse** dal otomatik olarak `main`'e aktarılır. Geçmezse `main` değişmez.
+- Aktarım yalnızca ileri sarma (fast-forward) ile yapılır. `main` ilerlemişse dalı güncelle:
+  `git fetch origin && git rebase origin/main && git push --force-with-lease`
+
+```bash
+git switch -c ozellik/ogrenci-kayit
+# ... çalış, commit at ...
+git push -u origin ozellik/ogrenci-kayit
+```
+
 ## Yapı
 ```
 backend/    FastAPI, SQLAlchemy, Alembic

@@ -34,48 +34,95 @@ Hedef teslim: Kasım 2026 son haftası. Ön ödeme: 15 Kasım. Başlangıç: mü
 
 Gerçekçi not: Teklifte süre 3–5 hafta. 15 Kasım ön ödeme ile Kasım sonu arasında ~2 hafta var. Bu yüzden **Faz 0'ı ön ödemeden önce, müşteriden bağımsız işlerle yapıyoruz.** (Ön ödemeden önce çalışmaya başlamak sizin ticari kararınızdır.) Aşağıdaki program sıkıdır ve müşteri bilgilerinin geç gelmesi doğrudan teslimi kaydırır.
 
+**İlerleme takibi:** `[x]` tamamlandı, `[ ]` bekliyor. GitHub'da kutucuklar işaretli görünür. Bir iş bitince bu dosya aynı değişiklikle güncellenir.
+
 ### Faz 0: Hazırlık ve temel (23 Eki – 14 Kas)
-- Müşteri bilgi listesini gönder (`musteri-bilgi-listesi.md`)
-- Domain (rotaperformans.com) ve hosting seçimi/satın alma
-- Repo, Docker Compose, PostgreSQL, Alembic, CI, staging ortamı
-- Tasarım sistemi: koyu tema, altın sarısı / siyah / beyaz
-- Kimlik doğrulama, roller, şifre sıfırlama (e-posta/SMTP seçimi)
-- Veritabanı şeması: **müşteri cevapları ve Excel dosyası gelmeden kilitlenmez.** Önce taslak, müşteri verisiyle doğrulanınca v1
-- Güvenlik temelleri: yetki kontrolü, yönetici 2FA, hız sınırı, audit log (bkz. [guvenlik-plani.md](guvenlik-plani.md))
-- Evolution API kurulumu ve test numarası ile deneme
-- **Çıktı:** giriş yapılabilen iskelet, yayına hazır altyapı
+Altyapı
+- [x] Repo, Docker Compose, PostgreSQL, Redis, Alembic
+- [x] Test altyapısı (ayrı test veritabanı, ders hakkı ve yetki testleri)
+- [x] CI iş akışı yazıldı (backend testleri + frontend derlemesi)
+- [x] Dal akışı: `ozellik/*` dalları testler geçerse otomatik `main`'e aktarılır
+- [ ] CI'ın GitHub'da ilk kez yeşil çalıştığı doğrulandı
+- [ ] Staging ortamı (VDS gelince)
+
+Kimlik ve güvenlik
+- [x] Giriş, yenileme, çıkış; rol bazlı yetki (admin, antrenör, veli, öğrenci)
+- [x] Hesap kilidi, IP hız sınırı, denetim kaydı
+- [x] T.C. kimlik şifreleme (AES-GCM) ve tekrar kontrolü (HMAC)
+- [ ] Yönetici 2 adımlı doğrulama (TOTP)
+- [ ] Şifre sıfırlama (e-posta/SMTP seçimi gerekli)
+
+Veri
+- [x] Veritabanı şeması: 19 tablo, kurallar veritabanında, testlerle kanıtlı
+- [ ] Şema, müşteri cevapları ve Excel dosyasıyla doğrulanır, gerekirse güncellenir
+
+Arayüz
+- [x] Koyu tema renk paleti (altın sarısı / siyah / beyaz), giriş ve boş panel sayfası
+- [ ] Bileşen kütüphanesi (shadcn/ui), her dilimde ihtiyaç oldukça eklenir
+
+Dış işler
+- [ ] Müşteri bilgi listesi müşteriye gönderildi
+- [ ] Domain (rotaperformans.com) satın alındı
+- [ ] VDS siparişi verildi
+- [ ] Evolution API deneme kurulumu ve test numarası ile deneme
 
 ### Faz 1: Yönetim çekirdeği (16 – 20 Kas)
-- Öğrenci, veli, antrenör, grup CRUD; pasife alma
-- Veli–öğrenci çoklu ilişki (bir veli, birden çok çocuk)
-- Excel içe aktarma (müşteri dosyası gelince eşleme)
-- Genel bakış ekranı
-- **Çıktı:** yönetici gerçek veriyle öğrenci/grup yönetebilir
+Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince `main`'e girer.
+
+**Dilim 1.1: Öğrenci kaydı ve listesi**
+- [ ] Backend: öğrenci oluştur, listele, getir, güncelle, pasife al
+- [ ] T.C./pasaport şifreli saklama, tekrar kontrolü, 5 yaş altı uyarısı
+- [ ] İletişim kişileri ve birincil kişi kuralı (en az bir birincil, en az bir "diğer")
+- [ ] Rıza kayıtları (aydınlatma, fotoğraf, WhatsApp)
+- [ ] Fotoğraf yükleme (özel depolama, küçük önizleme)
+- [ ] Frontend: öğrenci listesi (arama, filtre, fotoğraf)
+- [ ] Frontend: kayıt formu
+
+**Dilim 1.2: Antrenör ve grup yönetimi**
+- [ ] Antrenör ekleme (hesap oluşturma)
+- [ ] Grup, haftalık program slotları, kontenjan
+- [ ] Öğrenciyi gruba ekle/çıkar, doluluk göstergesi
+
+**Dilim 1.3: Veli ve reşit öğrenci hesapları**
+- [ ] Birincil kişiye hesap açma ve giriş bilgisini iletme
+- [ ] Kardeşler için tek hesap
+- [ ] Reşit öğrenci hesabı ve 18 yaş uyarısı
+
+**Dilim 1.4: Excel içe aktarma**
+- [ ] Müşterinin Excel dosyası gelince sütun eşleme ve aktarma (önizleme + hata raporu)
+
+**Dilim 1.5: Genel bakış ekranı**
+- [ ] Aktif öğrenci, grup doluluğu, bekleyen ödemeler özeti
 
 ### Faz 2: Program, yoklama ve ders hakkı (19 – 24 Kas)
-- Haftalık program ve kontenjan
-- Antrenör takvimi: derse tıkla → öğrenci listesi → yoklama
-- Ders hakkı defteri: aylık 8 ders, telafi sayacı, devir, düzeltme geçmişi
-- Telafi dersi planlama ve düşme mantığı
-- **Çıktı:** uçtan uca yoklama → ders hakkı akışı
+- [ ] Haftalık programdan tarihli ders oturumları üretme
+- [ ] Antrenör takvimi: derse tıkla → öğrenci listesi → yoklama (geldi/gelmedi)
+- [ ] Yoklama sonrası 1 saatlik gecikmeyle telafi hakkı (arka plan işi)
+- [ ] Ders hakkı defteri ekranı, düzeltme geçmişi, manuel düzeltme
+- [ ] Telafi dersi planlama ve düşme mantığı
+- [ ] Yönetici paneli yoklama düzeltme yetkisi
 
-### Faz 3: Aidat ve veli paneli (22 – 26 Kas)
-- Aylık aidat, manuel ödeme girişi, ödendi/bekliyor, ödeme geçmişi
-- Veli paneli: çocuklar, program, ödemeler, kalan/telafi/devreden ders
-- Profil güncelleme, şifre değiştirme
+### Faz 3: Paket, ödeme ve veli paneli (22 – 26 Kas)
+- [ ] Paket tanımları (aylık 8 ders), özel fiyat girişi
+- [ ] "Ödeme alındı" işareti → ders hakkı otomatik yüklenir
+- [ ] Ödeme geçmişi
+- [ ] Veli paneli: çocuklar, program, ödemeler, kalan/telafi ders
+- [ ] Profil güncelleme, şifre değiştirme
 
 ### Faz 4: Bildirimler (24 – 28 Kas)
-- Web Push (VAPID), cihaz kaydı, bildirim ayarları
-- WhatsApp kuyruğu, ban korumaları, geri alma penceresi
-- PWA kurulumu (manifest, simge, ana ekrana ekleme yönlendirmesi)
+- [ ] Web Push (VAPID), cihaz kaydı, bildirim ayarları
+- [ ] WhatsApp kuyruğu, ban korumaları, geri alma penceresi
+- [ ] Bildirimler yalnızca birincil iletişim kişisine
+- [ ] PWA kurulumu (manifest, simge, ana ekrana ekleme yönlendirmesi)
 
 ### Faz 5: Test, güvenlik ve yayına alma (27 Kas – 30 Kas)
-- Yetki testleri, yük denemesi (ör. 300 eşzamanlı kullanıcı)
-- iOS/Android cihaz testleri
-- Şifreli yedekleme ve geri yükleme testi, izleme, KVKK metinleri
-- Güvenlik kontrol listesi turu ve olay müdahale planı ([guvenlik-plani.md](guvenlik-plani.md) bölüm 8–9)
-- Canlıya alma, veri aktarımı, yönetici ve antrenör eğitimi
-- 1 yıllık ücretsiz bakım ve barındırma süresi başlar
+- [ ] Yetki testleri, yük denemesi (ör. 300 eşzamanlı kullanıcı)
+- [ ] iOS/Android cihaz testleri
+- [ ] Şifreli yedekleme ve geri yükleme testi, izleme, KVKK metinleri
+- [ ] Güvenlik kontrol listesi turu ve olay müdahale planı ([guvenlik-plani.md](guvenlik-plani.md) bölüm 8–9)
+- [ ] Dağıtım sonrası duman testi
+- [ ] Canlıya alma, veri aktarımı, yönetici ve antrenör eğitimi
+- [ ] 1 yıllık ücretsiz bakım ve barındırma süresi başlar
 
 ## 4. Test stratejisi (Faz 0'dan itibaren, projeyi inşa ederken)
 
