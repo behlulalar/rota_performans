@@ -198,6 +198,23 @@ export default function OgrenciDetay() {
       </section>
 
       <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
+        <h2 className="font-semibold mb-3">Ders hakkı</h2>
+        <div className="grid grid-cols-2 gap-3 max-w-sm">
+          <div className="rounded-xl border border-cizgi px-4 py-3">
+            <div className="text-xs text-metin-soluk">Kalan ders</div>
+            <div className={`text-2xl font-semibold ${o.ders_hakki.normal < 0 ? "text-hata" : ""}`}>{o.ders_hakki.normal}</div>
+          </div>
+          <div className="rounded-xl border border-cizgi px-4 py-3">
+            <div className="text-xs text-metin-soluk">Telafi</div>
+            <div className={`text-2xl font-semibold ${o.ders_hakki.telafi < 0 ? "text-hata" : ""}`}>{o.ders_hakki.telafi}</div>
+          </div>
+        </div>
+        {(o.ders_hakki.normal < 0 || o.ders_hakki.telafi < 0) && (
+          <p className="mt-3 text-sm text-hata">Paket yüklemesi bekleniyor</p>
+        )}
+      </section>
+
+      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
         <h2 className="font-semibold mb-3">Gruplar</h2>
         {(o.gruplar ?? []).length === 0 ? (
           <p className="text-sm text-metin-soluk">Öğrenci herhangi bir grupta değil.</p>

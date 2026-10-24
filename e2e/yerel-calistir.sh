@@ -67,4 +67,5 @@ echo "==> Playwright"
 cd "$KOK/e2e"
 if [ ! -d node_modules ]; then npm install; fi
 npx playwright install chromium >/dev/null
-npx playwright test "$@"
+# "Bugün" hesabı backend ile aynı saat diliminde yapılsın.
+TZ=Europe/Istanbul npx playwright test "$@"

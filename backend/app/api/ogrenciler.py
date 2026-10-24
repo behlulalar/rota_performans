@@ -8,9 +8,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Res
 from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import audit, kimlik
+from app import audit, ders_hakki, kimlik
 from app import telefon as telefon_modulu
 from app.db import get_session
 from app.depolama import depolama
@@ -26,7 +27,8 @@ from app.models.ogrenci import (
     Riza,
     RizaTuru,
 )
-from app.models.program import Grup, OgrenciGrup
+from app.models.program import DersOturumu, Grup, OgrenciGrup
+from app.models.yoklama import DersHakkiHareketi, Yoklama
 from app.schemas.ogrenci import (
     BirincilIletisim,
     FotoBoyut,
@@ -44,6 +46,7 @@ from app.schemas.ogrenci import (
     ResitUyari,
 )
 from app.schemas.antrenor import SifreSifirlaYanit
+from app.schemas.oturum import DersHakkiYanit, HareketOturum, HareketYanit
 from app.security import sifre_ozeti
 
 router = APIRouter(prefix="/api/ogrenciler", tags=["ogrenciler"])
@@ -182,6 +185,7 @@ async def _detay(session: AsyncSession, ogrenci: Ogrenci) -> OgrenciDetay:
         uyarilar=uyarilar,
         gruplar=[{"id": g.id, "ad": g.ad} for g in gruplar],
         hesap=hesap,
+        ders_hakki=await ders_hakki.bakiye(session, ogrenci.id),
     )
 
 
@@ -196,6 +200,38 @@ def _kimlik_yaz(ogrenci: Ogrenci, tur: KimlikTur, no: str | None) -> None:
     ogrenci.kimlik_tur = tur
     ogrenci.kimlik_no_sifreli = kimlik.sifrele(no) if no else None
     ogrenci.kimlik_no_ozet = kimlik.ozet(no) if no else None
+
+
+@router.get("/{ogrenci_id}/ders-hakki", response_model=DersHakkiYanit)
+async def ders_hakki_getir(
+    ogrenci_id: uuid.UUID, _: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)
+):
+    await _ogrenci_al(session, ogrenci_id)
+    bakiye = await ders_hakki.bakiye(session, ogrenci_id)
+    # İptal satırlarında yoklama_id boştur, oturum bilgisi geri aldığı hareketin yoklamasından gelir.
+    hedef = aliased(DersHakkiHareketi)
+    satirlar = (
+        await session.execute(
+            select(DersHakkiHareketi, DersOturumu.tarih, Grup.ad)
+            .outerjoin(hedef, hedef.id == DersHakkiHareketi.iptal_edilen_id)
+            .outerjoin(Yoklama, Yoklama.id == func.coalesce(DersHakkiHareketi.yoklama_id, hedef.yoklama_id))
+            .outerjoin(DersOturumu, DersOturumu.id == Yoklama.oturum_id)
+            .outerjoin(Grup, Grup.id == DersOturumu.grup_id)
+            .where(DersHakkiHareketi.ogrenci_id == ogrenci_id)
+            .order_by(DersHakkiHareketi.zaman.desc(), DersHakkiHareketi.id.desc())
+            .limit(100)
+        )
+    ).all()
+    return DersHakkiYanit(
+        **bakiye,
+        hareketler=[
+            HareketYanit(
+                id=h.id, zaman=h.zaman, sayac=h.sayac, miktar=h.miktar, tur=h.tur, neden=h.neden,
+                oturum=HareketOturum(tarih=tarih, grup_ad=grup_ad) if tarih is not None else None,
+            )
+            for h, tarih, grup_ad in satirlar
+        ],
+    )
 
 
 @router.get("", response_model=OgrenciListe)

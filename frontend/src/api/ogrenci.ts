@@ -37,6 +37,7 @@ export type OgrenciDetay = OgrenciOzet & {
   rizalar: { tur: RizaTur; verildi: boolean; geri_cekildi: boolean }[];
   uyarilar: string[];
   gruplar: { id: string; ad: string }[];
+  ders_hakki: { normal: number; telafi: number };
   hesap: { giris: string; rol: "veli" | "ogrenci"; aktif: boolean; bagli_ogrenci_sayisi: number } | null;
 };
 

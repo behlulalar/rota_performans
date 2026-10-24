@@ -7,6 +7,7 @@ const MENU = [
   { yol: "/ogrenciler", ad: "Öğrenciler" },
   { yol: "/antrenorler", ad: "Antrenörler" },
   { yol: "/gruplar", ad: "Gruplar" },
+  { yol: "/takvim", ad: "Takvim" },
 ];
 
 export default function YoneticiYerlesim() {

@@ -165,23 +165,41 @@ async def yoklama_olustur():
 async def test_devamsizlik_hareketi_tek_islemde_iki_sayaca_yazilir_ama_tekrarlanamaz():
     o, y = await yoklama_olustur()
     normal = DersHakkiHareketi(
-        ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.devamsizlik, yoklama_id=y.id
+        ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.devamsizlik, yoklama_id=y.id, yoklama_surum=0
     )
     telafi = DersHakkiHareketi(
-        ogrenci_id=o.id, sayac=Sayac.telafi, miktar=1, tur=HareketTuru.devamsizlik, yoklama_id=y.id
+        ogrenci_id=o.id, sayac=Sayac.telafi, miktar=1, tur=HareketTuru.devamsizlik, yoklama_id=y.id, yoklama_surum=0
     )
     await kaydet(normal, telafi)  # farklı sayaç: izinli
     # Arka plan işi yanlışlıkla ikinci kez çalışsa bile hak iki kez doğmaz.
-    await ihlal("uq_hareket_yoklama_tur_sayac", 
+    await ihlal("uq_hareket_yoklama_surum_tur_sayac", 
         DersHakkiHareketi(
-            ogrenci_id=o.id, sayac=Sayac.telafi, miktar=1, tur=HareketTuru.devamsizlik, yoklama_id=y.id
+            ogrenci_id=o.id, sayac=Sayac.telafi, miktar=1, tur=HareketTuru.devamsizlik, yoklama_id=y.id, yoklama_surum=0
         )
+    )
+    # Yoklama düzeltilip yeni sürüme geçince aynı türde hareket yeniden yazılabilir.
+    await kaydet(
+        DersHakkiHareketi(
+            ogrenci_id=o.id, sayac=Sayac.telafi, miktar=1, tur=HareketTuru.devamsizlik, yoklama_id=y.id, yoklama_surum=1
+        )
+    )
+
+
+async def test_yoklama_ve_surum_birlikte_dolu_veya_bos_olmali():
+    o, y = await yoklama_olustur()
+    await ihlal("yoklama_surum_birlikte", 
+        DersHakkiHareketi(ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.ders_kullanimi, yoklama_id=y.id)
+    )
+    await ihlal("yoklama_surum_birlikte", 
+        DersHakkiHareketi(ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.ders_kullanimi, yoklama_surum=0)
     )
 
 
 async def test_defter_degistirilemez_ve_silinemez():
     o, y = await yoklama_olustur()
-    h = DersHakkiHareketi(ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.ders_kullanimi, yoklama_id=y.id)
+    h = DersHakkiHareketi(
+        ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.ders_kullanimi, yoklama_id=y.id, yoklama_surum=0
+    )
     await kaydet(h)
     async with SessionLocal() as s:
         with pytest.raises(DBAPIError, match="degistirilemez"):
@@ -212,7 +230,9 @@ async def test_hareket_kurallari():
 
 async def test_bir_hareket_yalnizca_bir_kez_iptal_edilebilir():
     o, y = await yoklama_olustur()
-    h = DersHakkiHareketi(ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.ders_kullanimi, yoklama_id=y.id)
+    h = DersHakkiHareketi(
+        ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.ders_kullanimi, yoklama_id=y.id, yoklama_surum=0
+    )
     await kaydet(h)
     ters = dict(ogrenci_id=o.id, sayac=Sayac.normal, miktar=1, tur=HareketTuru.iptal, iptal_edilen_id=h.id)
     await kaydet(DersHakkiHareketi(**ters))

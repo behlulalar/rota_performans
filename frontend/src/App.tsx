@@ -11,12 +11,17 @@ import OgrenciDetay from "./pages/OgrenciDetay";
 import OgrenciForm from "./pages/OgrenciForm";
 import OgrenciListe from "./pages/OgrenciListe";
 import Panel from "./pages/Panel";
+import AntrenorYerlesim from "./components/AntrenorYerlesim";
+import Takvim from "./pages/Takvim";
+import Yoklama from "./pages/Yoklama";
 
 function KorumaliRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to="/giris" replace />;
-  return kullanici.rol === "admin" ? <Navigate to="/ogrenciler" replace /> : <Panel />;
+  if (kullanici.rol === "admin") return <Navigate to="/ogrenciler" replace />;
+  if (kullanici.rol === "antrenor") return <Navigate to="/takvim" replace />;
+  return <Panel />;
 }
 
 function YoneticiRota() {
@@ -27,6 +32,16 @@ function YoneticiRota() {
   return <YoneticiYerlesim />;
 }
 
+// Takvim ve yoklama ekranlarını yönetici ve antrenör kullanır; her biri kendi yerleşimini görür.
+function TakvimRota() {
+  const { kullanici, yukleniyor } = useAuth();
+  if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
+  if (!kullanici) return <Navigate to="/giris" replace />;
+  if (kullanici.rol === "admin") return <YoneticiYerlesim />;
+  if (kullanici.rol === "antrenor") return <AntrenorYerlesim />;
+  return <Navigate to="/" replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -34,6 +49,10 @@ export default function App() {
         <Routes>
           <Route path="/giris" element={<Giris />} />
           <Route path="/" element={<KorumaliRota />} />
+          <Route element={<TakvimRota />}>
+            <Route path="/takvim" element={<Takvim />} />
+            <Route path="/oturum/:id" element={<Yoklama />} />
+          </Route>
           <Route element={<YoneticiRota />}>
             <Route path="/genel-bakis" element={<GenelBakis />} />
             <Route path="/ogrenciler" element={<OgrenciListe />} />

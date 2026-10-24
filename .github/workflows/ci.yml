@@ -94,6 +94,8 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       ENV: e2e
+      # Testlerin "bugün" hesabı backend ile aynı günü görsün (backend İstanbul saatini kullanır).
+      TZ: Europe/Istanbul
       DATABASE_URL: postgresql+asyncpg://rota:rota_ci_sifre@localhost:5432/rota_e2e
       REDIS_URL: redis://localhost:6379/2
       JWT_SECRET: ci-icin-gecici-gizli-anahtar

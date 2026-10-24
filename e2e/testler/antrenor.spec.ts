@@ -25,15 +25,14 @@ test.describe("Antrenör", () => {
     await expect(page).toHaveURL(/\/giris$/);
 
     await arayuzdenGiris(page, giris, sifre);
-    await expect(page.getByRole("heading", { name: "Hoş geldiniz" })).toBeVisible();
-    await expect(page.getByText("Antrenör", { exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/takvim$/);
+    await expect(page.getByRole("heading", { name: "Takvim" })).toBeVisible();
     for (const menu of ["Öğrenciler", "Antrenörler", "Gruplar", "Genel bakış"]) {
       await expect(page.getByRole("link", { name: menu })).toHaveCount(0);
     }
 
-    // Yönetici sayfasına doğrudan gitse bile panele döner.
+    // Yönetici sayfasına doğrudan gitse bile takvime döner.
     await page.goto("/antrenorler");
-    await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole("heading", { name: "Hoş geldiniz" })).toBeVisible();
+    await expect(page).toHaveURL(/\/takvim$/);
   });
 });

@@ -43,6 +43,7 @@ Altyapı
 - [x] CI iş akışı yazıldı (backend testleri + frontend derlemesi)
 - [x] Dal akışı: `ozellik/*` dalları testler geçerse otomatik `main`'e aktarılır
 - [x] CI GitHub'da ilk kez yeşil çalıştı (dal akışı ile doğrulandı)
+- [x] Playwright E2E: 8 tarayıcı senaryosu, ayrı veritabanı, CI'da Preview öncesi zorunlu
 - [ ] Staging ortamı (VDS gelince)
 
 Kimlik ve güvenlik
@@ -95,12 +96,13 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [x] Aktif öğrenci, grup doluluğu, bekleyen ödemeler özeti
 
 ### Faz 2: Program, yoklama ve ders hakkı (19 – 24 Kas)
-- [ ] Haftalık programdan tarihli ders oturumları üretme
-- [ ] Antrenör takvimi: derse tıkla → öğrenci listesi → yoklama (geldi/gelmedi)
-- [ ] Yoklama sonrası 1 saatlik gecikmeyle telafi hakkı (arka plan işi)
+- [x] Haftalık programdan tarihli ders oturumları üretme
+- [x] Antrenör takvimi: derse tıkla → öğrenci listesi → yoklama (geldi/gelmedi)
+- [x] Yoklama sonrası 1 saatlik gecikmeyle telafi hakkı (arka plan işi)
 - [ ] Ders hakkı defteri ekranı, düzeltme geçmişi, manuel düzeltme
 - [ ] Telafi dersi planlama ve düşme mantığı
-- [ ] Yönetici paneli yoklama düzeltme yetkisi
+- [x] Yönetici paneli yoklama düzeltme yetkisi
+- [x] Antrenör yoklaması ders başlamadan 15 dakika önce açılır (yönetici muaf)
 
 ### Faz 3: Paket, ödeme ve veli paneli (22 – 26 Kas)
 - [ ] Paket tanımları (aylık 8 ders), özel fiyat girişi

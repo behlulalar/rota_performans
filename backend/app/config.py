@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     cors_origins: str = ""
     # Yüklenen fotoğrafların kök dizini (herkese açık sunulmaz, yalnızca API üzerinden okunur).
     dosya_dizini: str = "/app/uploads"
+    # "Bugün" ve ders saatleri bu saat dilimine göre hesaplanır.
+    saat_dilimi: str = "Europe/Istanbul"
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -146,3 +146,57 @@ export async function ogrenciOlusturAPI(page: Page, token: string, onek = "Api")
   const govde = (await yanit.json()) as { id: string };
   return { id: govde.id, ad, soyad, telefon, tc };
 }
+
+export type YoklamaOrtami = {
+  antrenor: { giris: string; sifre: string; adSoyad: string };
+  grupAdi: string;
+  geldi: SahteOgrenci;
+  gelmedi: SahteOgrenci;
+};
+
+/**
+ * Yönetici API'siyle yoklama senaryosunu kurar: antrenör, bugünün haftanın gününde programı olan
+ * grup, iki öğrenci ve bugüne ait oturum. Sonunda çerezleri temizler (antrenör temiz girer).
+ */
+export async function yoklamaOrtamiKur(page: Page): Promise<YoklamaOrtami> {
+  const token = await yoneticiApiGirisi(page);
+  const yetki = { Authorization: `Bearer ${token}` };
+  const k = benzersiz();
+  const adSoyad = `Antrenor ${k}`;
+  const giris = `antrenor.${k}@example.com`;
+
+  const a = await page.request.post("/api/antrenorler", { headers: yetki, data: { ad_soyad: adSoyad, giris } });
+  expect(a.status(), await a.text()).toBe(201);
+  const antrenor = (await a.json()) as { antrenor: { id: string }; gecici_sifre: string };
+
+  const bugun = new Date();
+  const gun = ((bugun.getDay() + 6) % 7) + 1; // isoweekday: Pazartesi=1 ... Pazar=7
+  const grupAdi = `Yoklama ${k}`;
+  const g = await page.request.post("/api/gruplar", {
+    headers: yetki,
+    data: {
+      ad: grupAdi,
+      antrenor_id: antrenor.antrenor.id,
+      kontenjan: 10,
+      // 00:00–23:59: antrenörün yoklaması (15 dk kuralı) günün her saatinde açık olsun.
+      program: [{ gun, baslangic: "00:00", bitis: "23:59" }],
+    },
+  });
+  expect(g.status(), await g.text()).toBe(201);
+  const grup = (await g.json()) as { id: string };
+
+  const geldi = await ogrenciOlusturAPI(page, token, "Geldi");
+  const gelmedi = await ogrenciOlusturAPI(page, token, "Gelmedi");
+  for (const o of [geldi, gelmedi]) {
+    const e = await page.request.post(`/api/gruplar/${grup.id}/ogrenciler`, { headers: yetki, data: { ogrenci_id: o.id } });
+    expect(e.ok(), await e.text()).toBeTruthy();
+  }
+
+  const t = `${bugun.getFullYear()}-${String(bugun.getMonth() + 1).padStart(2, "0")}-${String(bugun.getDate()).padStart(2, "0")}`;
+  const u = await page.request.post("/api/oturumlar/uret", { headers: yetki, data: { baslangic: t, bitis: t } });
+  expect(u.ok(), await u.text()).toBeTruthy();
+  expect(((await u.json()) as { olusturulan: number }).olusturulan).toBeGreaterThanOrEqual(1);
+
+  await page.context().clearCookies();
+  return { antrenor: { giris, sifre: antrenor.gecici_sifre, adSoyad }, grupAdi, geldi, gelmedi };
+}

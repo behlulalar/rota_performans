@@ -12,6 +12,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"], ["html", { open: "never" }]],
   use: {
+    // Tarayıcı da backend gibi İstanbul saatini kullansın (gün sınırlarında tutarlılık).
+    timezoneId: "Europe/Istanbul",
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:5175",
     locale: "tr-TR",
     trace: "retain-on-failure",

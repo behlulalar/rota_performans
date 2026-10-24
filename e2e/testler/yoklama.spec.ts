@@ -1,0 +1,38 @@
+import { arayuzdenGiris, expect, test, yoklamaOrtamiKur, YONETICI_GIRIS, YONETICI_SIFRE } from "../yardimci";
+
+test.describe("Yoklama", () => {
+  test("antrenör takvimden oturumu açar, yoklamayı alır; yönetici bakiyeyi düşmüş görür", async ({ page }) => {
+    const o = await yoklamaOrtamiKur(page);
+
+    await arayuzdenGiris(page, o.antrenor.giris, o.antrenor.sifre);
+    await expect(page).toHaveURL(/\/takvim$/);
+    await expect(page.getByRole("link", { name: "Öğrenciler" })).toHaveCount(0);
+
+    const kart = page.getByRole("link", { name: new RegExp(o.grupAdi) });
+    await expect(kart).toBeVisible();
+    await expect(kart).toContainText("2 öğrenci");
+    await kart.click();
+
+    await expect(page).toHaveURL(/\/oturum\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole("heading", { name: o.grupAdi })).toBeVisible();
+    const satir = (ad: string) => page.getByRole("listitem", { name: new RegExp(ad) });
+    await satir(o.geldi.ad).getByRole("button", { name: "Geldi", exact: true }).click();
+    await satir(o.gelmedi.ad).getByRole("button", { name: "Gelmedi", exact: true }).click();
+    await page.getByRole("button", { name: "Yoklamayı kaydet (2/2 işaretli)" }).click();
+
+    await expect(page.getByRole("status")).toContainText("Yoklama kaydedildi");
+    await expect(page.getByText("Yoklama alındı")).toBeVisible();
+    await expect(satir(o.geldi.ad).getByRole("button", { name: "Geldi", exact: true })).toHaveAttribute("aria-pressed", "true");
+
+    await page.getByRole("link", { name: "← Takvim" }).click();
+    await expect(page.getByRole("link", { name: new RegExp(o.grupAdi) })).toContainText("Yoklama alındı");
+
+    // Yönetici: geldi olan öğrencinin kalan dersi -1'dir (paket henüz yüklenmedi).
+    await page.getByRole("button", { name: "Çıkış" }).click();
+    await arayuzdenGiris(page, YONETICI_GIRIS, YONETICI_SIFRE);
+    await expect(page).toHaveURL(/\/ogrenciler$/);
+    await page.goto(`/ogrenciler/${o.geldi.id}`);
+    await expect(page.getByText("Kalan ders").locator("xpath=following-sibling::div")).toHaveText("-1");
+    await expect(page.getByText("Paket yüklemesi bekleniyor")).toBeVisible();
+  });
+});

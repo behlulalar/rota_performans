@@ -64,6 +64,9 @@ class Yoklama(Base):
     # "Gelmedi" için telafi hakkı işaretlemeden 1 saat sonra doğar. Arka plan işi bu alanlara bakar.
     hareket_planli_zaman: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     hareket_islendi: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Durum her değiştiğinde 1 artar. Defter hareketleri hangi sürüme ait olduğunu taşır, böylece
+    # geldi -> gelmedi -> geldi gibi düzeltmelerde aynı türde ikinci hareket tekil kısıta takılmaz.
+    surum: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
 
     __table_args__ = (
         UniqueConstraint("oturum_id", "ogrenci_id", name="uq_yoklama_oturum_ogrenci"),
@@ -95,6 +98,8 @@ class DersHakkiHareketi(Base):
     ogrenci_paketi_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("ogrenci_paketi.id", ondelete="RESTRICT"), index=True
     )
+    # Hareketin yazıldığı andaki yoklama sürümü (yoklama_id doluysa dolu, değilse boş).
+    yoklama_surum: Mapped[int | None] = mapped_column(Integer)
     # Bu kayıt başka bir hareketi geri alıyorsa onun kimliği (tur = iptal).
     iptal_edilen_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("ders_hakki_hareketi.id", ondelete="RESTRICT")
@@ -111,10 +116,12 @@ class DersHakkiHareketi(Base):
         CheckConstraint("miktar <> 0", name="miktar_sifir_degil"),
         CheckConstraint("(tur = 'iptal') = (iptal_edilen_id IS NOT NULL)", name="iptal_baglantisi"),
         CheckConstraint("tur <> 'manuel_duzeltme' OR (neden IS NOT NULL AND length(trim(neden)) > 0)", name="duzeltme_nedeni"),
-        # Aynı yoklama aynı sayaca aynı türde ikinci kez hareket yazamaz (arka plan işi tekrar çalışsa bile).
+        CheckConstraint("(yoklama_id IS NULL) = (yoklama_surum IS NULL)", name="yoklama_surum_birlikte"),
+        # Aynı yoklama sürümü aynı sayaca aynı türde ikinci kez hareket yazamaz (arka plan işi tekrar çalışsa bile).
         Index(
-            "uq_hareket_yoklama_tur_sayac",
+            "uq_hareket_yoklama_surum_tur_sayac",
             "yoklama_id",
+            "yoklama_surum",
             "tur",
             "sayac",
             unique=True,
