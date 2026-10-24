@@ -1,5 +1,7 @@
 # Rota Performans Akademi
 
+[![CI](https://github.com/behlulalar/rota_performans/actions/workflows/ci.yml/badge.svg)](https://github.com/behlulalar/rota_performans/actions/workflows/ci.yml)
+
 Yüzme kulübü yönetim sistemi. Planlar ve kararlar: [docs/](docs/).
 
 ## Geliştirme ortamı
@@ -41,7 +43,7 @@ docker compose exec backend alembic upgrade head
 ## Çalışma şekli: dal ve otomatik birleştirme
 - Her özellik `ozellik/<kisa-ad>` adlı bir dalda geliştirilir ve GitHub'a gönderilir.
 - GitHub Actions testleri çalıştırır (backend testleri, geçişlerin geri alınabilirliği, frontend derlemesi).
-- **Testler geçerse** dal otomatik olarak `main`'e aktarılır. Geçmezse `main` değişmez.
+- **Testler geçerse** dal önce **Preview** ortamına kaydedilir, sonra **Production** adımında `main`'e aktarılır. Geçmezse `main` değişmez. Durum GitHub'da sağ kenardaki *Deployments* bölümünde görünür.
 - Aktarım yalnızca ileri sarma (fast-forward) ile yapılır. `main` ilerlemişse dalı güncelle:
   `git fetch origin && git rebase origin/main && git push --force-with-lease`
 

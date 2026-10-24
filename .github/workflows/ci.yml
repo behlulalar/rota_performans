@@ -70,11 +70,32 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-  birlestir:
-    name: Testler geçtiyse main'e aktar
+  # GitHub'ın sağ kenarındaki "Deployments" bölümünü besler. Sunucu (VDS) hazır olunca
+  # bu iş dalı staging ortamına kuracak; şimdilik testleri geçmiş sürümü kaydeder.
+  onizleme:
+    name: Preview
     needs: [backend, frontend]
     if: startsWith(github.ref, 'refs/heads/ozellik/')
     runs-on: ubuntu-latest
+    environment:
+      name: Preview
+    steps:
+      - name: Özet
+        run: |
+          {
+            echo "### Preview: ${GITHUB_REF_NAME}"
+            echo "- Commit: \`${GITHUB_SHA::7}\`"
+            echo "- Backend testleri ve frontend derlemesi geçti"
+            echo "- Staging sunucusu henüz yok; kurulunca bu adım otomatik dağıtım yapacak"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  birlestir:
+    name: Production (main'e aktar)
+    needs: [onizleme]
+    if: startsWith(github.ref, 'refs/heads/ozellik/')
+    runs-on: ubuntu-latest
+    environment:
+      name: Production
     permissions:
       contents: write
     steps:
@@ -91,3 +112,4 @@ jobs:
             exit 1
           fi
           git push origin HEAD:main
+          echo "### Production: \`${GITHUB_SHA::7}\` main'e aktarıldı" >> "$GITHUB_STEP_SUMMARY"
