@@ -140,7 +140,7 @@ export default function OgrenciDetay() {
   const satirSinif = "flex flex-wrap items-center justify-between gap-2 px-6 py-2 min-h-[52px] border-t border-cizgi first:border-t-0 text-sm";
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="max-w-6xl space-y-4">
       <div>
         <Link to="/ogrenciler" className="inline-flex items-center min-h-11 md:min-h-0 text-[13px] text-metin-soluk hover:text-metin">← Öğrenciler</Link>
       </div>

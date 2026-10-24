@@ -92,7 +92,7 @@ export default function GrupDetay() {
     });
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="max-w-6xl space-y-4">
       <div>
         <Link to="/gruplar" className="inline-flex items-center min-h-11 md:min-h-0 text-[13px] text-metin-soluk hover:text-metin">← Gruplar</Link>
       </div>

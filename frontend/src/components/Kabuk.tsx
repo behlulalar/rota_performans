@@ -254,7 +254,7 @@ export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler
           )}
 
           <main
-            className={`px-4 md:px-8 pt-6 md:py-8 max-w-[1280px] ${
+            className={`px-4 md:px-8 pt-6 md:py-8 max-w-[1800px] ${
               sekmeler ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8" : "pb-8"
             }`}
           >
