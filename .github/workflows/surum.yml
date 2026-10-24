@@ -1,0 +1,25 @@
+name: Sürüm
+
+# "v" ile başlayan bir etiket gönderildiğinde GitHub Release oluşturur.
+# Sürüm notu, etiketin açıklamasından (git tag -a ... -m "...") alınır.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  surum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Release oluştur
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --force --tags
+          NOT=$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME")
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "$NOT" --verify-tag

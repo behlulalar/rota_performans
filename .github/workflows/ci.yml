@@ -4,7 +4,8 @@ name: CI
 # dalı main'e aktarır. main'e doğrudan gönderim de test edilir.
 on:
   push:
-    branches: ["**"]
+    # arsiv/* dalları yalnızca geçmişi göstermek için tutulur, test ve birleştirme çalışmaz.
+    branches: ["**", "!arsiv/**"]
 
 concurrency:
   group: ci-${{ github.ref }}

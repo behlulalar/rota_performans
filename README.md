@@ -47,6 +47,9 @@ docker compose exec backend alembic upgrade head
 - Aktarım yalnızca ileri sarma (fast-forward) ile yapılır. `main` ilerlemişse dalı güncelle:
   `git fetch origin && git rebase origin/main && git push --force-with-lease`
 
+- Dallar `main`'e girdikten sonra **silinmez**, GitHub'da Branches sekmesinde geçmiş olarak kalır.
+- Her faz bitince `v0.N.0` biçiminde bir **sürüm etiketi** atılır. Etiket gönderilince GitHub Actions o fazın notlarıyla bir **Release** oluşturur.
+
 ```bash
 git switch -c ozellik/ogrenci-kayit
 # ... çalış, commit at ...
