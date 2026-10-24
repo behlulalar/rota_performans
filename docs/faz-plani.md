@@ -70,13 +70,13 @@ Dış işler
 Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince `main`'e girer.
 
 **Dilim 1.1: Öğrenci kaydı ve listesi**
-- [ ] Backend: öğrenci oluştur, listele, getir, güncelle, pasife al
-- [ ] T.C./pasaport şifreli saklama, tekrar kontrolü, 5 yaş altı uyarısı
-- [ ] İletişim kişileri ve birincil kişi kuralı (en az bir birincil, en az bir "diğer")
-- [ ] Rıza kayıtları (aydınlatma, fotoğraf, WhatsApp)
-- [ ] Fotoğraf yükleme (özel depolama, küçük önizleme)
-- [ ] Frontend: öğrenci listesi (arama, filtre, fotoğraf)
-- [ ] Frontend: kayıt formu
+- [x] Backend: öğrenci oluştur, listele, getir, güncelle, pasife al
+- [x] T.C./pasaport şifreli saklama, tekrar kontrolü, 5 yaş altı uyarısı
+- [x] İletişim kişileri ve birincil kişi kuralı (en az bir birincil, en az bir "diğer")
+- [x] Rıza kayıtları (aydınlatma, fotoğraf, WhatsApp)
+- [x] Fotoğraf yükleme (özel depolama, küçük önizleme)
+- [x] Frontend: öğrenci listesi (arama, filtre, fotoğraf)
+- [x] Frontend: kayıt formu
 
 **Dilim 1.2: Antrenör ve grup yönetimi**
 - [ ] Antrenör ekleme (hesap oluşturma)

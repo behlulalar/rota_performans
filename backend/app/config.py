@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     refresh_token_days: int = 14
     cookie_secure: bool = True
     cors_origins: str = ""
+    # Yüklenen fotoğrafların kök dizini (herkese açık sunulmaz, yalnızca API üzerinden okunur).
+    dosya_dizini: str = "/app/uploads"
 
     @property
     def cors_origin_list(self) -> list[str]:

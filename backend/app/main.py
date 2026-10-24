@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, saglik
+from app.api import auth, ogrenciler, saglik
 from app.config import settings
 
 app = FastAPI(
@@ -27,10 +27,11 @@ async def guvenlik_basliklari(request: Request, call_next):
     yanit.headers["X-Content-Type-Options"] = "nosniff"
     yanit.headers["X-Frame-Options"] = "DENY"
     yanit.headers["Referrer-Policy"] = "no-referrer"
-    if request.url.path.startswith("/api"):
+    if request.url.path.startswith("/api") and "Cache-Control" not in yanit.headers:
         yanit.headers["Cache-Control"] = "no-store"
     return yanit
 
 
 app.include_router(saglik.router)
 app.include_router(auth.router)
+app.include_router(ogrenciler.router)
