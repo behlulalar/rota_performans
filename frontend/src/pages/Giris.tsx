@@ -41,7 +41,9 @@ export default function Giris() {
               value={giris}
               onChange={(e) => setGiris(e.target.value)}
               autoComplete="username"
-              inputMode="email"
+              type="text"
+              autoCapitalize="none"
+              placeholder="05xx xxx xx xx veya e-posta"
               required
             />
           </label>

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { aktifEt, fotoSil, fotoYukle, kimlikGetir, ogrenciGetir, pasifeAl, type OgrenciDetay as Detay, type RizaTur } from "../api/ogrenci";
+import { aktifEt, fotoSil, fotoYukle, hesapAc, hesapKaldir, hesapSifreSifirla, kimlikGetir, ogrenciGetir, pasifeAl, type OgrenciDetay as Detay, type RizaTur } from "../api/ogrenci";
 import { gruplariGetir, ogrenciEkle, type GrupOzet } from "../api/grup";
+import GeciciSifreKutusu from "../components/GeciciSifreKutusu";
+import ResitGecisi from "../components/ResitGecisi";
 import DurumRozeti from "../components/DurumRozeti";
 import OgrenciFoto from "../components/OgrenciFoto";
 import { hataMesaji, ROL_ETIKET, tarihBicimle } from "../lib/dogrulama";
@@ -28,6 +30,10 @@ export default function OgrenciDetay() {
   const [mesgul, setMesgul] = useState(false);
   const [grupSecenekleri, setGrupSecenekleri] = useState<GrupOzet[] | null>(null);
   const [secilenGrup, setSecilenGrup] = useState("");
+  const [hesapGiris, setHesapGiris] = useState("");
+  const [sifre, setSifre] = useState<{ baslik: string; deger: string } | null>(null);
+  const [hesapBilgi, setHesapBilgi] = useState<string | null>(null);
+  const [resitAcik, setResitAcik] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -84,6 +90,34 @@ export default function OgrenciDetay() {
       setKimlik((await kimlikGetir(id)).kimlik_no);
     });
 
+  const birincil = o.iletisim_kisileri.find((k) => k.birincil) ?? null;
+  const hesapEngeli = o.durum !== "aktif" ? "Öğrenci pasif olduğu için hesap açılamaz." : !birincil ? "Birincil iletişim kişisi olmadığı için hesap açılamaz." : null;
+  const resitUyarisi = (u: string) => u.toLocaleLowerCase("tr").includes("reşit");
+
+  const hesapAcIslem = () =>
+    islem(async () => {
+      setHesapBilgi(null);
+      const y = await hesapAc(id, hesapGiris.trim() || undefined);
+      setO(await ogrenciGetir(id));
+      setHesapGiris("");
+      if (y.gecici_sifre) setSifre({ baslik: `${y.giris} için geçici şifre`, deger: y.gecici_sifre });
+      if (!y.yeni_hesap) setHesapBilgi("Bu giriş bilgisiyle mevcut bir veli hesabı vardı; öğrenci o hesaba bağlandı (kardeş). Yeni şifre oluşturulmadı.");
+    });
+
+  const hesapSifirla = () =>
+    islem(async () => {
+      if (!window.confirm("Hesap şifresi sıfırlansın mı? Eski şifre geçersiz olur.")) return;
+      const y = await hesapSifreSifirla(id);
+      setSifre({ baslik: `${o.hesap?.giris ?? "Hesap"} için yeni geçici şifre`, deger: y.gecici_sifre });
+    });
+
+  const hesapSil = () =>
+    islem(async () => {
+      if (!window.confirm("Hesap bu öğrenciden ayrılacak. Başka öğrenciye bağlı değilse giriş kapatılır. Devam edilsin mi?")) return;
+      setHesapBilgi(null);
+      setO(await hesapKaldir(id));
+    });
+
   const fotoDegistir = (dosya: File | undefined) =>
     islem(async () => {
       if (!dosya) return;
@@ -117,7 +151,14 @@ export default function OgrenciDetay() {
 
       {o.uyarilar.length > 0 && (
         <div className="rounded-xl border border-altin/60 bg-altin/10 px-4 py-3 text-sm text-altin-acik space-y-1">
-          {o.uyarilar.map((u) => <p key={u}>{u}</p>)}
+          {o.uyarilar.map((u) => (
+            <div key={u} className="flex flex-wrap items-center justify-between gap-2">
+              <p>{u}</p>
+              {resitUyarisi(u) && (
+                <button className={dugme} onClick={() => { setHesapBilgi(null); setResitAcik(true); }}>Reşit geçişi yap</button>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -217,6 +258,49 @@ export default function OgrenciDetay() {
       </section>
 
       <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
+        <h2 className="font-semibold mb-3">Panel hesabı</h2>
+        {hesapBilgi && <p role="status" className="mb-3 rounded-lg border border-altin/60 bg-altin/10 text-altin-acik text-sm px-3 py-2">{hesapBilgi}</p>}
+        {o.hesap === null ? (
+          <div className="space-y-3 text-sm">
+            <p className="text-metin-soluk">
+              Panel hesabı yalnızca birincil iletişim kişisine açılır: {birincil ? birincil.ad_soyad : "—"}
+            </p>
+            <label className="block">
+              <span className="text-metin-soluk">Giriş bilgisi (boş bırakılırsa birincil kişinin telefonu kullanılır)</span>
+              <input
+                className="mt-1 w-full rounded-lg bg-zemin border border-cizgi px-3 py-2 outline-none focus:border-altin disabled:opacity-50"
+                value={hesapGiris}
+                onChange={(e) => setHesapGiris(e.target.value)}
+                placeholder={birincil?.telefon ?? ""}
+                autoCapitalize="none"
+                disabled={!!hesapEngeli}
+              />
+            </label>
+            {hesapEngeli && <p className="text-hata">{hesapEngeli}</p>}
+            <button className={dugme} disabled={mesgul || !!hesapEngeli} onClick={() => void hesapAcIslem()}>Hesap aç</button>
+          </div>
+        ) : (
+          <div className="space-y-3 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{o.hesap.giris}</span>
+              <span className="text-metin-soluk">({o.hesap.rol === "veli" ? "Veli" : "Öğrenci"})</span>
+              <span className={`rounded-full border px-2.5 py-0.5 text-xs ${o.hesap.aktif ? "border-basari/50 text-basari" : "border-cizgi text-metin-soluk"}`}>
+                {o.hesap.aktif ? "Aktif" : "Pasif"}
+              </span>
+            </div>
+            {o.hesap.bagli_ogrenci_sayisi > 1 && (
+              <p className="text-metin-soluk">Bu hesap {o.hesap.bagli_ogrenci_sayisi} öğrenciye bağlı (kardeşler).</p>
+            )}
+            <p className="text-metin-soluk">Hesap bu öğrenciden ayrılır. Başka öğrenciye bağlı değilse giriş kapatılır.</p>
+            <div className="flex flex-wrap gap-2">
+              <button className={dugme} disabled={mesgul} onClick={() => void hesapSifirla()}>Şifre sıfırla</button>
+              <button className={dugme} disabled={mesgul} onClick={() => void hesapSil()}>Hesabı kaldır</button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
         <h2 className="font-semibold mb-3">Rızalar</h2>
         <ul className="space-y-1.5 text-sm">
           {o.rizalar.map((r) => (
@@ -229,6 +313,25 @@ export default function OgrenciDetay() {
           ))}
         </ul>
       </section>
+      {sifre && (
+        <GeciciSifreKutusu
+          sifre={sifre.deger}
+          baslik={sifre.baslik}
+          uyari="Bu şifre yalnızca şimdi görünür. Veliye/öğrenciye güvenli bir yoldan iletin."
+          onKapat={() => setSifre(null)}
+        />
+      )}
+      {resitAcik && (
+        <ResitGecisi
+          ogrenci={o}
+          onKapat={() => setResitAcik(false)}
+          onTamam={(d) => {
+            setO(d);
+            setResitAcik(false);
+            setHesapBilgi("Reşit geçişi yapıldı. Şimdi öğrenciye kendi panel hesabını açabilirsiniz.");
+          }}
+        />
+      )}
     </div>
   );
 }

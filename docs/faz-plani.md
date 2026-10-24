@@ -84,9 +84,9 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [x] Öğrenciyi gruba ekle/çıkar, doluluk göstergesi
 
 **Dilim 1.3: Veli ve reşit öğrenci hesapları**
-- [ ] Birincil kişiye hesap açma ve giriş bilgisini iletme
-- [ ] Kardeşler için tek hesap
-- [ ] Reşit öğrenci hesabı ve 18 yaş uyarısı
+- [x] Birincil kişiye hesap açma ve giriş bilgisini iletme
+- [x] Kardeşler için tek hesap
+- [x] Reşit öğrenci hesabı ve 18 yaş uyarısı
 
 **Dilim 1.4: Excel içe aktarma**
 - [ ] Müşterinin Excel dosyası gelince sütun eşleme ve aktarma (önizleme + hata raporu)

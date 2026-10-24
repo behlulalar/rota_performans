@@ -11,9 +11,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit, kimlik
+from app import telefon as telefon_modulu
 from app.db import get_session
 from app.depolama import depolama
 from app.deps import rol_gerekli
+from app.api.antrenorler import _giris_hazirla, _oturumlari_iptal_et, gecici_sifre_uret
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import (
     IletisimKisisi,
@@ -28,6 +30,9 @@ from app.models.program import Grup, OgrenciGrup
 from app.schemas.ogrenci import (
     BirincilIletisim,
     FotoBoyut,
+    HesapAcGirdi,
+    HesapAcYanit,
+    HesapBilgi,
     IletisimKisisiGirdi,
     KimlikYanit,
     OgrenciDetay,
@@ -35,7 +40,11 @@ from app.schemas.ogrenci import (
     OgrenciListe,
     OgrenciOlustur,
     OgrenciOzet,
+    ResitGecisiGirdi,
+    ResitUyari,
 )
+from app.schemas.antrenor import SifreSifirlaYanit
+from app.security import sifre_ozeti
 
 router = APIRouter(prefix="/api/ogrenciler", tags=["ogrenciler"])
 
@@ -46,7 +55,6 @@ KUCUK_KENAR = 160
 JPEG_KALITE = 82
 Image.MAX_IMAGE_PIXELS = 60_000_000
 
-_TELEFON = re.compile(r"^\+?\d{7,15}$")
 _PASAPORT = re.compile(r"^[A-Z0-9]{5,20}$")
 GECERSIZ_TC = "Geçersiz T.C. kimlik numarası"
 KIMLIK_TEKRAR = "Bu kimlik numarasıyla kayıtlı bir öğrenci var"
@@ -68,10 +76,10 @@ def _yas(dogum: date) -> int:
 
 
 def _telefon_normalize(telefon: str) -> str:
-    sade = "".join(c for c in telefon if c not in " -()\t")
-    if not _TELEFON.fullmatch(sade):
-        raise _hata422("Geçersiz telefon numarası")
-    return sade
+    try:
+        return telefon_modulu.normalize(telefon)
+    except ValueError as hata:
+        raise _hata422(str(hata))
 
 
 def _kisileri_dogrula(kisiler: list[IletisimKisisiGirdi]) -> None:
@@ -152,6 +160,17 @@ async def _detay(session: AsyncSession, ogrenci: Ogrenci) -> OgrenciDetay:
             .order_by(Grup.ad, Grup.id)
         )
     ).all()
+    hesap = None
+    if birincil is not None and birincil.kullanici_id is not None:
+        k = await session.get(Kullanici, birincil.kullanici_id)
+        bagli = (
+            await session.execute(
+                select(func.count(func.distinct(IletisimKisisi.ogrenci_id))).where(
+                    IletisimKisisi.kullanici_id == k.id
+                )
+            )
+        ).scalar_one()
+        hesap = HesapBilgi(giris=k.giris, rol=k.rol, aktif=k.aktif, bagli_ogrenci_sayisi=bagli)
     return OgrenciDetay(
         **_ozet(ogrenci, birincil),
         anne_adi=ogrenci.anne_adi,
@@ -162,6 +181,7 @@ async def _detay(session: AsyncSession, ogrenci: Ogrenci) -> OgrenciDetay:
         rizalar=[{"tur": r.tur, "verildi": r.verildi, "geri_cekildi": r.geri_cekildi} for r in rizalar],
         uyarilar=uyarilar,
         gruplar=[{"id": g.id, "ad": g.ad} for g in gruplar],
+        hesap=hesap,
     )
 
 
@@ -282,6 +302,31 @@ async def olustur(
         raise HTTPException(status.HTTP_409_CONFLICT, KIMLIK_TEKRAR)
     await session.refresh(ogrenci)
     return await _detay(session, ogrenci)
+
+
+@router.get("/resit-uyarilari", response_model=list[ResitUyari])
+async def resit_uyarilari(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
+    bugun = date.today()
+    satirlar = await session.execute(
+        select(Ogrenci, IletisimKisisi)
+        .outerjoin(
+            IletisimKisisi, (IletisimKisisi.ogrenci_id == Ogrenci.id) & IletisimKisisi.birincil.is_(True)
+        )
+        .where(
+            Ogrenci.sentetik.is_(False),
+            Ogrenci.durum == OgrenciDurum.aktif,
+            Ogrenci.dogum_tarihi <= date(bugun.year - 18, 12, 31),
+        )
+        .order_by(Ogrenci.soyad, Ogrenci.ad, Ogrenci.id)
+    )
+    return [
+        ResitUyari(
+            id=o.id, ad=o.ad, soyad=o.soyad, yas=_yas(o.dogum_tarihi),
+            birincil_rol=b.rol if b else None, veli_hesabi_var=b is not None and b.kullanici_id is not None,
+        )
+        for o, b in satirlar.all()
+        if _yas(o.dogum_tarihi) >= 18 and (b is None or b.rol != IletisimRolu.kendisi)
+    ]
 
 
 @router.get("/{ogrenci_id}", response_model=OgrenciDetay)
@@ -564,3 +609,182 @@ async def foto_sil(
         await session.commit()
         await asyncio.to_thread(depolama.sil, eski)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+HESAP_VAR = "Bu öğrencinin panel hesabı zaten var"
+HESAP_YOK = "Öğrencinin panel hesabı yok"
+GIRIS_BASKA_TUR = "Bu giriş bilgisi başka türde bir hesapta kayıtlı"
+
+
+async def _birincil_al(session: AsyncSession, ogrenci: Ogrenci) -> IletisimKisisi | None:
+    return (
+        await session.execute(
+            select(IletisimKisisi)
+            .where(IletisimKisisi.ogrenci_id == ogrenci.id, IletisimKisisi.birincil.is_(True))
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+
+
+async def _hesabi_ayir(session: AsyncSession, ogrenci: Ogrenci, birincil: IletisimKisisi) -> None:
+    """Hesabı bu öğrenciden ayırır; başka bağı kalmadıysa hesabı pasifleştirir ve oturumları iptal eder."""
+    kullanici_id = birincil.kullanici_id
+    birincil.kullanici_id = None
+    if ogrenci.kullanici_id == kullanici_id:
+        ogrenci.kullanici_id = None
+    await session.flush()
+    baska_kisi = (
+        await session.execute(select(IletisimKisisi.id).where(IletisimKisisi.kullanici_id == kullanici_id).limit(1))
+    ).first()
+    baska_ogrenci = (
+        await session.execute(select(Ogrenci.id).where(Ogrenci.kullanici_id == kullanici_id).limit(1))
+    ).first()
+    if baska_kisi is None and baska_ogrenci is None:
+        kullanici = await session.get(Kullanici, kullanici_id)
+        if kullanici is not None:
+            kullanici.aktif = False
+            await _oturumlari_iptal_et(session, kullanici.id)
+
+
+@router.post("/{ogrenci_id}/hesap", response_model=HesapAcYanit)
+async def hesap_ac(
+    ogrenci_id: uuid.UUID,
+    govde: HesapAcGirdi,
+    request: Request,
+    yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    ogrenci = await _ogrenci_al(session, ogrenci_id)
+    if ogrenci.durum != OgrenciDurum.aktif:
+        raise _hata422("Pasif öğrenci için panel hesabı açılamaz")
+    birincil = await _birincil_al(session, ogrenci)
+    if birincil is None:
+        raise _hata422("Öğrencinin birincil iletişim kişisi yok")
+    if birincil.kullanici_id is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, HESAP_VAR)
+    giris = _giris_hazirla(govde.giris or birincil.telefon)
+    rol = Rol.ogrenci if birincil.rol == IletisimRolu.kendisi else Rol.veli
+
+    kullanici = (await session.execute(select(Kullanici).where(Kullanici.giris == giris))).scalar_one_or_none()
+    sifre = None
+    if kullanici is not None:
+        if kullanici.rol != rol:
+            raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_BASKA_TUR)
+        if rol == Rol.ogrenci:
+            # Öğrenci hesabı yalnız tek öğrenciye bağlanabilir.
+            dolu = (
+                await session.execute(
+                    select(Ogrenci.id).where(Ogrenci.kullanici_id == kullanici.id, Ogrenci.id != ogrenci.id).limit(1)
+                )
+            ).first()
+            if dolu is not None:
+                raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_BASKA_TUR)
+        kullanici.aktif = True
+    else:
+        sifre = gecici_sifre_uret()
+        kullanici = Kullanici(rol=rol, giris=giris, sifre_ozeti=sifre_ozeti(sifre), ad_soyad=birincil.ad_soyad, aktif=True)
+        session.add(kullanici)
+        await session.flush()
+    birincil.kullanici_id = kullanici.id
+    if rol == Rol.ogrenci:
+        ogrenci.kullanici_id = kullanici.id
+    await audit.kaydet(
+        session, "panel_hesabi_acildi" if sifre else "panel_hesabi_baglandi", kullanici_id=yonetici.id,
+        hedef_tur="ogrenci", hedef_id=str(ogrenci.id), ip=_ip(request), detay={"rol": rol.value},
+    )
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bu giriş bilgisi başka bir hesapta kayıtlı")
+    return HesapAcYanit(giris=giris, gecici_sifre=sifre, yeni_hesap=sifre is not None)
+
+
+@router.delete("/{ogrenci_id}/hesap", response_model=OgrenciDetay)
+async def hesap_ayir(
+    ogrenci_id: uuid.UUID, request: Request, yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    ogrenci = await _ogrenci_al(session, ogrenci_id)
+    birincil = await _birincil_al(session, ogrenci)
+    if birincil is None or birincil.kullanici_id is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, HESAP_YOK)
+    await _hesabi_ayir(session, ogrenci, birincil)
+    await audit.kaydet(
+        session, "panel_hesabi_ayrildi", kullanici_id=yonetici.id, hedef_tur="ogrenci", hedef_id=str(ogrenci.id),
+        ip=_ip(request),
+    )
+    await session.commit()
+    return await _detay(session, ogrenci)
+
+
+@router.post("/{ogrenci_id}/hesap/sifre-sifirla", response_model=SifreSifirlaYanit)
+async def hesap_sifre_sifirla(
+    ogrenci_id: uuid.UUID, request: Request, yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    ogrenci = await _ogrenci_al(session, ogrenci_id)
+    birincil = await _birincil_al(session, ogrenci)
+    kullanici = await session.get(Kullanici, birincil.kullanici_id) if birincil and birincil.kullanici_id else None
+    if kullanici is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, HESAP_YOK)
+    sifre = gecici_sifre_uret()
+    kullanici.sifre_ozeti = sifre_ozeti(sifre)
+    kullanici.basarisiz_deneme = 0
+    kullanici.kilit_bitis = None
+    await _oturumlari_iptal_et(session, kullanici.id)
+    await audit.kaydet(
+        session, "panel_hesabi_sifre_sifirlandi", kullanici_id=yonetici.id, hedef_tur="ogrenci",
+        hedef_id=str(ogrenci.id), ip=_ip(request),
+    )
+    await session.commit()
+    return SifreSifirlaYanit(gecici_sifre=sifre)
+
+
+@router.post("/{ogrenci_id}/resit-gecisi", response_model=OgrenciDetay)
+async def resit_gecisi(
+    ogrenci_id: uuid.UUID,
+    govde: ResitGecisiGirdi,
+    request: Request,
+    yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    ogrenci = await _ogrenci_al(session, ogrenci_id)
+    if _yas(ogrenci.dogum_tarihi) < 18:
+        raise _hata422("Öğrenci 18 yaşından küçük")
+    telefon = _telefon_normalize(govde.telefon)
+    kisiler = list(
+        (await session.execute(select(IletisimKisisi).where(IletisimKisisi.ogrenci_id == ogrenci.id).with_for_update()))
+        .scalars()
+    )
+    eski = next((k for k in kisiler if k.birincil), None)
+    if eski is not None and eski.kullanici_id is not None:
+        await _hesabi_ayir(session, ogrenci, eski)
+    whatsapp_riza = (
+        await session.execute(
+            select(Riza.id).where(
+                Riza.ogrenci_id == ogrenci.id, Riza.tur == RizaTuru.whatsapp, Riza.geri_cekildi.is_(None)
+            )
+        )
+    ).first() is not None
+
+    kendisi = next((k for k in kisiler if k.rol == IletisimRolu.kendisi), None)
+    if eski is not None and eski is not kendisi:
+        # Tek birincil kısıtı için önce eski birincil kapatılır.
+        eski.birincil = False
+        eski.whatsapp_izni = False
+        await session.flush()
+    ad_soyad = govde.ad_soyad or (kendisi.ad_soyad if kendisi else f"{ogrenci.ad} {ogrenci.soyad}")
+    if kendisi is None:
+        kendisi = IletisimKisisi(ogrenci_id=ogrenci.id, rol=IletisimRolu.kendisi)
+        session.add(kendisi)
+    kendisi.ad_soyad = ad_soyad
+    kendisi.telefon = telefon
+    kendisi.birincil = True
+    kendisi.whatsapp_izni = whatsapp_riza
+    await audit.kaydet(
+        session, "resit_gecisi", kullanici_id=yonetici.id, hedef_tur="ogrenci", hedef_id=str(ogrenci.id),
+        ip=_ip(request),
+    )
+    await session.commit()
+    return await _detay(session, ogrenci)

@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 // Şifre yalnızca üst bileşenin geçici durumunda yaşar; kapatılınca üst bileşen siler.
-export default function GeciciSifreKutusu({ sifre, baslik, onKapat }: { sifre: string; baslik: string; onKapat: () => void }) {
+export default function GeciciSifreKutusu({ sifre, baslik, onKapat, uyari = "Bu şifre yalnızca şimdi görünür. Antrenöre güvenli bir yoldan iletin." }: { sifre: string; baslik: string; onKapat: () => void; uyari?: string }) {
   const [kopyalandi, setKopyalandi] = useState(false);
 
   async function kopyala() {
@@ -24,7 +24,7 @@ export default function GeciciSifreKutusu({ sifre, baslik, onKapat }: { sifre: s
           </button>
         </div>
         <p className="rounded-lg border border-altin/60 bg-altin/10 text-altin-acik text-sm px-3 py-2">
-          Bu şifre yalnızca şimdi görünür. Antrenöre güvenli bir yoldan iletin.
+          {uyari}
         </p>
         <div className="text-right">
           <button onClick={onKapat} className="rounded-lg bg-altin text-zemin font-semibold px-5 py-2 hover:bg-altin-acik">Kapat</button>

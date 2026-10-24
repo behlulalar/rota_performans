@@ -34,6 +34,10 @@ export default function Panel() {
           {ROL_ADI[kullanici.rol]}
         </p>
       </section>
+
+      {(kullanici.rol === "veli" || kullanici.rol === "ogrenci") && (
+        <p className="mt-4 text-sm text-metin-soluk">Veli paneli yakında burada olacak.</p>
+      )}
     </main>
   );
 }

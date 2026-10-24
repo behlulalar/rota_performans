@@ -37,6 +37,7 @@ export type OgrenciDetay = OgrenciOzet & {
   rizalar: { tur: RizaTur; verildi: boolean; geri_cekildi: boolean }[];
   uyarilar: string[];
   gruplar: { id: string; ad: string }[];
+  hesap: { giris: string; rol: "veli" | "ogrenci"; aktif: boolean; bagli_ogrenci_sayisi: number } | null;
 };
 
 export type Liste = { kayitlar: OgrenciOzet[]; toplam: number; sayfa: number; boyut: number };
@@ -85,3 +86,22 @@ export function fotoYukle(id: string, dosya: Blob) {
   return api<void>(`/api/ogrenciler/${id}/foto`, { method: "POST", body: form });
 }
 export const fotoSil = (id: string) => api<void>(`/api/ogrenciler/${id}/foto`, { method: "DELETE" });
+
+export type HesapAcYaniti = { giris: string; gecici_sifre: string | null; yeni_hesap: boolean };
+export type ResitUyarisi = {
+  id: string;
+  ad: string;
+  soyad: string;
+  yas: number;
+  birincil_rol: string | null;
+  veli_hesabi_var: boolean;
+};
+
+export const hesapAc = (id: string, giris?: string) =>
+  api<HesapAcYaniti>(`/api/ogrenciler/${id}/hesap`, { method: "POST", body: json(giris ? { giris } : {}) });
+export const hesapKaldir = (id: string) => api<OgrenciDetay>(`/api/ogrenciler/${id}/hesap`, { method: "DELETE" });
+export const hesapSifreSifirla = (id: string) =>
+  api<{ gecici_sifre: string }>(`/api/ogrenciler/${id}/hesap/sifre-sifirla`, { method: "POST" });
+export const resitUyarilariniGetir = () => api<ResitUyarisi[]>("/api/ogrenciler/resit-uyarilari");
+export const resitGecisiYap = (id: string, g: { telefon: string; ad_soyad?: string }) =>
+  api<OgrenciDetay>(`/api/ogrenciler/${id}/resit-gecisi`, { method: "POST", body: json(g) });

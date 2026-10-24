@@ -1,4 +1,3 @@
-import re
 import secrets
 import uuid
 
@@ -9,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
+from app import telefon as telefon_modulu
 from app.db import get_session
 from app.deps import rol_gerekli
 from app.models.kullanici import Kullanici, Oturum, Rol
@@ -24,7 +24,6 @@ from app.security import normalize_giris, sifre_ozeti
 
 router = APIRouter(prefix="/api/antrenorler", tags=["antrenorler"])
 
-_TELEFON = re.compile(r"^\+?\d{7,15}$")
 GIRIS_TEKRAR = "Bu giriş bilgisi başka bir hesapta kayıtlı"
 BULUNAMADI = "Antrenör bulunamadı"
 
@@ -45,10 +44,10 @@ def _hata422(mesaj: str) -> HTTPException:
 
 
 def _telefon_normalize(telefon: str) -> str:
-    sade = "".join(c for c in telefon if c not in " -()\t")
-    if not _TELEFON.fullmatch(sade):
-        raise _hata422("Geçersiz telefon numarası")
-    return sade
+    try:
+        return telefon_modulu.normalize(telefon)
+    except ValueError as hata:
+        raise _hata422(str(hata))
 
 
 def _giris_hazirla(giris: str) -> str:

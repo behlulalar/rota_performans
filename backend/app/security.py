@@ -8,6 +8,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
 from app.config import settings
+from app import telefon
 from app.models.kullanici import Rol
 
 _hasher = PasswordHasher()
@@ -22,7 +23,9 @@ def simdi() -> datetime:
 
 
 def normalize_giris(giris: str) -> str:
-    return giris.strip().lower()
+    giris = giris.strip().lower()
+    # Telefonla girişte boşluk, tire ve parantez önemsizdir; e-postaya dokunulmaz.
+    return giris if "@" in giris else telefon.sade(giris)
 
 
 def sifre_ozeti(sifre: str) -> str:

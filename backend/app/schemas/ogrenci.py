@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.grup import OgrenciGrupOzet
+from app.models.kullanici import Rol
 from app.models.ogrenci import Cinsiyet, IletisimRolu, KimlikTur, OgrenciDurum, RizaTuru
 
 
@@ -99,6 +100,13 @@ class RizaYanit(BaseModel):
     geri_cekildi: datetime | None
 
 
+class HesapBilgi(BaseModel):
+    giris: str
+    rol: Rol
+    aktif: bool
+    bagli_ogrenci_sayisi: int
+
+
 class OgrenciDetay(OgrenciOzet):
     anne_adi: str | None
     baba_adi: str | None
@@ -108,6 +116,7 @@ class OgrenciDetay(OgrenciOzet):
     rizalar: list[RizaYanit]
     uyarilar: list[str]
     gruplar: list[OgrenciGrupOzet] = []
+    hesap: HesapBilgi | None = None
 
 
 class KimlikYanit(BaseModel):
@@ -115,3 +124,31 @@ class KimlikYanit(BaseModel):
 
 
 FotoBoyut = Literal["kucuk", "buyuk"]
+
+
+class HesapAcGirdi(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    giris: str | None = Field(default=None, max_length=255)
+
+
+class HesapAcYanit(BaseModel):
+    giris: str
+    gecici_sifre: str | None
+    yeni_hesap: bool
+
+
+class ResitUyari(BaseModel):
+    id: uuid.UUID
+    ad: str
+    soyad: str
+    yas: int
+    birincil_rol: IletisimRolu | None
+    veli_hesabi_var: bool
+
+
+class ResitGecisiGirdi(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    telefon: str = Field(min_length=1, max_length=40)
+    ad_soyad: str | None = Field(default=None, max_length=200)
