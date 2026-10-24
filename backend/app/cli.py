@@ -8,6 +8,7 @@ import asyncio
 import getpass
 import sys
 
+from email_validator import EmailNotValidError, validate_email
 from sqlalchemy import select
 
 from app.db import SessionLocal, engine
@@ -19,6 +20,15 @@ MIN_SIFRE_UZUNLUK = 12
 
 async def admin_olustur(giris: str) -> int:
     giris = normalize_giris(giris)
+    if "@" in giris:
+        try:
+            validate_email(giris, check_deliverability=False)
+        except EmailNotValidError as hata:
+            print(f"Geçersiz e-posta adresi: {hata}", file=sys.stderr)
+            return 1
+    elif not giris.lstrip("+").isdigit():
+        print("Giriş bir e-posta adresi veya telefon numarası olmalı.", file=sys.stderr)
+        return 1
     sifre = getpass.getpass("Şifre: ")
     if len(sifre) < MIN_SIFRE_UZUNLUK:
         print(f"Şifre en az {MIN_SIFRE_UZUNLUK} karakter olmalı.", file=sys.stderr)
