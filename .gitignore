@@ -1,0 +1,27 @@
+# Sırlar
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# Node
+node_modules/
+dist/
+
+# Müşteri ve üçüncü kişi belgeleri: depoya asla girmez
+docs/*.pdf
+docs/*.docx
+docs/*.dotx
+
+# Yüklemeler ve yedekler
+uploads/
+backups/
+*.dump
+*.sql.gz
+
+.DS_Store

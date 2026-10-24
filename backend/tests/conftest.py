@@ -1,0 +1,48 @@
+import os
+
+# Ayarlar içe aktarma sırasında okunduğu için, uygulamadan önce test ortamına geçilir.
+os.environ["ENV"] = "test"
+os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
+os.environ["REDIS_URL"] = os.environ["TEST_REDIS_URL"]
+os.environ["COOKIE_SECURE"] = "true"
+
+import pytest_asyncio  # noqa: E402
+from httpx import ASGITransport, AsyncClient  # noqa: E402
+from redis.asyncio import Redis  # noqa: E402
+from sqlalchemy import text  # noqa: E402
+
+from app.config import settings  # noqa: E402
+from app.db import SessionLocal, engine  # noqa: E402
+from app.main import app  # noqa: E402
+from app.models import Base, Kullanici, Rol  # noqa: E402
+from app.security import sifre_ozeti  # noqa: E402
+
+SIFRE = "Dogru-sifre-123"
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def temiz_ortam():
+    async with engine.begin() as baglanti:
+        await baglanti.run_sync(Base.metadata.create_all)
+    redis = Redis.from_url(settings.redis_url)
+    await redis.flushdb()
+    await redis.aclose()
+    yield
+    async with engine.begin() as baglanti:
+        tablolar = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
+        await baglanti.execute(text(f"TRUNCATE {tablolar} RESTART IDENTITY CASCADE"))
+
+
+@pytest_asyncio.fixture
+async def istemci():
+    # https: Secure çerezlerin test istemcisinde saklanabilmesi için.
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="https://test") as c:
+        yield c
+
+
+async def kullanici_olustur(giris: str = "yonetici@kulup.com", rol: Rol = Rol.admin, aktif: bool = True) -> Kullanici:
+    async with SessionLocal() as session:
+        k = Kullanici(rol=rol, giris=giris, sifre_ozeti=sifre_ozeti(SIFRE), aktif=aktif)
+        session.add(k)
+        await session.commit()
+        return k
