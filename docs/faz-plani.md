@@ -92,7 +92,7 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [ ] Müşterinin Excel dosyası gelince sütun eşleme ve aktarma (önizleme + hata raporu)
 
 **Dilim 1.5: Genel bakış ekranı**
-- [ ] Aktif öğrenci, grup doluluğu, bekleyen ödemeler özeti
+- [x] Aktif öğrenci, grup doluluğu, bekleyen ödemeler özeti
 
 ### Faz 2: Program, yoklama ve ders hakkı (19 – 24 Kas)
 - [ ] Haftalık programdan tarihli ders oturumları üretme
