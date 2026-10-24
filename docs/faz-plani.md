@@ -42,7 +42,7 @@ Altyapı
 - [x] Test altyapısı (ayrı test veritabanı, ders hakkı ve yetki testleri)
 - [x] CI iş akışı yazıldı (backend testleri + frontend derlemesi)
 - [x] Dal akışı: `ozellik/*` dalları testler geçerse otomatik `main`'e aktarılır
-- [ ] CI'ın GitHub'da ilk kez yeşil çalıştığı doğrulandı
+- [x] CI GitHub'da ilk kez yeşil çalıştı (dal akışı ile doğrulandı)
 - [ ] Staging ortamı (VDS gelince)
 
 Kimlik ve güvenlik
