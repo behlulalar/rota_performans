@@ -1,0 +1,39 @@
+import uuid
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class AntrenorOlustur(BaseModel):
+    # Yalnızca boşluktan oluşan değerler boş sayılır ve min_length ile reddedilir.
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    ad_soyad: str = Field(min_length=1, max_length=200)
+    telefon: str | None = Field(default=None, max_length=40)
+    # E-posta veya telefon.
+    giris: str = Field(min_length=1, max_length=255)
+
+
+class AntrenorGuncelle(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    ad_soyad: str | None = Field(default=None, min_length=1, max_length=200)
+    telefon: str | None = Field(default=None, max_length=40)
+    aktif: bool | None = None
+
+
+class AntrenorOzet(BaseModel):
+    id: uuid.UUID
+    ad_soyad: str
+    telefon: str | None
+    aktif: bool
+    giris: str | None
+    grup_sayisi: int
+
+
+class AntrenorOlusturYanit(BaseModel):
+    antrenor: AntrenorOzet
+    gecici_sifre: str
+
+
+class SifreSifirlaYanit(BaseModel):
+    gecici_sifre: str

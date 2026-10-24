@@ -79,9 +79,9 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [x] Frontend: kayıt formu
 
 **Dilim 1.2: Antrenör ve grup yönetimi**
-- [ ] Antrenör ekleme (hesap oluşturma)
-- [ ] Grup, haftalık program slotları, kontenjan
-- [ ] Öğrenciyi gruba ekle/çıkar, doluluk göstergesi
+- [x] Antrenör ekleme (hesap oluşturma)
+- [x] Grup, haftalık program slotları, kontenjan
+- [x] Öğrenciyi gruba ekle/çıkar, doluluk göstergesi
 
 **Dilim 1.3: Veli ve reşit öğrenci hesapları**
 - [ ] Birincil kişiye hesap açma ve giriş bilgisini iletme

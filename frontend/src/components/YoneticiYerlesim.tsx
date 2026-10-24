@@ -5,6 +5,8 @@ import { useAuth } from "../auth/AuthProvider";
 const MENU = [
   { yol: "/genel-bakis", ad: "Genel bakış" },
   { yol: "/ogrenciler", ad: "Öğrenciler" },
+  { yol: "/antrenorler", ad: "Antrenörler" },
+  { yol: "/gruplar", ad: "Gruplar" },
 ];
 
 export default function YoneticiYerlesim() {

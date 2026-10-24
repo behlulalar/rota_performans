@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { aktifEt, fotoSil, fotoYukle, kimlikGetir, ogrenciGetir, pasifeAl, type OgrenciDetay as Detay, type RizaTur } from "../api/ogrenci";
+import { gruplariGetir, ogrenciEkle, type GrupOzet } from "../api/grup";
 import DurumRozeti from "../components/DurumRozeti";
 import OgrenciFoto from "../components/OgrenciFoto";
 import { hataMesaji, ROL_ETIKET, tarihBicimle } from "../lib/dogrulama";
@@ -25,6 +26,8 @@ export default function OgrenciDetay() {
   const [kimlik, setKimlik] = useState<string | null>(null);
   const [surum, setSurum] = useState(0);
   const [mesgul, setMesgul] = useState(false);
+  const [grupSecenekleri, setGrupSecenekleri] = useState<GrupOzet[] | null>(null);
+  const [secilenGrup, setSecilenGrup] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -59,6 +62,20 @@ export default function OgrenciDetay() {
       const aktif = o.durum === "aktif";
       if (!window.confirm(aktif ? "Öğrenci pasife alınsın mı?" : "Öğrenci tekrar aktif edilsin mi?")) return;
       setO(await (aktif ? pasifeAl(id) : aktifEt(id)));
+    });
+
+  const grupEkleAc = () =>
+    islem(async () => {
+      setGrupSecenekleri(await gruplariGetir(true));
+    });
+
+  const gruba = () =>
+    islem(async () => {
+      if (!secilenGrup) return;
+      await ogrenciEkle(secilenGrup, id);
+      setO(await ogrenciGetir(id));
+      setSecilenGrup("");
+      setGrupSecenekleri(null);
     });
 
   const kimlikGoster = () =>
@@ -137,6 +154,44 @@ export default function OgrenciDetay() {
             <dt className="text-metin-soluk">Kayıt tarihi</dt><dd>{tarihBicimle(o.kayit_tarihi)}</dd>
           </dl>
         </div>
+      </section>
+
+      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
+        <h2 className="font-semibold mb-3">Gruplar</h2>
+        {(o.gruplar ?? []).length === 0 ? (
+          <p className="text-sm text-metin-soluk">Öğrenci herhangi bir grupta değil.</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {o.gruplar.map((g) => (
+              <li key={g.id}>
+                <Link to={`/gruplar/${g.id}`} className="inline-block rounded-full border border-cizgi px-3 py-1 text-sm hover:border-altin hover:text-altin">{g.ad}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {o.durum === "aktif" && (
+          <div className="mt-4">
+            {grupSecenekleri === null ? (
+              <button className={dugme} disabled={mesgul} onClick={() => void grupEkleAc()}>Gruba ekle</button>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={secilenGrup}
+                  onChange={(e) => setSecilenGrup(e.target.value)}
+                  aria-label="Grup seç"
+                  className="flex-1 rounded-lg bg-zemin border border-cizgi px-3 py-2 outline-none focus:border-altin"
+                >
+                  <option value="">Grup seçin…</option>
+                  {grupSecenekleri.filter((g) => !o.gruplar?.some((x) => x.id === g.id)).map((g) => (
+                    <option key={g.id} value={g.id}>{g.ad} ({g.ogrenci_sayisi}/{g.kontenjan})</option>
+                  ))}
+                </select>
+                <button className={dugme} disabled={mesgul || !secilenGrup} onClick={() => void gruba()}>Ekle</button>
+                <button className={dugme} onClick={() => { setGrupSecenekleri(null); setSecilenGrup(""); }}>Vazgeç</button>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">

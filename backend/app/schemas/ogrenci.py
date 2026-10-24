@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.grup import OgrenciGrupOzet
 from app.models.ogrenci import Cinsiyet, IletisimRolu, KimlikTur, OgrenciDurum, RizaTuru
 
 
@@ -106,6 +107,7 @@ class OgrenciDetay(OgrenciOzet):
     iletisim_kisileri: list[IletisimKisisiYanit]
     rizalar: list[RizaYanit]
     uyarilar: list[str]
+    gruplar: list[OgrenciGrupOzet] = []
 
 
 class KimlikYanit(BaseModel):

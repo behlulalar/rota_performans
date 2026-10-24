@@ -6,7 +6,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
 from PIL import Image, ImageOps, UnidentifiedImageError
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,7 @@ from app.models.ogrenci import (
     Riza,
     RizaTuru,
 )
+from app.models.program import Grup, OgrenciGrup
 from app.schemas.ogrenci import (
     BirincilIletisim,
     FotoBoyut,
@@ -143,6 +144,14 @@ async def _detay(session: AsyncSession, ogrenci: Ogrenci) -> OgrenciDetay:
         uyarilar.append("Öğrenci 5 yaşını doldurmamış")
     if yas >= 18 and (birincil is None or birincil.rol != IletisimRolu.kendisi):
         uyarilar.append("Öğrenci reşit, birincil iletişim kişisi kendisi olmalı")
+    gruplar = (
+        await session.execute(
+            select(Grup.id, Grup.ad)
+            .join(OgrenciGrup, OgrenciGrup.grup_id == Grup.id)
+            .where(OgrenciGrup.ogrenci_id == ogrenci.id, OgrenciGrup.bitis.is_(None))
+            .order_by(Grup.ad, Grup.id)
+        )
+    ).all()
     return OgrenciDetay(
         **_ozet(ogrenci, birincil),
         anne_adi=ogrenci.anne_adi,
@@ -152,6 +161,7 @@ async def _detay(session: AsyncSession, ogrenci: Ogrenci) -> OgrenciDetay:
         iletisim_kisileri=kisiler,
         rizalar=[{"tur": r.tur, "verildi": r.verildi, "geri_cekildi": r.geri_cekildi} for r in rizalar],
         uyarilar=uyarilar,
+        gruplar=[{"id": g.id, "ad": g.ad} for g in gruplar],
     )
 
 
@@ -401,6 +411,13 @@ async def _durum_degistir(
 ) -> OgrenciDetay:
     ogrenci = await _ogrenci_al(session, ogrenci_id)
     ogrenci.durum = durum
+    if durum == OgrenciDurum.pasif:
+        # Pasif öğrenci hiçbir grupta kalmaz, üyelikler bugün tarihiyle kapanır.
+        await session.execute(
+            update(OgrenciGrup)
+            .where(OgrenciGrup.ogrenci_id == ogrenci.id, OgrenciGrup.bitis.is_(None))
+            .values(bitis=func.current_date())
+        )
     await audit.kaydet(
         session, islem, kullanici_id=yonetici.id, hedef_tur="ogrenci", hedef_id=str(ogrenci.id), ip=_ip(request)
     )

@@ -36,6 +36,7 @@ export type OgrenciDetay = OgrenciOzet & {
   iletisim_kisileri: IletisimKisisi[];
   rizalar: { tur: RizaTur; verildi: boolean; geri_cekildi: boolean }[];
   uyarilar: string[];
+  gruplar: { id: string; ad: string }[];
 };
 
 export type Liste = { kayitlar: OgrenciOzet[]; toplam: number; sayfa: number; boyut: number };

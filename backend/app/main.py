@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, ogrenciler, saglik
+from app.api import antrenorler, auth, gruplar, ogrenciler, saglik
 from app.config import settings
 
 app = FastAPI(
@@ -35,3 +35,5 @@ async def guvenlik_basliklari(request: Request, call_next):
 app.include_router(saglik.router)
 app.include_router(auth.router)
 app.include_router(ogrenciler.router)
+app.include_router(antrenorler.router)
+app.include_router(gruplar.router)

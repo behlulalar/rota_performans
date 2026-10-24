@@ -1,6 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
 import YoneticiYerlesim from "./components/YoneticiYerlesim";
+import AntrenorListe from "./pages/AntrenorListe";
+import GrupDetay from "./pages/GrupDetay";
+import GrupForm from "./pages/GrupForm";
+import GrupListe from "./pages/GrupListe";
 import Giris from "./pages/Giris";
 import GenelBakis from "./pages/GenelBakis";
 import OgrenciDetay from "./pages/OgrenciDetay";
@@ -36,6 +40,11 @@ export default function App() {
             <Route path="/ogrenciler/yeni" element={<OgrenciForm />} />
             <Route path="/ogrenciler/:id" element={<OgrenciDetay />} />
             <Route path="/ogrenciler/:id/duzenle" element={<OgrenciForm />} />
+            <Route path="/antrenorler" element={<AntrenorListe />} />
+            <Route path="/gruplar" element={<GrupListe />} />
+            <Route path="/gruplar/yeni" element={<GrupForm />} />
+            <Route path="/gruplar/:id" element={<GrupDetay />} />
+            <Route path="/gruplar/:id/duzenle" element={<GrupForm />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
