@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { aktifEt, fotoSil, fotoYukle, hesapAc, hesapKaldir, hesapSifreSifirla, kimlikGetir, ogrenciGetir, pasifeAl, type OgrenciDetay as Detay, type RizaTur } from "../api/ogrenci";
 import { gruplariGetir, ogrenciEkle, type GrupOzet } from "../api/grup";
 import GeciciSifreKutusu from "../components/GeciciSifreKutusu";
+import DersHakki from "../components/DersHakki";
 import ResitGecisi from "../components/ResitGecisi";
 import DurumRozeti from "../components/DurumRozeti";
 import OgrenciFoto from "../components/OgrenciFoto";
@@ -197,22 +198,7 @@ export default function OgrenciDetay() {
         </div>
       </section>
 
-      <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
-        <h2 className="font-semibold mb-3">Ders hakkı</h2>
-        <div className="grid grid-cols-2 gap-3 max-w-sm">
-          <div className="rounded-xl border border-cizgi px-4 py-3">
-            <div className="text-xs text-metin-soluk">Kalan ders</div>
-            <div className={`text-2xl font-semibold ${o.ders_hakki.normal < 0 ? "text-hata" : ""}`}>{o.ders_hakki.normal}</div>
-          </div>
-          <div className="rounded-xl border border-cizgi px-4 py-3">
-            <div className="text-xs text-metin-soluk">Telafi</div>
-            <div className={`text-2xl font-semibold ${o.ders_hakki.telafi < 0 ? "text-hata" : ""}`}>{o.ders_hakki.telafi}</div>
-          </div>
-        </div>
-        {(o.ders_hakki.normal < 0 || o.ders_hakki.telafi < 0) && (
-          <p className="mt-3 text-sm text-hata">Paket yüklemesi bekleniyor</p>
-        )}
-      </section>
+      <DersHakki ogrenci={o} onYenile={setO} />
 
       <section className="bg-yuzey border border-cizgi rounded-2xl p-4 sm:p-6">
         <h2 className="font-semibold mb-3">Gruplar</h2>

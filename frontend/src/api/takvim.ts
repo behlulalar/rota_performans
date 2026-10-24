@@ -44,3 +44,8 @@ export const oturumGetir = (id: string) => api<OturumDetay>(`/api/oturumlar/${id
 
 export const yoklamaKaydet = (id: string, kayitlar: YoklamaKaydi[]) =>
   api<OturumDetay>(`/api/oturumlar/${id}/yoklama`, { method: "PUT", body: json(kayitlar) });
+
+export const telafiPlanla = (oturumId: string, ogrenciId: string) =>
+  api<OturumDetay>(`/api/oturumlar/${oturumId}/telafi`, { method: "POST", body: json({ ogrenci_id: ogrenciId }) });
+export const telafiGeriAl = (oturumId: string, ogrenciId: string) =>
+  api<OturumDetay>(`/api/oturumlar/${oturumId}/telafi/${ogrenciId}`, { method: "DELETE" });

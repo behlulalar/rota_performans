@@ -5,10 +5,13 @@ yeni durum yeni bir yoklama sürümüyle yazılır. Çağıran işlemi commit ed
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.program import DersOturumu, OturumDurum, TelafiPlani
 from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, Yoklama, YoklamaDurum
+
+from app.oturumlar import bugun
 
 DEVAMSIZLIK_BEKLEME = timedelta(hours=1)
 
@@ -30,6 +33,24 @@ async def bakiyeler(session: AsyncSession, ogrenci_idleri: list[uuid.UUID]) -> d
 
 async def bakiye(session: AsyncSession, ogrenci_id: uuid.UUID) -> dict[str, int]:
     return (await bakiyeler(session, [ogrenci_id]))[ogrenci_id]
+
+
+async def kullanilabilir_telafi(session: AsyncSession, ogrenci_id: uuid.UUID) -> int:
+    """Telafi bakiyesi eksi, ileri tarihli (bugün dahil) planlanmış ve yoklaması alınmamış telafi dersleri."""
+    planli = (
+        await session.execute(
+            select(func.count())
+            .select_from(TelafiPlani)
+            .join(DersOturumu, DersOturumu.id == TelafiPlani.oturum_id)
+            .where(
+                TelafiPlani.ogrenci_id == ogrenci_id,
+                DersOturumu.tarih >= bugun(),
+                DersOturumu.durum != OturumDurum.iptal,
+                ~exists().where(Yoklama.oturum_id == DersOturumu.id, Yoklama.ogrenci_id == ogrenci_id),
+            )
+        )
+    ).scalar_one()
+    return (await bakiye(session, ogrenci_id))["telafi"] - planli
 
 
 def _hareket(yoklama: Yoklama, sayac: Sayac, miktar: int, tur: HareketTuru) -> DersHakkiHareketi:

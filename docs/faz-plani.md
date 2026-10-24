@@ -99,8 +99,8 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [x] Haftalık programdan tarihli ders oturumları üretme
 - [x] Antrenör takvimi: derse tıkla → öğrenci listesi → yoklama (geldi/gelmedi)
 - [x] Yoklama sonrası 1 saatlik gecikmeyle telafi hakkı (arka plan işi)
-- [ ] Ders hakkı defteri ekranı, düzeltme geçmişi, manuel düzeltme
-- [ ] Telafi dersi planlama ve düşme mantığı
+- [x] Ders hakkı defteri ekranı, düzeltme geçmişi, manuel düzeltme
+- [x] Telafi dersi planlama ve düşme mantığı
 - [x] Yönetici paneli yoklama düzeltme yetkisi
 - [x] Antrenör yoklaması ders başlamadan 15 dakika önce açılır (yönetici muaf)
 

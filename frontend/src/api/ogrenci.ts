@@ -1,4 +1,5 @@
 import { api } from "../lib/api";
+import type { OturumOzet } from "./takvim";
 
 export type Durum = "aktif" | "pasif";
 export type Cinsiyet = "kadin" | "erkek";
@@ -37,7 +38,7 @@ export type OgrenciDetay = OgrenciOzet & {
   rizalar: { tur: RizaTur; verildi: boolean; geri_cekildi: boolean }[];
   uyarilar: string[];
   gruplar: { id: string; ad: string }[];
-  ders_hakki: { normal: number; telafi: number };
+  ders_hakki: { normal: number; telafi: number; kullanilabilir_telafi: number };
   hesap: { giris: string; rol: "veli" | "ogrenci"; aktif: boolean; bagli_ogrenci_sayisi: number } | null;
 };
 
@@ -106,3 +107,32 @@ export const hesapSifreSifirla = (id: string) =>
 export const resitUyarilariniGetir = () => api<ResitUyarisi[]>("/api/ogrenciler/resit-uyarilari");
 export const resitGecisiYap = (id: string, g: { telefon: string; ad_soyad?: string }) =>
   api<OgrenciDetay>(`/api/ogrenciler/${id}/resit-gecisi`, { method: "POST", body: json(g) });
+
+export type Sayac = "normal" | "telafi";
+export type HakTur = "paket_yuklemesi" | "ders_kullanimi" | "devamsizlik" | "telafi_kullanimi" | "manuel_duzeltme" | "iptal";
+export type HakHareketi = {
+  id: string;
+  zaman: string;
+  sayac: Sayac;
+  miktar: number;
+  tur: HakTur;
+  neden: string | null;
+  oturum: { tarih: string; grup_ad: string } | null;
+};
+export type DersHakkiDefteri = { normal: number; telafi: number; hareketler: HakHareketi[] };
+export type TelafiAdayi = { oturum: OturumOzet; bos_yer: number };
+export type TelafiPlani = {
+  oturum_id: string;
+  tarih: string;
+  baslangic: string;
+  bitis: string;
+  grup: { id: string; ad: string };
+  yoklama: "geldi" | "gelmedi" | null;
+};
+
+export const dersHakkiGetir = (id: string) => api<DersHakkiDefteri>(`/api/ogrenciler/${id}/ders-hakki`);
+export const dersHakkiDuzelt = (id: string, g: { sayac: Sayac; miktar: number; neden: string }) =>
+  api<{ normal: number; telafi: number }>(`/api/ogrenciler/${id}/ders-hakki/duzeltme`, { method: "POST", body: json(g) });
+export const telafiAdaylariGetir = (id: string, baslangic: string, bitis: string) =>
+  api<TelafiAdayi[]>(`/api/ogrenciler/${id}/telafi-adaylari?${new URLSearchParams({ baslangic, bitis })}`);
+export const telafiPlanlariGetir = (id: string) => api<TelafiPlani[]>(`/api/ogrenciler/${id}/telafi-planlari`);

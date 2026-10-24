@@ -28,7 +28,7 @@ from app.models.ogrenci import (
     RizaTuru,
 )
 from app.models.program import DersOturumu, Grup, OgrenciGrup
-from app.models.yoklama import DersHakkiHareketi, Yoklama
+from app.models.yoklama import DersHakkiHareketi, HareketTuru, Yoklama
 from app.schemas.ogrenci import (
     BirincilIletisim,
     FotoBoyut,
@@ -44,9 +44,10 @@ from app.schemas.ogrenci import (
     OgrenciOzet,
     ResitGecisiGirdi,
     ResitUyari,
+    DersHakki,
 )
 from app.schemas.antrenor import SifreSifirlaYanit
-from app.schemas.oturum import DersHakkiYanit, HareketOturum, HareketYanit
+from app.schemas.oturum import DersHakkiYanit, DuzeltmeGirdi, HareketOturum, HareketYanit
 from app.security import sifre_ozeti
 
 router = APIRouter(prefix="/api/ogrenciler", tags=["ogrenciler"])
@@ -185,7 +186,10 @@ async def _detay(session: AsyncSession, ogrenci: Ogrenci) -> OgrenciDetay:
         uyarilar=uyarilar,
         gruplar=[{"id": g.id, "ad": g.ad} for g in gruplar],
         hesap=hesap,
-        ders_hakki=await ders_hakki.bakiye(session, ogrenci.id),
+        ders_hakki={
+            **await ders_hakki.bakiye(session, ogrenci.id),
+            "kullanilabilir_telafi": await ders_hakki.kullanilabilir_telafi(session, ogrenci.id),
+        },
     )
 
 
@@ -200,6 +204,34 @@ def _kimlik_yaz(ogrenci: Ogrenci, tur: KimlikTur, no: str | None) -> None:
     ogrenci.kimlik_tur = tur
     ogrenci.kimlik_no_sifreli = kimlik.sifrele(no) if no else None
     ogrenci.kimlik_no_ozet = kimlik.ozet(no) if no else None
+
+
+@router.post("/{ogrenci_id}/ders-hakki/duzeltme", response_model=DersHakki)
+async def ders_hakki_duzelt(
+    ogrenci_id: uuid.UUID,
+    govde: DuzeltmeGirdi,
+    request: Request,
+    yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    await _ogrenci_al(session, ogrenci_id)
+    session.add(
+        DersHakkiHareketi(
+            ogrenci_id=ogrenci_id,
+            sayac=govde.sayac,
+            miktar=govde.miktar,
+            tur=HareketTuru.manuel_duzeltme,
+            neden=govde.neden,
+            olusturan_id=yonetici.id,
+        )
+    )
+    # Neden metni kişisel veri içerebileceği için denetime yazılmaz.
+    await audit.kaydet(
+        session, "ders_hakki_duzeltildi", kullanici_id=yonetici.id, hedef_tur="ogrenci", hedef_id=str(ogrenci_id),
+        ip=_ip(request), detay={"sayac": govde.sayac.value, "miktar": govde.miktar},
+    )
+    await session.commit()
+    return await ders_hakki.bakiye(session, ogrenci_id)
 
 
 @router.get("/{ogrenci_id}/ders-hakki", response_model=DersHakkiYanit)

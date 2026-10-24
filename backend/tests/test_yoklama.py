@@ -382,7 +382,7 @@ async def test_ders_hakki_ucu_hareketler_iptal_satiri_oturumu_ve_yetki(istemci, 
     assert all(h["oturum"] == {"tarih": str(BUGUN), "grup_ad": "GA"} for h in ders["hareketler"])
     assert all({"id", "zaman", "sayac", "miktar", "tur", "neden", "oturum"} <= set(h) for h in ders["hareketler"])
     detay = (await istemci.get(f"/api/ogrenciler/{o1.id}", headers=yonetici)).json()
-    assert detay["ders_hakki"] == {"normal": 0, "telafi": 0}
+    assert detay["ders_hakki"] == {"normal": 0, "telafi": 0, "kullanilabilir_telafi": 0}
     veli = await giris(istemci, "veli@kulup.com", Rol.veli)
     assert (await istemci.get(f"/api/ogrenciler/{o1.id}/ders-hakki", headers=ba)).status_code == 403
     assert (await istemci.get(f"/api/ogrenciler/{o1.id}/ders-hakki", headers=veli)).status_code == 403

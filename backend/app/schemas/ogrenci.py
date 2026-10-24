@@ -112,6 +112,10 @@ class DersHakki(BaseModel):
     telafi: int
 
 
+class DersHakkiDetay(DersHakki):
+    kullanilabilir_telafi: int
+
+
 class OgrenciDetay(OgrenciOzet):
     anne_adi: str | None
     baba_adi: str | None
@@ -122,7 +126,7 @@ class OgrenciDetay(OgrenciOzet):
     uyarilar: list[str]
     gruplar: list[OgrenciGrupOzet] = []
     hesap: HesapBilgi | None = None
-    ders_hakki: DersHakki = DersHakki(normal=0, telafi=0)
+    ders_hakki: DersHakkiDetay = DersHakkiDetay(normal=0, telafi=0, kullanilabilir_telafi=0)
 
 
 class KimlikYanit(BaseModel):

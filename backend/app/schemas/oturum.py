@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime, time
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.models.program import OturumDurum
 from app.models.yoklama import HareketTuru, Sayac, YoklamaDurum
@@ -86,3 +86,39 @@ class HareketYanit(BaseModel):
 class DersHakkiYanit(DersHakki):
     hareketler: list[HareketYanit]
 
+
+
+class DuzeltmeGirdi(BaseModel):
+    sayac: Sayac
+    miktar: int = Field(ge=-50, le=50)
+    neden: str = Field(min_length=3, max_length=500)
+
+    @field_validator("neden", mode="before")
+    @classmethod
+    def _kirp(cls, v):
+        return v.strip() if isinstance(v, str) else v
+
+    @field_validator("miktar")
+    @classmethod
+    def _sifir_degil(cls, v):
+        if v == 0:
+            raise ValueError("Miktar sıfır olamaz")
+        return v
+
+
+class TelafiAdayi(BaseModel):
+    oturum: OturumOzet
+    bos_yer: int
+
+
+class TelafiPlanGirdi(BaseModel):
+    ogrenci_id: uuid.UUID
+
+
+class TelafiPlanYanit(BaseModel):
+    oturum_id: uuid.UUID
+    tarih: date
+    baslangic: time
+    bitis: time
+    grup: OturumGrup
+    yoklama: YoklamaDurum | None

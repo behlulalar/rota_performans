@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -13,7 +13,8 @@ from app.config import settings
 from app.db import get_session
 from app.deps import rol_gerekli
 from app.models.kullanici import Kullanici, Rol
-from app.models.ogrenci import Ogrenci
+from app.api.ogrenciler import _ogrenci_al
+from app.models.ogrenci import Ogrenci, OgrenciDurum
 from app.models.program import Antrenor, DersOturumu, Grup, OgrenciGrup, OturumDurum, TelafiPlani
 from app.models.yoklama import Yoklama
 from app.oturumlar import bugun, oturumlari_uret, simdi, yoklama_acilis_zamani
@@ -24,6 +25,9 @@ from app.schemas.oturum import (
     OturumGrup,
     OturumOgrenci,
     OturumOzet,
+    TelafiAdayi,
+    TelafiPlanGirdi,
+    TelafiPlanYanit,
     UretGirdi,
     UretYanit,
     YoklamaGirdi,
@@ -295,5 +299,164 @@ async def yoklama_al(
     except IntegrityError:
         await session.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Yoklama aynı anda başka biri tarafından değiştirildi, tekrar deneyin")
+    ozet = (await _ozetler(session, [DersOturumu.id == oturum_id]))[0]
+    return await _detay(session, ozet)
+
+
+# ---------- telafi ----------
+
+EN_COK_TELAFI_GUN = 31
+
+
+@router.get("/ogrenciler/{ogrenci_id}/telafi-adaylari", response_model=list[TelafiAdayi])
+async def telafi_adaylari(
+    ogrenci_id: uuid.UUID,
+    baslangic: date | None = Query(default=None),
+    bitis: date | None = Query(default=None),
+    _: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    await _ogrenci_al(session, ogrenci_id)
+    bas = baslangic or bugun()
+    bit = bitis or (bas + timedelta(days=14))
+    if bit < bas:
+        raise HTTPException(422, "Bitiş tarihi başlangıçtan önce olamaz")
+    if (bit - bas).days + 1 > EN_COK_TELAFI_GUN:
+        raise HTTPException(422, f"Aralık en çok {EN_COK_TELAFI_GUN} gün olabilir")
+    uye_mi = exists().where(
+        OgrenciGrup.ogrenci_id == ogrenci_id,
+        OgrenciGrup.grup_id == DersOturumu.grup_id,
+        OgrenciGrup.baslangic <= DersOturumu.tarih,
+        or_(OgrenciGrup.bitis.is_(None), OgrenciGrup.bitis >= DersOturumu.tarih),
+    )
+    planli_mi = exists().where(TelafiPlani.oturum_id == DersOturumu.id, TelafiPlani.ogrenci_id == ogrenci_id)
+    ozetler = await _ozetler(
+        session,
+        [
+            DersOturumu.tarih >= max(bas, bugun()),
+            DersOturumu.tarih <= bit,
+            DersOturumu.durum != OturumDurum.iptal,
+            Grup.aktif.is_(True),
+            ~uye_mi,
+            ~planli_mi,
+        ],
+    )
+    if not ozetler:
+        return []
+    kontenjan = dict(
+        (await session.execute(select(Grup.id, Grup.kontenjan).where(Grup.id.in_({o.grup.id for o in ozetler})))).all()
+    )
+    return [
+        TelafiAdayi(oturum=o, bos_yer=kontenjan[o.grup.id] - o.ogrenci_sayisi)
+        for o in ozetler
+        if kontenjan[o.grup.id] - o.ogrenci_sayisi > 0
+    ]
+
+
+@router.get("/ogrenciler/{ogrenci_id}/telafi-planlari", response_model=list[TelafiPlanYanit])
+async def telafi_planlari(
+    ogrenci_id: uuid.UUID, _: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)
+):
+    await _ogrenci_al(session, ogrenci_id)
+    satirlar = (
+        await session.execute(
+            select(DersOturumu, Grup.ad, Yoklama.durum)
+            .join(TelafiPlani, TelafiPlani.oturum_id == DersOturumu.id)
+            .join(Grup, Grup.id == DersOturumu.grup_id)
+            .outerjoin(Yoklama, and_(Yoklama.oturum_id == DersOturumu.id, Yoklama.ogrenci_id == ogrenci_id))
+            .where(TelafiPlani.ogrenci_id == ogrenci_id)
+            .order_by(DersOturumu.tarih.desc(), DersOturumu.baslangic.desc(), DersOturumu.id)
+        )
+    ).all()
+    return [
+        TelafiPlanYanit(
+            oturum_id=o.id, tarih=o.tarih, baslangic=o.baslangic, bitis=o.bitis,
+            grup=OturumGrup(id=o.grup_id, ad=ad), yoklama=durum,
+        )
+        for o, ad, durum in satirlar
+    ]
+
+
+@router.post("/oturumlar/{oturum_id}/telafi", response_model=OturumDetay)
+async def telafi_planla(
+    oturum_id: uuid.UUID,
+    govde: TelafiPlanGirdi,
+    request: Request,
+    yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    # Önce öğrenci satırı kilitlenir: aynı öğrenci için eşzamanlı planlamalar sırayla işlenir ve
+    # son hak iki kez kullanılamaz. Sonra grup satırı kilitlenir: kontenjan yarışı olmaz.
+    ogrenci = (
+        await session.execute(
+            select(Ogrenci).where(Ogrenci.id == govde.ogrenci_id, Ogrenci.sentetik.is_(False)).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if ogrenci is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Öğrenci bulunamadı")
+    ozet = await _oturum_al(session, oturum_id, yonetici)
+    grup = (await session.execute(select(Grup).where(Grup.id == ozet.grup.id).with_for_update())).scalar_one()
+    # Kilit alındıktan sonra güncel sayılar için özet yeniden okunur.
+    ozet = await _oturum_al(session, oturum_id, yonetici)
+    if ogrenci.durum != OgrenciDurum.aktif:
+        raise HTTPException(422, "Pasif öğrenci için telafi planlanamaz")
+    if ozet.tarih < bugun():
+        raise HTTPException(422, "Geçmiş derse telafi planlanamaz")
+    if ozet.durum == OturumDurum.iptal:
+        raise HTTPException(422, "İptal edilmiş derse telafi planlanamaz")
+    liste = {o.id: telafi_mi for o, telafi_mi in await _ogrenci_listesi(session, ozet)}
+    if liste.get(ogrenci.id) is False:
+        raise HTTPException(422, "Öğrenci bu grubun üyesi, telafi gerekmez")
+    if liste.get(ogrenci.id) is True:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Öğrenci bu derse zaten telafi için eklendi")
+    if await ders_hakki.kullanilabilir_telafi(session, ogrenci.id) <= 0:
+        raise HTTPException(422, "Kullanılabilir telafi hakkı yok")
+    if ozet.ogrenci_sayisi >= grup.kontenjan:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bu derste boş yer yok")
+    session.add(TelafiPlani(oturum_id=oturum_id, ogrenci_id=ogrenci.id, olusturan_id=yonetici.id))
+    await audit.kaydet(
+        session, "telafi_planlandi", kullanici_id=yonetici.id, hedef_tur="ders_oturumu", hedef_id=str(oturum_id),
+        ip=_ip(request), detay={"ogrenci_id": str(ogrenci.id)},
+    )
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Öğrenci bu derse zaten telafi için eklendi")
+    ozet = (await _ozetler(session, [DersOturumu.id == oturum_id]))[0]
+    return await _detay(session, ozet)
+
+
+@router.delete("/oturumlar/{oturum_id}/telafi/{ogrenci_id}", response_model=OturumDetay)
+async def telafi_iptal(
+    oturum_id: uuid.UUID,
+    ogrenci_id: uuid.UUID,
+    request: Request,
+    yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    await _oturum_al(session, oturum_id, yonetici)
+    plan = (
+        await session.execute(
+            select(TelafiPlani)
+            .where(TelafiPlani.oturum_id == oturum_id, TelafiPlani.ogrenci_id == ogrenci_id)
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if plan is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Telafi planı bulunamadı")
+    yoklama_var = (
+        await session.execute(
+            select(Yoklama.id).where(Yoklama.oturum_id == oturum_id, Yoklama.ogrenci_id == ogrenci_id)
+        )
+    ).first()
+    if yoklama_var is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Yoklaması alınmış telafi geri alınamaz")
+    await session.delete(plan)
+    await audit.kaydet(
+        session, "telafi_iptal_edildi", kullanici_id=yonetici.id, hedef_tur="ders_oturumu", hedef_id=str(oturum_id),
+        ip=_ip(request), detay={"ogrenci_id": str(ogrenci_id)},
+    )
+    await session.commit()
     ozet = (await _ozetler(session, [DersOturumu.id == oturum_id]))[0]
     return await _detay(session, ozet)
