@@ -39,7 +39,6 @@ class OgrenciPaketiDurum(str, enum.Enum):
 class OdemeYontemi(str, enum.Enum):
     nakit = "nakit"
     havale_eft = "havale_eft"
-    pos = "pos"
     diger = "diger"
 
 

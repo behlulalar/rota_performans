@@ -60,13 +60,13 @@ async def test_yetki(istemci, yonetici):
 
 async def test_odeme_al_durum_ders_yukler(istemci, yonetici):
     oid, opid = await bekleyen_paket(istemci, yonetici)
-    r = await ode(istemci, yonetici, opid, yontem="pos", aciklama="Mayıs aidatı")
+    r = await ode(istemci, yonetici, opid, yontem="havale_eft", aciklama="Mayıs aidatı")
     assert r.status_code == 200, r.text
     j = r.json()
     assert j["durum"] == "odendi" and j["toplam_odenen"] == "3400.00"
     assert len(j["odemeler"]) == 1
     od = j["odemeler"][0]
-    assert od["tutar"] == "3400.00" and od["yontem"] == "pos" and od["iptal"] is False
+    assert od["tutar"] == "3400.00" and od["yontem"] == "havale_eft" and od["iptal"] is False
     assert od["tarih"] == bugun().isoformat() and od["aciklama"] == "Mayıs aidatı"
     assert od["alan_ad"] == "yonetici@kulup.com"
     assert (await bakiye(oid))["normal"] == 8
@@ -75,7 +75,7 @@ async def test_odeme_al_durum_ders_yukler(istemci, yonetici):
         assert h.tur == HareketTuru.paket_yuklemesi and h.miktar == 8 and str(h.ogrenci_paketi_id) == opid
         assert h.odeme_id is not None
         log = (await s.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "odeme_alindi"))).scalar_one()
-        assert log.detay["tutar"] == "3400.00" and log.detay["yontem"] == "pos"
+        assert log.detay["tutar"] == "3400.00" and log.detay["yontem"] == "havale_eft"
     # GET listesinde de odemeler döner
     liste = (await istemci.get(f"/api/ogrenciler/{oid}/paketler", headers=yonetici)).json()
     assert len(liste[0]["odemeler"]) == 1
@@ -185,7 +185,7 @@ async def test_iptal_edilen_odeme_paket_iptaline_engel_degildir(istemci, yonetic
 
 async def test_eszamanli_iki_odeme_biri_409(istemci, yonetici):
     oid, opid = await bekleyen_paket(istemci, yonetici)
-    yanitlar = await asyncio.gather(ode(istemci, yonetici, opid), ode(istemci, yonetici, opid, yontem="pos"))
+    yanitlar = await asyncio.gather(ode(istemci, yonetici, opid), ode(istemci, yonetici, opid, yontem="havale_eft"))
     assert sorted(y.status_code for y in yanitlar) == [200, 409]
     assert (await bakiye(oid))["normal"] == 8
     async with SessionLocal() as s:
@@ -197,7 +197,7 @@ async def test_odeme_listesi_suzgec_ozet_sayfalama_arama(istemci, yonetici):
     o2, p2 = await bekleyen_paket(istemci, yonetici, ad="Mehmet", soyad="Kaya", ozel_fiyat="1000", ozel_fiyat_nedeni="İndirim")
     o3, p3 = await bekleyen_paket(istemci, yonetici, ad="Zeynep", soyad="Demir")
     await ode(istemci, yonetici, p1, yontem="nakit")
-    await ode(istemci, yonetici, p2, yontem="pos")
+    await ode(istemci, yonetici, p2, yontem="havale_eft")
     j3 = (await ode(istemci, yonetici, p3, yontem="nakit", tarih=bugun().isoformat())).json()
     await istemci.post(f"/api/odemeler/{j3['odemeler'][0]['id']}/iptal", json={"neden": "hata"}, headers=yonetici)
     # sentetik öğrenci ödemesi görünmez
@@ -212,7 +212,7 @@ async def test_odeme_listesi_suzgec_ozet_sayfalama_arama(istemci, yonetici):
     assert j["ozet"]["toplam_tutar"] == "4400.00" and j["ozet"]["adet"] == 2  # iptal hariç
     dagilim = {d["yontem"]: d for d in j["ozet"]["yontem_dagilimi"]}
     assert dagilim["nakit"] == {"yontem": "nakit", "tutar": "3400.00", "adet": 1}
-    assert dagilim["pos"]["tutar"] == "1000.00"
+    assert dagilim["havale_eft"]["tutar"] == "1000.00"
     satir = next(k for k in j["kayitlar"] if k["iptal"])
     assert satir["ogrenci"]["ad"] == "Zeynep" and satir["iptal_nedeni"] == "hata" and satir["paket_adi"] == "Aylık 8 Ders"
     assert satir["alan_ad"] == "yonetici@kulup.com"

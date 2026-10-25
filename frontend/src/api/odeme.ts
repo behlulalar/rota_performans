@@ -6,7 +6,6 @@ export type { OdemeYontemi };
 export const YONTEM_ETIKET: Record<OdemeYontemi, string> = {
   nakit: "Nakit",
   havale_eft: "Havale/EFT",
-  pos: "POS",
   diger: "Diğer",
 };
 

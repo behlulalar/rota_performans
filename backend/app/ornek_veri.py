@@ -468,8 +468,8 @@ ODEME_OGRENCI_SAYISI = 30
 BEKLEYEN_SIRALAR = {1, 5, 9, 13, 17, 21}
 OZEL_FIYAT_SIRALARI = {0, 9, 18, 27}
 IPTAL_EDILENLER = {(3, 1): "Yanlış tutar girildi", (7, 2): "Veli ödemeyi geri istedi"}  # (sıra, kaç ay önce)
-YONTEMLER = [OdemeYontemi.nakit, OdemeYontemi.havale_eft, OdemeYontemi.pos, OdemeYontemi.havale_eft,
-             OdemeYontemi.nakit, OdemeYontemi.pos, OdemeYontemi.diger]
+YONTEMLER = [OdemeYontemi.nakit, OdemeYontemi.havale_eft, OdemeYontemi.nakit, OdemeYontemi.havale_eft,
+             OdemeYontemi.nakit, OdemeYontemi.nakit, OdemeYontemi.diger]
 
 
 def _ay_basi(bugun: date, geri: int) -> date:

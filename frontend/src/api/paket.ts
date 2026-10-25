@@ -36,7 +36,7 @@ export type OgrenciPaketi = {
   odemeler?: OdemeSatiri[];
 };
 
-export type OdemeYontemi = "nakit" | "havale_eft" | "pos" | "diger";
+export type OdemeYontemi = "nakit" | "havale_eft" | "diger";
 export type OdemeSatiri = {
   id: string;
   tutar: string;
