@@ -8,6 +8,7 @@ export const girdi =
 export const secimKutusu =
   "rounded-[3px] bg-yuzey border border-cizgi-guclu px-3 min-h-11 text-sm outline-none focus:border-altin";
 export const bilgiKutusu = "rounded-[3px] border border-altin/50 bg-altin/10 text-altin-metin text-[13px] px-3 py-2";
+export const tehlikeKutusu = "rounded-[3px] border-2 border-hata bg-hata-zemin text-hata text-sm font-semibold px-3 py-2.5";
 export const uyariKutusu = "rounded-[3px] border border-uyari/40 bg-uyari-zemin text-uyari text-[13px] px-3 py-2";
 export const basariKutusu = "rounded-[3px] border border-basari/40 bg-basari-zemin text-basari text-[13px] px-3 py-2";
 

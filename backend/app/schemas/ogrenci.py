@@ -39,6 +39,7 @@ class OgrenciOlustur(BaseModel):
     cinsiyet: Cinsiyet | None = None
     kimlik_tur: KimlikTur
     kimlik_no: str | None = Field(default=None, max_length=40)
+    telefon: str | None = Field(default=None, max_length=40)
     iletisim_kisileri: list[IletisimKisisiGirdi]
     rizalar: RizaGirdi
 
@@ -55,6 +56,7 @@ class OgrenciGuncelle(BaseModel):
     cinsiyet: Cinsiyet | None = None
     kimlik_tur: KimlikTur | None = None
     kimlik_no: str | None = Field(default=None, max_length=40)
+    telefon: str | None = Field(default=None, max_length=40)
 
 
 class BirincilIletisim(BaseModel):
@@ -73,6 +75,7 @@ class OgrenciOzet(BaseModel):
     cinsiyet: Cinsiyet | None
     kimlik_maskeli: str | None
     foto_var: bool
+    telefon: str | None
     birincil_iletisim: BirincilIletisim | None
 
 

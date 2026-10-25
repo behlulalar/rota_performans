@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { bicimle, telefonSec } from "../lib/telefon";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { aktifEt, fotoSil, fotoYukle, hesapAc, hesapKaldir, hesapSifreSifirla, kimlikGetir, ogrenciGetir, pasifeAl, type OgrenciDetay as Detay, type RizaTur } from "../api/ogrenci";
 import { gruplariGetir, ogrenciEkle, type GrupOzet } from "../api/grup";
@@ -11,7 +12,7 @@ import { hataMesaji, ROL_ETIKET, tarihBicimle } from "../lib/dogrulama";
 import { fotoKucult } from "../lib/fotoKucult";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
-import { bilgiKutusu, dugme, girdi, rozetBasari, rozetBirincil, rozetNotr, secimKutusu, uyariKutusu } from "../lib/stil";
+import { bilgiKutusu, dugme, girdi, rozetBasari, rozetBirincil, rozetNotr, secimKutusu, tehlikeKutusu, uyariKutusu } from "../lib/stil";
 
 const RIZA_ADI: Record<RizaTur, string> = {
   aydinlatma: "KVKK aydınlatma",
@@ -34,7 +35,7 @@ export default function OgrenciDetay() {
   const [grupSecenekleri, setGrupSecenekleri] = useState<GrupOzet[] | null>(null);
   const [secilenGrup, setSecilenGrup] = useState("");
   const [hesapGiris, setHesapGiris] = useState("");
-  const [sifre, setSifre] = useState<{ baslik: string; deger: string } | null>(null);
+  const [sifre, setSifre] = useState<{ baslik: string; deger: string; giris?: string; telefon?: string | null } | null>(null);
   const [hesapBilgi, setHesapBilgi] = useState<string | null>(null);
   const [resitAcik, setResitAcik] = useState(false);
 
@@ -103,7 +104,7 @@ export default function OgrenciDetay() {
       const y = await hesapAc(id, hesapGiris.trim() || undefined);
       setO(await ogrenciGetir(id));
       setHesapGiris("");
-      if (y.gecici_sifre) setSifre({ baslik: `${y.giris} için geçici şifre`, deger: y.gecici_sifre });
+      if (y.gecici_sifre) setSifre({ baslik: `${y.giris} için geçici şifre`, deger: y.gecici_sifre, giris: y.giris, telefon: telefonSec(y.giris, o?.birincil_iletisim?.telefon) });
       if (!y.yeni_hesap) setHesapBilgi("Bu giriş bilgisiyle mevcut bir veli hesabı vardı; öğrenci o hesaba bağlandı (kardeş). Yeni şifre oluşturulmadı.");
     });
 
@@ -111,7 +112,7 @@ export default function OgrenciDetay() {
     islem(async () => {
       if (!window.confirm("Hesap şifresi sıfırlansın mı? Eski şifre geçersiz olur.")) return;
       const y = await hesapSifreSifirla(id);
-      setSifre({ baslik: `${o.hesap?.giris ?? "Hesap"} için yeni geçici şifre`, deger: y.gecici_sifre });
+      setSifre({ baslik: `${o.hesap?.giris ?? "Hesap"} için yeni geçici şifre`, deger: y.gecici_sifre, giris: o.hesap?.giris, telefon: telefonSec(o.hesap?.giris, o?.birincil_iletisim?.telefon) });
     });
 
   const hesapSil = () =>
@@ -140,7 +141,7 @@ export default function OgrenciDetay() {
   const satirSinif = "flex flex-wrap items-center justify-between gap-2 px-6 py-2 min-h-[52px] border-t border-cizgi first:border-t-0 text-sm";
 
   return (
-    <div className="max-w-6xl space-y-4">
+    <div className="space-y-4">
       <div>
         <Link to="/ogrenciler" className="inline-flex items-center min-h-11 md:min-h-0 text-[13px] text-metin-soluk hover:text-metin">← Öğrenciler</Link>
       </div>
@@ -162,9 +163,13 @@ export default function OgrenciDetay() {
       {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
 
       {o.uyarilar.length > 0 && (
-        <div className={`${uyariKutusu} space-y-1`}>
+        <div className="space-y-2">
           {o.uyarilar.map((u) => (
-            <div key={u} className="flex flex-wrap items-center justify-between gap-2">
+            <div
+              key={u}
+              role={resitUyarisi(u) ? "alert" : undefined}
+              className={`${resitUyarisi(u) ? tehlikeKutusu : uyariKutusu} flex flex-wrap items-center justify-between gap-2`}
+            >
               <p>{u}</p>
               {resitUyarisi(u) && (
                 <button className={dugme} onClick={() => { setHesapBilgi(null); setResitAcik(true); }}>Reşit geçişi yap</button>
@@ -190,6 +195,7 @@ export default function OgrenciDetay() {
 
           <dl className="flex-1 min-w-0 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm content-start">
             <dt className="text-metin-soluk">Doğum tarihi</dt><dd className="num">{tarihBicimle(o.dogum_tarihi)} ({o.yas} yaş)</dd>
+            <dt className="text-metin-soluk">Telefon</dt><dd className="num">{o.telefon ? bicimle(o.telefon) : "—"}</dd>
             <dt className="text-metin-soluk">Cinsiyet</dt><dd>{o.cinsiyet === "kadin" ? "Kadın" : o.cinsiyet === "erkek" ? "Erkek" : "—"}</dd>
             <dt className="text-metin-soluk">Anne adı</dt><dd>{o.anne_adi || "—"}</dd>
             <dt className="text-metin-soluk">Baba adı</dt><dd>{o.baba_adi || "—"}</dd>
@@ -253,7 +259,7 @@ export default function OgrenciDetay() {
               <li key={k.id} className={satirSinif}>
                 <div>
                   <div className="font-medium">{k.ad_soyad} <span className="text-metin-soluk font-normal">({ROL_ETIKET[k.rol]})</span></div>
-                  <a href={`tel:${k.telefon}`} className="num text-metin-soluk hover:text-altin-metin">{k.telefon}</a>
+                  <a href={`tel:${k.telefon}`} className="num text-metin-soluk hover:text-altin-metin">{bicimle(k.telefon)}</a>
                 </div>
                 <div className="flex gap-2">
                   {k.birincil && <span className={rozetBirincil}>Birincil</span>}
@@ -278,7 +284,7 @@ export default function OgrenciDetay() {
                 className={`${girdi} disabled:opacity-50`}
                 value={hesapGiris}
                 onChange={(e) => setHesapGiris(e.target.value)}
-                placeholder={birincil?.telefon ?? ""}
+                placeholder={birincil ? bicimle(birincil.telefon) : ""}
                 autoCapitalize="none"
                 disabled={!!hesapEngeli}
               />
@@ -289,7 +295,7 @@ export default function OgrenciDetay() {
         ) : (
           <div className="space-y-3 text-sm">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">{o.hesap.giris}</span>
+              <span className="font-medium">{bicimle(o.hesap.giris)}</span>
               <span className="text-metin-soluk">({o.hesap.rol === "veli" ? "Veli" : "Öğrenci"})</span>
               <span className={o.hesap.aktif ? rozetBasari : rozetNotr}>
                 {o.hesap.aktif ? "Aktif" : "Pasif"}
@@ -323,6 +329,8 @@ export default function OgrenciDetay() {
         <GeciciSifreKutusu
           sifre={sifre.deger}
           baslik={sifre.baslik}
+          giris={sifre.giris}
+          telefon={sifre.telefon}
           uyari="Bu şifre yalnızca şimdi görünür. Veliye/öğrenciye güvenli bir yoldan iletin."
           onKapat={() => setSifre(null)}
         />

@@ -5,7 +5,7 @@ import {
   KUCUK_PNG,
   tcMaskeli,
   tcUret,
-  telefonUret,
+  telefonUret10,
   test,
   yoneticiApiGirisi,
 } from "../yardimci";
@@ -32,7 +32,10 @@ test.describe("Öğrenci kaydı", () => {
     const telefonlar = page.getByLabel("Telefon");
     for (const [i, kisi] of ["Anne", "Baba", "Diger"].entries()) {
       await adlar.nth(i).fill(`${kisi} ${k}`);
-      await telefonlar.nth(i).fill(telefonUret());
+    }
+    // "Telefon (isteğe bağlı)" öğrenci alanı da eşleşir; hepsi 10 hane alır (+90 kutuda sabit).
+    for (let i = 0; i < (await telefonlar.count()); i++) {
+      await telefonlar.nth(i).fill(telefonUret10());
     }
 
     await page.getByLabel(/KVKK aydınlatma metnini okudum/).check();
@@ -81,7 +84,10 @@ test.describe("Öğrenci kaydı", () => {
     const telefonlar = page.getByLabel("Telefon");
     for (const [i, kisi] of ["Anne", "Baba", "Diger"].entries()) {
       await adlar.nth(i).fill(`${kisi} ${k}`);
-      await telefonlar.nth(i).fill(telefonUret());
+    }
+    // "Telefon (isteğe bağlı)" öğrenci alanı da eşleşir; hepsi 10 hane alır (+90 kutuda sabit).
+    for (let i = 0; i < (await telefonlar.count()); i++) {
+      await telefonlar.nth(i).fill(telefonUret10());
     }
     await page.getByLabel(/KVKK aydınlatma metnini okudum/).check();
     await page.getByRole("button", { name: "Kaydet" }).click();
@@ -91,5 +97,25 @@ test.describe("Öğrenci kaydı", () => {
 
     const yanit = await page.request.get(`/api/ogrenciler?q=${ad}`, { headers: { Authorization: `Bearer ${token}` } });
     expect(((await yanit.json()) as { toplam: number }).toplam).toBe(0);
+  });
+
+  test("reşit öğrenci telefonsuz kaydedilemez; telefon kutusu en çok 10 hane tutar", async ({ page }) => {
+    await yoneticiApiGirisi(page);
+    const k = benzersiz();
+    await page.goto("/ogrenciler/yeni");
+    await page.getByLabel("Ad", { exact: true }).fill(`Resit${k}`);
+    await page.getByLabel("Soyad", { exact: true }).fill(`Tel${k}`);
+    await page.getByLabel("Doğum tarihi").fill("2000-01-01");
+
+    await page.getByRole("button", { name: "Kaydet" }).click();
+    await expect(page.getByText("Reşit öğrenci için telefon gerekli")).toBeVisible();
+    await expect(page).toHaveURL(/\/ogrenciler\/yeni$/);
+
+    const telefon = page.getByLabel("Telefon").first();
+    await telefon.fill("532123456789");
+    await expect(telefon).toHaveValue("5321234567");
+    await telefon.fill("");
+    await telefon.pressSequentially("90 532 123 45 67 89");
+    await expect(telefon).toHaveValue("9053212345");
   });
 });

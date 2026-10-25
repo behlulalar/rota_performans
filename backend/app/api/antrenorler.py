@@ -125,7 +125,8 @@ async def olustur(
 
     sifre = gecici_sifre_uret()
     kullanici = Kullanici(
-        rol=Rol.antrenor, giris=giris, sifre_ozeti=sifre_ozeti(sifre), ad_soyad=govde.ad_soyad, aktif=True
+        rol=Rol.antrenor, giris=giris, sifre_ozeti=sifre_ozeti(sifre), ad_soyad=govde.ad_soyad, aktif=True,
+        sifre_degistirmeli=True,
     )
     session.add(kullanici)
     await session.flush()
@@ -196,6 +197,7 @@ async def sifre_sifirla(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Antrenörün giriş hesabı yok")
     sifre = gecici_sifre_uret()
     kullanici.sifre_ozeti = sifre_ozeti(sifre)
+    kullanici.sifre_degistirmeli = True
     kullanici.basarisiz_deneme = 0
     kullanici.kilit_bitis = None
     await _oturumlari_iptal_et(session, kullanici.id)

@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { resitGecisiYap, type OgrenciDetay } from "../api/ogrenci";
 import { hataMesaji } from "../lib/dogrulama";
+import TelefonGirdisi from "./TelefonGirdisi";
+import { apiyeCevir, gecerliMi, TELEFON_HATA } from "../lib/telefon";
 import { girdi, birincilDugme } from "../lib/stil";
 
 
@@ -20,12 +22,13 @@ export default function ResitGecisi({
 
   async function gonder(e: FormEvent) {
     e.preventDefault();
-    if (!telefon.trim()) return setHata("Öğrencinin telefonu zorunludur.");
+    if (!telefon) return setHata("Öğrencinin telefonu zorunludur.");
+    if (!gecerliMi(telefon)) return setHata(TELEFON_HATA);
     if (!window.confirm("Reşit geçişi yapılsın mı? Velinin bu öğrenciye panel erişimi kapanır.")) return;
     setGonderiliyor(true);
     setHata(null);
     try {
-      const detay = await resitGecisiYap(ogrenci.id, { telefon: telefon.trim(), ad_soyad: adSoyad.trim() || undefined });
+      const detay = await resitGecisiYap(ogrenci.id, { telefon: apiyeCevir(telefon)!, ad_soyad: adSoyad.trim() || undefined });
       onTamam(detay);
     } catch (err) {
       setHata(hataMesaji(err));
@@ -46,7 +49,7 @@ export default function ResitGecisi({
         </p>
         <form onSubmit={gonder} noValidate className="space-y-3">
           <label className="block"><span className="text-sm text-metin-soluk">Öğrencinin telefonu</span>
-            <input className={girdi} type="tel" value={telefon} onChange={(e) => setTelefon(e.target.value)} autoFocus /></label>
+            <TelefonGirdisi value={telefon} onChange={setTelefon} autoFocus /></label>
           <label className="block"><span className="text-sm text-metin-soluk">Ad soyad</span>
             <input className={girdi} value={adSoyad} onChange={(e) => setAdSoyad(e.target.value)} /></label>
           {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import TelefonGirdisi from "../components/TelefonGirdisi";
+import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA, telefonSec } from "../lib/telefon";
 import {
   antrenorGuncelle,
   antrenorleriGetir,
@@ -21,7 +23,7 @@ export default function AntrenorListe() {
   const [liste, setListe] = useState<AntrenorOzet[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
-  const [sifre, setSifre] = useState<{ baslik: string; deger: string } | null>(null);
+  const [sifre, setSifre] = useState<{ baslik: string; deger: string; giris?: string | null; telefon?: string | null } | null>(null);
   const [yeniAcik, setYeniAcik] = useState(false);
   const [duzenlenen, setDuzenlenen] = useState<AntrenorOzet | null>(null);
 
@@ -60,7 +62,7 @@ export default function AntrenorListe() {
     islem(async () => {
       if (!window.confirm(`${a.ad_soyad} için şifre sıfırlansın mı? Eski şifre geçersiz olur.`)) return;
       const y = await sifreSifirla(a.id);
-      setSifre({ baslik: `${a.ad_soyad} için yeni geçici şifre`, deger: y.gecici_sifre });
+      setSifre({ baslik: `${a.ad_soyad} için yeni geçici şifre`, deger: y.gecici_sifre, giris: a.giris, telefon: telefonSec(a.giris, a.telefon) });
     });
 
   return (
@@ -108,7 +110,7 @@ export default function AntrenorListe() {
                 {liste.map((a) => (
                   <tr key={a.id} className={satir}>
                     <td className={`${td} font-medium`}>{a.ad_soyad}</td>
-                    <td className={`${td} num text-metin-soluk`}>{a.telefon ?? "—"}</td>
+                    <td className={`${td} num text-metin-soluk`}>{a.telefon ? bicimle(a.telefon) : "—"}</td>
                     <td className={`${td} text-metin-soluk`}>{a.giris ?? "—"}</td>
                     <td className={`${td} num`}>{a.grup_sayisi}</td>
                     <td className={td}><AktifRozeti aktif={a.aktif} /></td>
@@ -132,7 +134,7 @@ export default function AntrenorListe() {
                   <span className="font-medium">{a.ad_soyad}</span>
                   <AktifRozeti aktif={a.aktif} />
                 </div>
-                <div className="num text-metin-soluk mt-1">{a.telefon ?? "Telefon yok"} · {a.giris ?? "Giriş yok"}</div>
+                <div className="num text-metin-soluk mt-1">{a.telefon ? bicimle(a.telefon) : "Telefon yok"} · {a.giris ?? "Giriş yok"}</div>
                 <div className="num text-metin-soluk">{a.grup_sayisi} grup</div>
                 <div className="flex gap-2 flex-wrap mt-3">
                   <button className={dugme} onClick={() => setDuzenlenen(a)}>Düzenle</button>
@@ -148,9 +150,9 @@ export default function AntrenorListe() {
       {yeniAcik && (
         <YeniAntrenor
           onKapat={() => setYeniAcik(false)}
-          onOlustu={(deger, ad) => {
+          onOlustu={(deger, ad, giris, telefon) => {
             setYeniAcik(false);
-            setSifre({ baslik: `${ad} için geçici şifre`, deger });
+            setSifre({ baslik: `${ad} için geçici şifre`, deger, giris, telefon: telefonSec(giris, telefon) });
             void yukle();
           }}
         />
@@ -165,7 +167,7 @@ export default function AntrenorListe() {
           }}
         />
       )}
-      {sifre && <GeciciSifreKutusu sifre={sifre.deger} baslik={sifre.baslik} onKapat={() => setSifre(null)} />}
+      {sifre && <GeciciSifreKutusu sifre={sifre.deger} baslik={sifre.baslik} giris={sifre.giris} telefon={sifre.telefon} onKapat={() => setSifre(null)} />}
     </div>
   );
 }
@@ -184,7 +186,7 @@ function Modal({ baslik, children, onKapat }: { baslik: string; children: React.
   );
 }
 
-function YeniAntrenor({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (sifre: string, ad: string) => void }) {
+function YeniAntrenor({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (sifre: string, ad: string, giris: string | null, telefon: string | null) => void }) {
   const [ad, setAd] = useState("");
   const [telefon, setTelefon] = useState("");
   const [giris, setGiris] = useState("");
@@ -194,11 +196,12 @@ function YeniAntrenor({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
   async function gonder(e: FormEvent) {
     e.preventDefault();
     if (!ad.trim() || !giris.trim()) return setHata("Ad soyad ve giriş bilgisi zorunludur.");
+    if (telefon && !gecerliMi(telefon)) return setHata(TELEFON_HATA);
     setGonderiliyor(true);
     setHata(null);
     try {
-      const y = await antrenorOlustur({ ad_soyad: ad.trim(), telefon: telefon.trim() || undefined, giris: giris.trim() });
-      onOlustu(y.gecici_sifre, y.antrenor.ad_soyad);
+      const y = await antrenorOlustur({ ad_soyad: ad.trim(), telefon: apiyeCevir(telefon) ?? undefined, giris: giris.trim() });
+      onOlustu(y.gecici_sifre, y.antrenor.ad_soyad, y.antrenor.giris, y.antrenor.telefon);
     } catch (err) {
       setHata(hataMesaji(err));
       setGonderiliyor(false);
@@ -211,7 +214,7 @@ function YeniAntrenor({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
         <label className="block"><span className="text-[13px] text-metin-soluk">Ad soyad</span>
           <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} autoFocus /></label>
         <label className="block"><span className="text-[13px] text-metin-soluk">Telefon</span>
-          <input className={girdi} type="tel" value={telefon} onChange={(e) => setTelefon(e.target.value)} /></label>
+          <TelefonGirdisi value={telefon} onChange={setTelefon} /></label>
         <label className="block"><span className="text-[13px] text-metin-soluk">Giriş (e-posta veya telefon)</span>
           <input className={girdi} value={giris} onChange={(e) => setGiris(e.target.value)} autoCapitalize="none" /></label>
         {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
@@ -225,17 +228,18 @@ function YeniAntrenor({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
 
 function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; onKapat: () => void; onKaydedildi: () => void }) {
   const [ad, setAd] = useState(antrenor.ad_soyad);
-  const [telefon, setTelefon] = useState(antrenor.telefon ?? "");
+  const [telefon, setTelefon] = useState(rakamlaraCevir(antrenor.telefon));
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
 
   async function gonder(e: FormEvent) {
     e.preventDefault();
     if (!ad.trim()) return setHata("Ad soyad zorunludur.");
+    if (telefon && !gecerliMi(telefon)) return setHata(TELEFON_HATA);
     setGonderiliyor(true);
     setHata(null);
     try {
-      await antrenorGuncelle(antrenor.id, { ad_soyad: ad.trim(), telefon: telefon.trim() });
+      await antrenorGuncelle(antrenor.id, { ad_soyad: ad.trim(), telefon: apiyeCevir(telefon) ?? undefined });
       onKaydedildi();
     } catch (err) {
       setHata(hataMesaji(err));
@@ -249,7 +253,7 @@ function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; 
         <label className="block"><span className="text-[13px] text-metin-soluk">Ad soyad</span>
           <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} autoFocus /></label>
         <label className="block"><span className="text-[13px] text-metin-soluk">Telefon</span>
-          <input className={girdi} type="tel" value={telefon} onChange={(e) => setTelefon(e.target.value)} /></label>
+          <TelefonGirdisi value={telefon} onChange={setTelefon} /></label>
         {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
         <button type="submit" disabled={gonderiliyor} className={birincilDugme}>
           {gonderiliyor ? "Kaydediliyor…" : "Kaydet"}

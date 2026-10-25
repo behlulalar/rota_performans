@@ -10,6 +10,7 @@ import GenelBakis from "./pages/GenelBakis";
 import OgrenciDetay from "./pages/OgrenciDetay";
 import OgrenciForm from "./pages/OgrenciForm";
 import OgrenciListe from "./pages/OgrenciListe";
+import SifreDegistir from "./pages/SifreDegistir";
 import Panel from "./pages/Panel";
 import AntrenorYerlesim from "./components/AntrenorYerlesim";
 import Takvim from "./pages/Takvim";
@@ -19,6 +20,7 @@ function KorumaliRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to="/giris" replace />;
+  if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin") return <Navigate to="/genel-bakis" replace />;
   if (kullanici.rol === "antrenor") return <Navigate to="/takvim" replace />;
   return <Panel />;
@@ -28,6 +30,7 @@ function YoneticiRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to="/giris" replace />;
+  if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "admin") return <Navigate to="/" replace />;
   return <YoneticiYerlesim />;
 }
@@ -37,6 +40,7 @@ function TakvimRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to="/giris" replace />;
+  if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin") return <YoneticiYerlesim />;
   if (kullanici.rol === "antrenor") return <AntrenorYerlesim />;
   return <Navigate to="/" replace />;
@@ -48,6 +52,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/giris" element={<Giris />} />
+          <Route path="/sifre-degistir" element={<SifreDegistir />} />
           <Route path="/" element={<KorumaliRota />} />
           <Route element={<TakvimRota />}>
             <Route path="/takvim" element={<Takvim />} />

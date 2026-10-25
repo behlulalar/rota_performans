@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, belirteciAyarla, oturumuYenile } from "../lib/api";
+import { api, belirteciAyarla, oturumuYenile, sifreZorunluDinleyiciAyarla } from "../lib/api";
 import { cikisIsaretle, cikisYapildiMi, hatirlananiKaydet, hatirlananiOku, hatirlananiSil } from "../lib/hatirla";
 
 export type Rol = "admin" | "antrenor" | "veli" | "ogrenci";
-export type Kullanici = { id: string; rol: Rol; giris: string; ad_soyad: string | null };
+export type Kullanici = { id: string; rol: Rol; giris: string; ad_soyad: string | null; sifre_degistirmeli: boolean };
 
 type AuthDegeri = {
   kullanici: Kullanici | null;
@@ -12,6 +12,8 @@ type AuthDegeri = {
   oturumSuresiDoldu: boolean;
   girisYap: (giris: string, sifre: string, beniHatirla: boolean) => Promise<void>;
   cikisYap: () => Promise<void>;
+  /** Zorunlu şifre değişiminden sonra çağrılır; kullanıcı durumunu sunucudan yeniler. */
+  sifreDegistirildi: () => Promise<void>;
 };
 
 const AuthBaglami = createContext<AuthDegeri | null>(null);
@@ -68,9 +70,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const sifreDegistirildi = useCallback(async () => {
+    try {
+      const ben = await api<Kullanici>("/api/auth/me");
+      setKullanici(ben);
+    } catch {
+      setKullanici((k) => (k ? { ...k, sifre_degistirmeli: false } : k));
+    }
+  }, []);
+
+  // Nadir yarış: sunucu 403 sifre_degistirmeli derse durumu yenile; yönlendirmeyi rota koruması yapar.
+  useEffect(() => {
+    sifreZorunluDinleyiciAyarla(() => {
+      api<Kullanici>("/api/auth/me").then(setKullanici, () => {});
+    });
+    return () => sifreZorunluDinleyiciAyarla(null);
+  }, []);
+
   const deger = useMemo(
-    () => ({ kullanici, yukleniyor, oturumSuresiDoldu, girisYap, cikisYap }),
-    [kullanici, yukleniyor, oturumSuresiDoldu, girisYap, cikisYap],
+    () => ({ kullanici, yukleniyor, oturumSuresiDoldu, girisYap, cikisYap, sifreDegistirildi }),
+    [kullanici, yukleniyor, oturumSuresiDoldu, girisYap, cikisYap, sifreDegistirildi],
   );
   return <AuthBaglami.Provider value={deger}>{children}</AuthBaglami.Provider>;
 }

@@ -20,7 +20,7 @@ def _yetkisiz() -> HTTPException:
     )
 
 
-async def aktif_kullanici(
+async def aktif_kullanici_serbest(
     kimlik: HTTPAuthorizationCredentials | None = Depends(_bearer),
     session: AsyncSession = Depends(get_session),
 ) -> Kullanici:
@@ -35,6 +35,17 @@ async def aktif_kullanici(
     kullanici = await session.get(Kullanici, kullanici_id)
     if kullanici is None or not kullanici.aktif:
         raise _yetkisiz()
+    return kullanici
+
+
+async def aktif_kullanici(kullanici: Kullanici = Depends(aktif_kullanici_serbest)) -> Kullanici:
+    """Geçici şifreyle girilmişse şifre değiştirilene kadar korumalı uç noktalar kapalıdır."""
+    if kullanici.sifre_degistirmeli:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Şifrenizi değiştirmeniz gerekiyor",
+            headers={"X-Hata-Kodu": "sifre_degistirmeli"},
+        )
     return kullanici
 
 

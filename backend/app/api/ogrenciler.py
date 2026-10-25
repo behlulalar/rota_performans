@@ -86,6 +86,13 @@ def _telefon_normalize(telefon: str) -> str:
         raise _hata422(str(hata))
 
 
+def _telefon_hazirla(telefon: str | None) -> str | None:
+    """Boş/yalnız boşluk None sayılır; doluysa doğrulanıp normalize edilir."""
+    if telefon is None or not telefon.strip():
+        return None
+    return _telefon_normalize(telefon)
+
+
 def _kisileri_dogrula(kisiler: list[IletisimKisisiGirdi]) -> None:
     if sum(1 for k in kisiler if k.birincil) != 1:
         raise _hata422("Tam olarak bir birincil iletişim kişisi olmalı")
@@ -129,6 +136,7 @@ def _ozet(ogrenci: Ogrenci, birincil: IletisimKisisi | None) -> dict:
         "cinsiyet": ogrenci.cinsiyet,
         "kimlik_maskeli": _maskeli(ogrenci),
         "foto_var": ogrenci.foto_anahtar is not None,
+        "telefon": ogrenci.telefon,
         "birincil_iletisim": BirincilIletisim(ad_soyad=birincil.ad_soyad, telefon=birincil.telefon, rol=birincil.rol)
         if birincil
         else None,
@@ -323,9 +331,22 @@ async def olustur(
     yonetici: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
-    _kisileri_dogrula(govde.iletisim_kisileri)
+    ogr_telefon = _telefon_hazirla(govde.telefon)
+    resit = _yas(govde.dogum_tarihi) >= 18
+    if resit:
+        if ogr_telefon is None:
+            raise _hata422("Reşit öğrenci için öğrencinin kendi telefon numarası gerekli")
+        # Birincil iletişim sunucuda üretilir; gelen "kendisi" satırları yok sayılır, diğerleri birincil olamaz.
+        kisiler = [
+            k.model_copy(update={"birincil": False})
+            for k in govde.iletisim_kisileri
+            if k.rol != IletisimRolu.kendisi
+        ]
+    else:
+        kisiler = list(govde.iletisim_kisileri)
+        _kisileri_dogrula(kisiler)
     no = _kimlik_hazirla(govde.kimlik_tur, govde.kimlik_no)
-    telefonlar = [_telefon_normalize(k.telefon) for k in govde.iletisim_kisileri]
+    telefonlar = [_telefon_normalize(k.telefon) for k in kisiler]
     if no and await _kimlik_tekrar_var_mi(session, kimlik.ozet(no)):
         raise HTTPException(status.HTTP_409_CONFLICT, KIMLIK_TEKRAR)
 
@@ -336,6 +357,7 @@ async def olustur(
         baba_adi=(govde.baba_adi or "").strip() or None,
         dogum_tarihi=govde.dogum_tarihi,
         cinsiyet=govde.cinsiyet,
+        telefon=ogr_telefon,
         durum=OgrenciDurum.aktif,
     )
     _kimlik_yaz(ogrenci, govde.kimlik_tur, no)
@@ -343,7 +365,20 @@ async def olustur(
     await session.flush()
 
     birincil_id = None
-    for k, telefon in zip(govde.iletisim_kisileri, telefonlar):
+    if resit:
+        kendisi = IletisimKisisi(
+            id=uuid.uuid4(),
+            ogrenci_id=ogrenci.id,
+            rol=IletisimRolu.kendisi,
+            ad_soyad=f"{ogrenci.ad} {ogrenci.soyad}",
+            telefon=ogr_telefon,
+            birincil=True,
+            whatsapp_izni=govde.rizalar.whatsapp,
+        )
+        session.add(kendisi)
+        await session.flush()
+        birincil_id = kendisi.id
+    for k, telefon in zip(kisiler, telefonlar):
         satir = IletisimKisisi(
             id=uuid.uuid4(),
             ogrenci_id=ogrenci.id,
@@ -428,6 +463,24 @@ async def guncelle(
         ogrenci.dogum_tarihi = govde.dogum_tarihi
     if "cinsiyet" in verilen:
         ogrenci.cinsiyet = govde.cinsiyet
+    if "telefon" in verilen:
+        yeni_tel = _telefon_hazirla(govde.telefon)
+        kendisi_birincil = (
+            await session.execute(
+                select(IletisimKisisi)
+                .where(
+                    IletisimKisisi.ogrenci_id == ogrenci.id,
+                    IletisimKisisi.rol == IletisimRolu.kendisi,
+                    IletisimKisisi.birincil.is_(True),
+                )
+                .with_for_update()
+            )
+        ).scalar_one_or_none()
+        if kendisi_birincil is not None:
+            if yeni_tel is None:
+                raise _hata422("Birincil iletişimi öğrencinin kendisi olan kayıtta telefon boş bırakılamaz")
+            kendisi_birincil.telefon = yeni_tel
+        ogrenci.telefon = yeni_tel
     if "kimlik_tur" in verilen:
         no = _kimlik_hazirla(govde.kimlik_tur, govde.kimlik_no)
         if no and await _kimlik_tekrar_var_mi(session, kimlik.ozet(no), haric=ogrenci.id):
@@ -750,7 +803,8 @@ async def hesap_ac(
         kullanici.aktif = True
     else:
         sifre = gecici_sifre_uret()
-        kullanici = Kullanici(rol=rol, giris=giris, sifre_ozeti=sifre_ozeti(sifre), ad_soyad=birincil.ad_soyad, aktif=True)
+        kullanici = Kullanici(rol=rol, giris=giris, sifre_ozeti=sifre_ozeti(sifre), ad_soyad=birincil.ad_soyad, aktif=True,
+                            sifre_degistirmeli=True)
         session.add(kullanici)
         await session.flush()
     birincil.kullanici_id = kullanici.id
@@ -798,6 +852,7 @@ async def hesap_sifre_sifirla(
         raise HTTPException(status.HTTP_404_NOT_FOUND, HESAP_YOK)
     sifre = gecici_sifre_uret()
     kullanici.sifre_ozeti = sifre_ozeti(sifre)
+    kullanici.sifre_degistirmeli = True
     kullanici.basarisiz_deneme = 0
     kullanici.kilit_bitis = None
     await _oturumlari_iptal_et(session, kullanici.id)
@@ -848,6 +903,8 @@ async def resit_gecisi(
         session.add(kendisi)
     kendisi.ad_soyad = ad_soyad
     kendisi.telefon = telefon
+    if not ogrenci.telefon:
+        ogrenci.telefon = telefon
     kendisi.birincil = True
     kendisi.whatsapp_izni = whatsapp_riza
     await audit.kaydet(

@@ -15,6 +15,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.db import SessionLocal, engine
 from app.models.kullanici import Kullanici, Rol
+from app import telefon
 from app.security import normalize_giris, sifre_ozeti
 
 MIN_SIFRE_UZUNLUK = 12
@@ -28,8 +29,8 @@ async def admin_olustur(giris: str) -> int:
         except EmailNotValidError as hata:
             print(f"Geçersiz e-posta adresi: {hata}", file=sys.stderr)
             return 1
-    elif not giris.lstrip("+").isdigit():
-        print("Giriş bir e-posta adresi veya telefon numarası olmalı.", file=sys.stderr)
+    elif telefon.giris_icin(giris) is None:
+        print("Giriş bir e-posta adresi veya +90 ardından 10 haneli telefon numarası olmalı.", file=sys.stderr)
         return 1
     sifre = getpass.getpass("Şifre: ")
     if len(sifre) < MIN_SIFRE_UZUNLUK:

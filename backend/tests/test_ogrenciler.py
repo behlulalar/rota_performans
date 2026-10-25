@@ -76,7 +76,7 @@ async def test_olusturma_ve_sifreli_saklama(istemci, yonetici):
     d = await olustur(istemci, yonetici)
     assert d["kimlik_maskeli"] == "100******46"
     assert d["durum"] == "aktif"
-    assert d["birincil_iletisim"]["telefon"] == "05320000001"
+    assert d["birincil_iletisim"]["telefon"] == "+905320000001"
     assert sorted(r["tur"] for r in d["rizalar"]) == ["aydinlatma", "foto", "whatsapp"]
     birincil = next(k for k in d["iletisim_kisileri"] if k["birincil"])
     assert birincil["whatsapp_izni"] is True
@@ -167,10 +167,15 @@ async def test_liste_arama_filtre_sayfalama(istemci, yonetici):
 async def test_detay_uyarilari(istemci, yonetici):
     kucuk = await olustur(istemci, yonetici, dogum_tarihi=date.today().replace(year=date.today().year - 3).isoformat())
     assert kucuk["uyarilar"] == ["Öğrenci 5 yaşını doldurmamış"]
-    resit = await olustur(
-        istemci, yonetici, kimlik_no=IKINCI_TC,
-        dogum_tarihi=date.today().replace(year=date.today().year - 20).isoformat(),
+    # Reşit + veli birincil durumu: küçükken açılmış kayıt yaşlanınca oluşur.
+    acilan = await olustur(istemci, yonetici, kimlik_no=IKINCI_TC)
+    g = await istemci.patch(
+        f"/api/ogrenciler/{acilan['id']}",
+        json={"dogum_tarihi": date.today().replace(year=date.today().year - 20).isoformat()},
+        headers=yonetici,
     )
+    assert g.status_code == 200
+    resit = g.json()
     assert resit["uyarilar"] == ["Öğrenci reşit, birincil iletişim kişisi kendisi olmalı"]
     d = (await istemci.get(f"/api/ogrenciler/{resit['id']}", headers=yonetici)).json()
     assert d["uyarilar"] == resit["uyarilar"] and d["yas"] == 20
@@ -269,7 +274,7 @@ async def test_hesapli_birincil_degistirilemez(istemci, yonetici):
     assert (await istemci.put(f"/api/ogrenciler/{d['id']}/iletisim-kisileri", json=ayni, headers=yonetici)).status_code == 200
     async with SessionLocal() as s:
         b = (await s.execute(select(IletisimKisisi).where(IletisimKisisi.birincil))).scalar_one()
-        assert b.kullanici_id == veli.id and b.telefon == "05329999999"
+        assert b.kullanici_id == veli.id and b.telefon == "+905329999999"
 
 
 @pytest.mark.parametrize("rol", [Rol.antrenor, Rol.veli])
@@ -396,3 +401,89 @@ async def test_yalnizca_bosluktan_olusan_ad_reddedilir(istemci):
     olusan = (await istemci.post("/api/ogrenciler", json=govde, headers=bas)).json()
     guncelle = await istemci.patch(f"/api/ogrenciler/{olusan['id']}", json={"ad": "  "}, headers=bas)
     assert guncelle.status_code == 422
+
+
+def _yil_once(yil):
+    return date.today().replace(day=1, year=date.today().year - yil).isoformat()
+
+
+async def test_telefonsuz_kucuk_kayit_ve_telefon_normalize(istemci, yonetici):
+    d = await olustur(istemci, yonetici)
+    assert d["telefon"] is None
+    d2 = await olustur(istemci, yonetici, kimlik_no=IKINCI_TC, telefon="0 (532) 111-22 33")
+    assert d2["telefon"] == "+905321112233"
+    d3 = await olustur(istemci, yonetici, kimlik_no=None, telefon="   ")
+    assert d3["telefon"] is None
+    assert d3["birincil_iletisim"]["rol"] == "anne"
+
+
+async def test_gecersiz_telefon_422(istemci, yonetici):
+    y = await istemci.post("/api/ogrenciler", json=govde(telefon="abc"), headers=yonetici)
+    assert y.status_code == 422
+
+
+async def test_resit_telefonla_birincil_kendisi_otomatik(istemci, yonetici):
+    d = await olustur(
+        istemci, yonetici, dogum_tarihi=_yil_once(20), telefon="0532 111 22 33",
+        iletisim_kisileri=[
+            {"rol": "kendisi", "ad_soyad": "Sahte", "telefon": "05320000009", "birincil": True},
+            {"rol": "anne", "ad_soyad": "Deneme Anne", "telefon": "05320000001", "birincil": True},
+        ],
+    )
+    kisiler = d["iletisim_kisileri"]
+    assert len(kisiler) == 2
+    b = d["birincil_iletisim"]
+    assert b == {"ad_soyad": "Deneme Öğrenci", "telefon": "+905321112233", "rol": "kendisi"}
+    assert [k["rol"] for k in kisiler if k["birincil"]] == ["kendisi"]
+    anne = next(k for k in kisiler if k["rol"] == "anne")
+    assert anne["birincil"] is False and anne["whatsapp_izni"] is False
+    assert next(k for k in kisiler if k["birincil"])["whatsapp_izni"] is True
+    assert d["telefon"] == "+905321112233"
+    assert d["uyarilar"] == []
+
+
+async def test_resit_bos_iletisim_listesiyle(istemci, yonetici):
+    d = await olustur(istemci, yonetici, dogum_tarihi=_yil_once(30), telefon="05321112233", iletisim_kisileri=[])
+    assert len(d["iletisim_kisileri"]) == 1 and d["birincil_iletisim"]["rol"] == "kendisi"
+
+
+async def test_resit_telefonsuz_422(istemci, yonetici):
+    for ek in ({}, {"telefon": "  "}):
+        y = await istemci.post("/api/ogrenciler", json=govde(dogum_tarihi=_yil_once(20), **ek), headers=yonetici)
+        assert y.status_code == 422
+        assert "kendi telefon" in y.json()["detail"]
+
+
+async def test_patch_telefon_senkronu(istemci, yonetici):
+    d = await olustur(istemci, yonetici, dogum_tarihi=_yil_once(20), telefon="05321112233", iletisim_kisileri=[])
+    url = f"/api/ogrenciler/{d['id']}"
+    y = await istemci.patch(url, json={"telefon": "0555 444 33 22"}, headers=yonetici)
+    assert y.status_code == 200
+    assert y.json()["telefon"] == "+905554443322"
+    assert y.json()["birincil_iletisim"]["telefon"] == "+905554443322"
+    for bos in (None, "  "):
+        assert (await istemci.patch(url, json={"telefon": bos}, headers=yonetici)).status_code == 422
+    assert (await istemci.patch(url, json={"telefon": "abc"}, headers=yonetici)).status_code == 422
+    # küçük öğrenci: temizlenebilir
+    k = await olustur(istemci, yonetici, kimlik_no=IKINCI_TC, telefon="05321112233")
+    y = await istemci.patch(f"/api/ogrenciler/{k['id']}", json={"telefon": None}, headers=yonetici)
+    assert y.status_code == 200 and y.json()["telefon"] is None
+
+
+async def test_telefon_9_ve_11_hane_422(istemci, yonetici):
+    for t in ("532123456", "53212345678", "9053212345678"):
+        y = await istemci.post("/api/ogrenciler", json=govde(telefon=t), headers=yonetici)
+        assert y.status_code == 422, t
+        assert "10 haneden" in y.json()["detail"]
+
+
+async def test_gecersiz_iletisim_kisisi_telefonu_422(istemci, yonetici):
+    kisiler = [{"rol": "anne", "ad_soyad": "A", "telefon": "0532 123", "birincil": True}]
+    y = await istemci.post("/api/ogrenciler", json=govde(iletisim_kisileri=kisiler), headers=yonetici)
+    assert y.status_code == 422
+
+
+async def test_gecersiz_resit_gecisi_telefonu_422(istemci, yonetici):
+    o = await olustur(istemci, yonetici)
+    y = await istemci.post(f"/api/ogrenciler/{o['id']}/resit-gecisi", json={"telefon": "12345"}, headers=yonetici)
+    assert y.status_code == 422

@@ -36,7 +36,7 @@ async def test_olusturma_ve_gecici_sifreyle_giris(istemci, yonetici):
     assert d["antrenor"]["giris"] == "ali@kulup.com"
     assert d["antrenor"]["aktif"] is True
     assert d["antrenor"]["grup_sayisi"] == 0
-    assert d["antrenor"]["telefon"] == "05320000000"
+    assert d["antrenor"]["telefon"] == "+905320000000"
 
     giris_yaniti = await istemci.post("/api/auth/login", json={"giris": "ALI@kulup.com", "sifre": sifre})
     assert giris_yaniti.status_code == 200
@@ -180,3 +180,22 @@ async def test_yetki(istemci, yonetici):
         for baslik in (antrenor, veli):
             assert (await istemci.request(yontem, yol, json=govde, headers=baslik)).status_code == 403
         assert (await istemci.request(yontem, yol, json=govde)).status_code == 401
+
+
+async def test_antrenor_farkli_yazimla_giris(istemci, yonetici):
+    y = await olustur(istemci, yonetici, giris="0532 111 22 33")
+    assert y.status_code == 201, y.text
+    assert y.json()["antrenor"]["giris"] == "+905321112233"
+    sifre = y.json()["gecici_sifre"]
+    for g in ("+905321112233", "5321112233", "0 532 111 22 33", "90 532 111 22 33"):
+        r = await istemci.post("/api/auth/login", json={"giris": g, "sifre": sifre})
+        assert r.status_code == 200, g
+
+
+async def test_antrenor_gecersiz_telefon_422(istemci, yonetici):
+    for t in ("abc", "532123456", "053212345678"):
+        assert (await olustur(istemci, yonetici, telefon=t)).status_code == 422
+    assert (await olustur(istemci, yonetici, giris="12345")).status_code == 422
+    d = (await olustur(istemci, yonetici)).json()["antrenor"]
+    y = await istemci.patch(f"/api/antrenorler/{d['id']}", json={"telefon": "123"}, headers=yonetici)
+    assert y.status_code == 422

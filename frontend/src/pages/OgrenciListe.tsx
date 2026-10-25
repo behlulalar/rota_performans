@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { bicimle } from "../lib/telefon";
 import { Link, useNavigate } from "react-router-dom";
 import { ogrencileriGetir, type Liste } from "../api/ogrenci";
 import DurumRozeti from "../components/DurumRozeti";
@@ -112,7 +113,7 @@ export default function OgrenciListe() {
                       {o.birincil_iletisim ? (
                         <div className="leading-4">
                           <div>{o.birincil_iletisim.ad_soyad} <span className="text-metin-soluk">({ROL_ETIKET[o.birincil_iletisim.rol]})</span></div>
-                          <div className="num text-metin-soluk text-xs">{o.birincil_iletisim.telefon}</div>
+                          <div className="num text-metin-soluk text-xs">{bicimle(o.birincil_iletisim.telefon)}</div>
                         </div>
                       ) : "—"}
                     </td>
@@ -137,7 +138,7 @@ export default function OgrenciListe() {
                     <div className="num text-metin-soluk">{o.yas} yaş · {o.kimlik_maskeli ?? "—"}</div>
                     {o.birincil_iletisim && (
                       <div className="num mt-1 text-metin-soluk">
-                        {o.birincil_iletisim.ad_soyad} · {o.birincil_iletisim.telefon}
+                        {o.birincil_iletisim.ad_soyad} · {bicimle(o.birincil_iletisim.telefon)}
                       </div>
                     )}
                   </div>

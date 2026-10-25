@@ -113,7 +113,7 @@ export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler
         {/* Masaüstü: bölüm şeridi */}
         <nav
           aria-label="Bölümler"
-          className="hidden md:flex flex-col items-center w-16 shrink-0 sticky top-0 h-dvh bg-serit py-3 gap-1"
+          className="hidden md:flex flex-col items-center w-[76px] shrink-0 sticky top-0 h-dvh bg-serit py-3 gap-1"
         >
           <div
             aria-hidden="true"
@@ -131,7 +131,7 @@ export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler
                 aria-label={b.ad}
                 aria-pressed={sec}
                 title={b.ad}
-                className={`relative grid place-items-center size-11 rounded-lg transition-colors ${
+                className={`relative flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-lg transition-colors ${
                   sec
                     ? "bg-white/10 text-serit-ikon-secili"
                     : "text-serit-ikon hover:text-serit-ikon-secili hover:bg-white/5"
@@ -139,11 +139,12 @@ export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler
               >
                 {sec && <span aria-hidden="true" className="absolute -left-2.5 top-2.5 bottom-2.5 w-[3px] rounded-r bg-serit-ikon-secili" />}
                 <Simge ad={b.simge} />
+                <span className="text-[11px] leading-none font-medium">{b.ad}</span>
               </button>
             );
           })}
           <div className="mt-auto flex flex-col items-center gap-1">
-            <TemaDugmesi gorunum="serit" />
+            <TemaDugmesi gorunum="serit" etiket />
             <div
               title={kullanici?.giris}
               className="size-9 rounded-full border border-serit-ikon/40 grid place-items-center text-serit-ikon-secili text-[11px] font-semibold"
@@ -155,9 +156,10 @@ export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler
               onClick={() => void cikisYap()}
               aria-label="Çıkış"
               title="Çıkış"
-              className="grid place-items-center size-11 rounded-lg text-serit-ikon hover:text-serit-ikon-secili transition-colors"
+              className="flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-lg text-serit-ikon hover:text-serit-ikon-secili hover:bg-white/5 transition-colors"
             >
               <Simge ad="cikis" />
+              <span className="text-[11px] leading-none font-medium">Çıkış</span>
             </button>
           </div>
         </nav>

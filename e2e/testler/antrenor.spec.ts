@@ -1,4 +1,4 @@
-import { arayuzdenGiris, benzersiz, expect, test, yoneticiApiGirisi } from "../yardimci";
+import { benzersiz, expect, geciciSifreyleGiris, test, yoneticiApiGirisi } from "../yardimci";
 
 test.describe("Antrenör", () => {
   test("oluşturulur, geçici şifreyle girer ve yönetici menüsünü görmez", async ({ page }) => {
@@ -24,7 +24,7 @@ test.describe("Antrenör", () => {
     await page.getByRole("button", { name: "Çıkış" }).click();
     await expect(page).toHaveURL(/\/giris$/);
 
-    await arayuzdenGiris(page, giris, sifre);
+    await geciciSifreyleGiris(page, giris, sifre);
     await expect(page).toHaveURL(/\/takvim$/);
     await expect(page.getByRole("heading", { name: "Takvim" })).toBeVisible();
     for (const menu of ["Öğrenciler", "Antrenörler", "Gruplar", "Genel bakış"]) {

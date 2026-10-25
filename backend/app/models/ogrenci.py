@@ -65,6 +65,7 @@ class Ogrenci(Base):
     kimlik_no_sifreli: Mapped[bytes | None] = mapped_column(LargeBinary)
     kimlik_no_ozet: Mapped[str | None] = mapped_column(String(64), unique=True)
 
+    telefon: Mapped[str | None] = mapped_column(String(32))
     foto_anahtar: Mapped[str | None] = mapped_column(String(255))
     durum: Mapped[OgrenciDurum] = mapped_column(enum_kolon(OgrenciDurum), default=OgrenciDurum.aktif)
     kayit_tarihi: Mapped[date] = mapped_column(Date, server_default=func.current_date())

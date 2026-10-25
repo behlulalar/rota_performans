@@ -46,9 +46,21 @@ export function telefonUret(): string {
   return s;
 }
 
-/** 05551234567 -> "0555 123 45 67" (kullanıcının yazabileceği boşluklu biçim). */
+/** Arayüzdeki telefon kutusuna yazılacak 10 hane (+90 öneki kutuda sabittir): 5XXXXXXXXX. */
+export function telefonUret10(): string {
+  return telefonUret().slice(1);
+}
+
+/** "+905551234567" -> "0555 123 45 67" (kullanıcının giriş ekranında yazabileceği boşluklu biçim). */
 export function telefonBosluklu(t: string): string {
-  return `${t.slice(0, 4)} ${t.slice(4, 7)} ${t.slice(7, 9)} ${t.slice(9)}`;
+  const r = t.replace(/\D/g, "").slice(-10);
+  return `0${r.slice(0, 3)} ${r.slice(3, 6)} ${r.slice(6, 8)} ${r.slice(8)}`;
+}
+
+/** "+905551234567" -> "+90 555 123 45 67" (arayüzde görünen biçim). */
+export function telefonGorunen(t: string): string {
+  const r = t.replace(/\D/g, "").slice(-10);
+  return `+90 ${r.slice(0, 3)} ${r.slice(3, 6)} ${r.slice(6, 8)} ${r.slice(8)}`;
 }
 
 /** Maskeleme kuralı: ilk 3 ve son 2 hane görünür. */
@@ -128,6 +140,24 @@ export async function arayuzdenGiris(page: Page, giris: string, sifre: string): 
   }
 }
 
+export const YENI_SIFRE = "yeni-sifre-12345";
+
+/** Geçici şifreyle girişte açılan zorunlu ekranda yeni şifreyi belirler (UI). */
+export async function zorunluSifreyiBelirle(page: Page, gecici: string, yeni: string = YENI_SIFRE): Promise<void> {
+  await expect(page.getByRole("heading", { name: "Şifrenizi belirleyin" })).toBeVisible();
+  await page.getByLabel("Mevcut (geçici) şifre").fill(gecici);
+  await page.getByLabel("Yeni şifre", { exact: true }).fill(yeni);
+  await page.getByLabel("Yeni şifre (tekrar)").fill(yeni);
+  await page.getByRole("button", { name: "Şifreyi kaydet" }).click();
+}
+
+/** Arayüzden geçici şifreyle girer ve zorunlu ekranda yeni şifre belirler. */
+export async function geciciSifreyleGiris(page: Page, giris: string, gecici: string, yeni: string = YENI_SIFRE): Promise<string> {
+  await arayuzdenGiris(page, giris, gecici);
+  await zorunluSifreyiBelirle(page, gecici, yeni);
+  return yeni;
+}
+
 export type SahteOgrenci = { id: string; ad: string; soyad: string; telefon: string; tc: string };
 
 /** API ile hızlıca öğrenci oluşturur (benzersiz ad, TC ve telefon). */
@@ -135,7 +165,7 @@ export async function ogrenciOlusturAPI(page: Page, token: string, onek = "Api")
   const k = benzersiz();
   const ad = `${onek}${k}`;
   const soyad = `Ogrenci${k}`;
-  const telefon = telefonUret();
+  const telefon = "+90" + telefonUret10(); // kanonik API biçimi
   const tc = tcUret();
   const yanit = await page.request.post("/api/ogrenciler", {
     headers: { Authorization: `Bearer ${token}` },
@@ -204,6 +234,17 @@ export async function yoklamaOrtamiKur(page: Page): Promise<YoklamaOrtami> {
   expect(u.ok(), await u.text()).toBeTruthy();
   expect(((await u.json()) as { olusturulan: number }).olusturulan).toBeGreaterThanOrEqual(1);
 
+  // Geçici şifre zorunlu değişim bayrağıyla gelir; antrenör doğrudan takvime girebilsin diye şifreyi API ile belirler.
   await page.context().clearCookies();
-  return { antrenor: { giris, sifre: antrenor.gecici_sifre, adSoyad }, grupAdi, geldi, gelmedi };
+  const l = await page.request.post("/api/auth/login", { data: { giris, sifre: antrenor.gecici_sifre } });
+  expect(l.ok(), await l.text()).toBeTruthy();
+  const at = ((await l.json()) as { access_token: string }).access_token;
+  const d = await page.request.post("/api/auth/sifre-degistir", {
+    headers: { Authorization: `Bearer ${at}` },
+    data: { mevcut_sifre: antrenor.gecici_sifre, yeni_sifre: YENI_SIFRE },
+  });
+  expect(d.status(), await d.text()).toBe(204);
+
+  await page.context().clearCookies();
+  return { antrenor: { giris, sifre: YENI_SIFRE, adSoyad }, grupAdi, geldi, gelmedi };
 }

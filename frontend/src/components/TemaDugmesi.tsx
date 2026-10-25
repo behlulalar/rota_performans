@@ -2,7 +2,7 @@ import { useTema } from "../lib/tema";
 import Simge from "./Simge";
 
 /** `serit` koyu şerit üzerinde, `normal` sayfa zemininde kullanılır. */
-export default function TemaDugmesi({ gorunum = "normal", sinif = "" }: { gorunum?: "normal" | "serit"; sinif?: string }) {
+export default function TemaDugmesi({ gorunum = "normal", sinif = "", etiket = false }: { gorunum?: "normal" | "serit"; sinif?: string; etiket?: boolean }) {
   const { tema, degistir } = useTema();
   const renk =
     gorunum === "serit"
@@ -14,9 +14,12 @@ export default function TemaDugmesi({ gorunum = "normal", sinif = "" }: { gorunu
       onClick={degistir}
       aria-label={tema === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
       title={tema === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
-      className={`grid place-items-center size-11 rounded-[3px] transition-colors ${renk} ${sinif}`}
+      className={`${
+        etiket ? "flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-lg hover:bg-white/5" : "grid place-items-center size-11 rounded-[3px]"
+      } transition-colors ${renk} ${sinif}`}
     >
       <Simge ad={tema === "dark" ? "gunes" : "ay"} />
+      {etiket && <span className="text-[11px] leading-none font-medium">{tema === "dark" ? "Açık tema" : "Koyu tema"}</span>}
     </button>
   );
 }

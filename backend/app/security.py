@@ -25,7 +25,9 @@ def simdi() -> datetime:
 def normalize_giris(giris: str) -> str:
     giris = giris.strip().lower()
     # Telefonla girişte boşluk, tire ve parantez önemsizdir; e-postaya dokunulmaz.
-    return giris if "@" in giris else telefon.sade(giris)
+    if "@" in giris:
+        return giris
+    return telefon.giris_icin(giris) or telefon.sade(giris)
 
 
 def sifre_ozeti(sifre: str) -> str:

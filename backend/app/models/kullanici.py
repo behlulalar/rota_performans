@@ -29,6 +29,8 @@ class Kullanici(Base):
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
     basarisiz_deneme: Mapped[int] = mapped_column(Integer, default=0)
     kilit_bitis: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Geçici şifreyle açılan/sıfırlanan hesap: kullanıcı kendi şifresini belirleyene kadar True.
+    sifre_degistirmeli: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     son_giris: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

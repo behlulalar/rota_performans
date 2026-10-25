@@ -107,7 +107,7 @@ export default function GrupForm() {
   if (yukleniyor) return <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>;
 
   return (
-    <form onSubmit={gonder} noValidate className="max-w-4xl space-y-4">
+    <form onSubmit={gonder} noValidate className="space-y-4">
       <SayfaBasligi
         baslik={duzenleme ? "Grubu düzenle" : "Yeni grup"}
         aciklama="Ad, antrenör, kontenjan ve haftalık program"

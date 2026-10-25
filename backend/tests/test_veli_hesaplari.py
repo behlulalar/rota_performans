@@ -11,7 +11,7 @@ from tests.conftest import SIFRE, kullanici_olustur
 from tests.test_ogrenciler import giris as yonetici_girisi
 
 TELEFON = "0555 111 22 33"
-SADE = "05551112233"
+SADE = "+905551112233"
 
 
 @pytest.fixture
@@ -43,20 +43,32 @@ _sayac = 0
 async def ogrenci_ac(istemci, baslik, *, yas=10, rol="anne", telefon=TELEFON, dogum_tarihi=None, ad="Ali"):
     global _sayac
     _sayac += 1
+    dt = dogum_tarihi or dogum(yas)
+    resit = date.fromisoformat(dt) <= date.fromisoformat(dogum(18))
+    # Reşit öğrenci artık kayıtta kendi telefonuyla ve otomatik "kendisi" birincille açılır.
+    # Reşit + veli birincil durumu, eski kayıtların yaşlanması gibi, doğum tarihi sonradan güncellenerek kurulur.
     kisiler = [{"rol": rol, "ad_soyad": "Kişi Bir", "telefon": telefon, "birincil": True}]
+    if resit and rol == "kendisi":
+        kisiler = []
     if rol not in ("diger", "kendisi"):
         kisiler.append({"rol": "diger", "ad_soyad": "Diğer", "telefon": "05320000009", "birincil": False})
     govde = {
         "ad": ad,
         "soyad": f"Soy{_sayac}",
-        "dogum_tarihi": dogum_tarihi or dogum(yas),
+        "dogum_tarihi": dogum(10) if resit and rol != "kendisi" else dt,
         "kimlik_tur": "pasaport",
         "kimlik_no": f"AB{_sayac:06d}",
         "iletisim_kisileri": kisiler,
         "rizalar": {"aydinlatma": True, "foto": False, "whatsapp": True},
     }
+    if resit and rol == "kendisi":
+        govde["telefon"] = telefon
     y = await istemci.post("/api/ogrenciler", json=govde, headers=baslik)
     assert y.status_code == 201, y.text
+    if resit and rol != "kendisi":
+        g = await istemci.patch(f"/api/ogrenciler/{y.json()['id']}", json={"dogum_tarihi": dt}, headers=baslik)
+        assert g.status_code == 200, g.text
+        return g.json()
     return y.json()
 
 
@@ -213,7 +225,7 @@ async def test_resit_gecisi(istemci, yonetici):
     assert y.status_code == 200, y.text
     d = y.json()
     assert d["hesap"] is None
-    assert d["birincil_iletisim"]["rol"] == "kendisi" and d["birincil_iletisim"]["telefon"] == "05329998877"
+    assert d["birincil_iletisim"]["rol"] == "kendisi" and d["birincil_iletisim"]["telefon"] == "+905329998877"
     assert d["birincil_iletisim"]["ad_soyad"] == f"{o['ad']} {o['soyad']}"
     assert sum(1 for k in d["iletisim_kisileri"] if k["birincil"]) == 1
     kendisi = next(k for k in d["iletisim_kisileri"] if k["rol"] == "kendisi")
@@ -222,7 +234,7 @@ async def test_resit_gecisi(istemci, yonetici):
     assert not d["uyarilar"]
 
     h = await hesap_ac(istemci, yonetici, o["id"])
-    assert h.status_code == 200 and h.json()["giris"] == "05329998877"
+    assert h.status_code == 200 and h.json()["giris"] == "+905329998877"
     detay = (await istemci.get(f"/api/ogrenciler/{o['id']}", headers=yonetici)).json()
     assert detay["hesap"]["rol"] == "ogrenci"
     assert (await login(istemci, "05329998877", h.json()["gecici_sifre"])).status_code == 200

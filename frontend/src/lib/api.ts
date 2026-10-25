@@ -18,6 +18,15 @@ export function belirteciAyarla(belirtec: string | null) {
   erisimBelirteci = belirtec;
 }
 
+// Sunucu "şifre değiştirmelisin" (403 + X-Hata-Kodu) derse oturum durumu yenilensin diye
+// AuthProvider kaydeder. Tek seferlik: yenileme sırasında tekrar tetiklenmez (döngü olmaz).
+let sifreZorunluDinleyici: (() => void) | null = null;
+let sifreZorunluBekliyor = false;
+
+export function sifreZorunluDinleyiciAyarla(f: (() => void) | null) {
+  sifreZorunluDinleyici = f;
+}
+
 type BelirtecYaniti = { access_token: string };
 
 async function hataOku(yanit: Response): Promise<ApiHata> {
@@ -68,6 +77,19 @@ async function istek(yol: string, secenekler: RequestInit, yenidenDene: boolean)
 
   if (yanit.status === 401 && yenidenDene && !yol.startsWith("/api/auth/")) {
     if (await oturumuYenile()) return istek(yol, secenekler, false);
+  }
+  if (
+    yanit.status === 403 &&
+    yanit.headers.get("X-Hata-Kodu") === "sifre_degistirmeli" &&
+    sifreZorunluDinleyici &&
+    !sifreZorunluBekliyor
+  ) {
+    sifreZorunluBekliyor = true;
+    try {
+      sifreZorunluDinleyici();
+    } finally {
+      setTimeout(() => (sifreZorunluBekliyor = false), 2000);
+    }
   }
   if (!yanit.ok) throw await hataOku(yanit);
   return yanit;

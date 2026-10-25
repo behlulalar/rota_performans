@@ -12,6 +12,7 @@ export type OgrenciOzet = {
   ad: string;
   soyad: string;
   dogum_tarihi: string;
+  telefon: string | null;
   yas: number;
   durum: Durum;
   cinsiyet: Cinsiyet | null;
@@ -53,6 +54,7 @@ export type OgrenciTemel = {
   baba_adi?: string | null;
   dogum_tarihi: string;
   cinsiyet?: Cinsiyet | null;
+  telefon?: string | null;
   kimlik_tur: KimlikTur;
   kimlik_no?: string | null;
 };

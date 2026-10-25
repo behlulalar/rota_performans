@@ -14,8 +14,10 @@ import { ApiHata } from "../lib/api";
 import { hataMesaji, ROL_ETIKET, tcGecerli, yasHesapla } from "../lib/dogrulama";
 import { fotoKucult } from "../lib/fotoKucult";
 import Kart from "../components/Kart";
+import TelefonGirdisi from "../components/TelefonGirdisi";
+import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
 import SayfaBasligi from "../components/SayfaBasligi";
-import { birincilDugme, dugme, girdi } from "../lib/stil";
+import { birincilDugme, dugme, girdi, tehlikeKutusu } from "../lib/stil";
 
 type Kisi = { anahtar: number; rol: IletisimRol; ad_soyad: string; telefon: string; birincil: boolean };
 type Hatalar = Record<string, string>;
@@ -44,6 +46,7 @@ export default function OgrenciForm() {
   const [anneAdi, setAnneAdi] = useState("");
   const [babaAdi, setBabaAdi] = useState("");
   const [dogum, setDogum] = useState("");
+  const [telefon, setTelefon] = useState("");
   const [cinsiyet, setCinsiyet] = useState<Cinsiyet | "">("");
   const [kimlikTur, setKimlikTur] = useState<KimlikTur>("tc");
   const [kimlikNo, setKimlikNo] = useState("");
@@ -68,8 +71,9 @@ export default function OgrenciForm() {
         setBabaAdi(o.baba_adi ?? "");
         setDogum(o.dogum_tarihi);
         setCinsiyet(o.cinsiyet ?? "");
+        setTelefon(rakamlaraCevir(o.telefon));
         setKimlikTur(o.kimlik_tur);
-        setKisiler(o.iletisim_kisileri.map((k) => ({ anahtar: ++sayac, rol: k.rol, ad_soyad: k.ad_soyad, telefon: k.telefon, birincil: k.birincil })));
+        setKisiler(o.iletisim_kisileri.map((k) => ({ anahtar: ++sayac, rol: k.rol, ad_soyad: k.ad_soyad, telefon: rakamlaraCevir(k.telefon), birincil: k.birincil })));
       })
       .catch((e) => !iptal && setGenelHata(hataMesaji(e)))
       .finally(() => !iptal && setYukleniyor(false));
@@ -86,6 +90,9 @@ export default function OgrenciForm() {
   }, [foto]);
 
   const yas = useMemo(() => yasHesapla(dogum), [dogum]);
+  // Reşit öğrencide birincil iletişim sunucuda otomatik oluşur (yalnızca yeni kayıtta).
+  const resit = !duzenleme && yas !== null && yas >= 18;
+  const adSoyad = `${ad.trim()} ${soyad.trim()}`.trim();
 
   function kisiGuncelle(anahtar: number, yama: Partial<Kisi>) {
     setKisiler((l) => l.map((k) => (k.anahtar === anahtar ? { ...k, ...yama } : k)));
@@ -111,6 +118,9 @@ export default function OgrenciForm() {
     }
   }
 
+  // Reşitte yalnızca dolu (kısmen dolu dahil) ek kişiler gönderilir; tamamen boş satırlar atlanır.
+  const ekKisiler = kisiler.filter((k) => k.ad_soyad.trim() || k.telefon);
+
   function dogrula(): Hatalar {
     const h: Hatalar = {};
     if (!ad.trim()) h.ad = "Ad zorunludur.";
@@ -118,7 +128,13 @@ export default function OgrenciForm() {
     if (!dogum) h.dogum_tarihi = "Doğum tarihi zorunludur.";
     else if (yas === null || yas < 0) h.dogum_tarihi = "Geçerli bir doğum tarihi girin.";
     if (kimlikTur === "tc" && kimlikNo && !tcGecerli(kimlikNo)) h.kimlik_no = "Geçerli bir T.C. kimlik numarası girin (11 hane).";
-    if (kisiler.some((k) => !k.ad_soyad.trim() || !k.telefon.trim())) h.kisiler = "Her iletişim kişisi için ad soyad ve telefon girin ya da satırı silin.";
+    if (resit && !telefon) h.telefon = "Reşit öğrenci için telefon gerekli";
+    else if (telefon && !gecerliMi(telefon)) h.telefon = TELEFON_HATA;
+    if (resit) {
+      if (ekKisiler.some((k) => !k.ad_soyad.trim() || !k.telefon)) h.kisiler = "Her iletişim kişisi için ad soyad ve telefon girin ya da satırı silin.";
+      else if (ekKisiler.some((k) => !gecerliMi(k.telefon))) h.kisiler = TELEFON_HATA;
+    } else if (kisiler.some((k) => !k.ad_soyad.trim() || !k.telefon)) h.kisiler = "Her iletişim kişisi için ad soyad ve telefon girin ya da satırı silin.";
+    else if (kisiler.some((k) => !gecerliMi(k.telefon))) h.kisiler = TELEFON_HATA;
     else if (kisiler.filter((k) => k.birincil).length !== 1) h.kisiler = "Tam olarak bir birincil iletişim kişisi seçilmelidir.";
     else if (!kisiler.some((k) => k.rol === "diger" || k.rol === "kendisi")) h.kisiler = "En az bir Diğer veya Kendisi iletişim kişisi eklenmelidir.";
     if (!duzenleme && !rizalar.aydinlatma) h.aydinlatma = "KVKK aydınlatma metninin onaylanması gerekir.";
@@ -132,7 +148,12 @@ export default function OgrenciForm() {
     setHatalar(h);
     if (Object.keys(h).length) return;
 
-    const kisilerGovde = kisiler.map(({ rol, ad_soyad, telefon, birincil }) => ({ rol, ad_soyad: ad_soyad.trim(), telefon: telefon.trim(), birincil }));
+    const kisilerGovde = (resit ? ekKisiler : kisiler).map((k) => ({
+      rol: k.rol,
+      ad_soyad: k.ad_soyad.trim(),
+      telefon: apiyeCevir(k.telefon) ?? "",
+      birincil: resit ? false : k.birincil,
+    }));
     const temel = {
       ad: ad.trim(),
       soyad: soyad.trim(),
@@ -140,6 +161,7 @@ export default function OgrenciForm() {
       baba_adi: babaAdi.trim() || null,
       dogum_tarihi: dogum,
       cinsiyet: cinsiyet || null,
+      telefon: apiyeCevir(telefon),
     };
     setGonderiliyor(true);
     try {
@@ -184,7 +206,7 @@ export default function OgrenciForm() {
   if (yukleniyor) return <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>;
 
   return (
-    <form onSubmit={gonder} noValidate className="max-w-4xl space-y-4">
+    <form onSubmit={gonder} noValidate className="space-y-4">
       <SayfaBasligi
         baslik={duzenleme ? "Öğrenciyi düzenle" : "Yeni öğrenci"}
         aciklama={duzenleme ? "Kayıt bilgilerini güncelleyin" : "Kişisel bilgiler, iletişim kişileri ve rızalar"}
@@ -192,7 +214,7 @@ export default function OgrenciForm() {
       />
 
       <Kart baslik="Kişisel bilgiler">
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
         <Alan etiket="Ad" hata={hatalar.ad}>
           <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} autoComplete="off" />
         </Alan>
@@ -216,10 +238,13 @@ export default function OgrenciForm() {
           </select>
         </Alan>
         {yas !== null && yas >= 0 && yas < 5 && (
-          <p className="sm:col-span-2 rounded-[3px] border border-uyari/40 bg-uyari-zemin text-uyari text-[13px] px-3 py-2">
+          <p className="col-span-full rounded-[3px] border border-uyari/40 bg-uyari-zemin text-uyari text-[13px] px-3 py-2">
             Dikkat: Öğrenci 5 yaşından küçük ({yas} yaş). Doğum tarihini kontrol edin; kayda devam edebilirsiniz.
           </p>
         )}
+        <Alan etiket={resit ? "Telefon" : "Telefon (isteğe bağlı)"} hata={hatalar.telefon}>
+          <TelefonGirdisi value={telefon} onChange={setTelefon} />
+        </Alan>
         <Alan etiket="Kimlik türü">
           <select className={girdi} value={kimlikTur} onChange={(e) => setKimlikTur(e.target.value as KimlikTur)}>
             <option value="tc">T.C. Kimlik No</option>
@@ -241,6 +266,13 @@ export default function OgrenciForm() {
 
       <Kart baslik="İletişim kişileri">
         <p className="text-sm text-metin-soluk">Öğrenciyle ilgili tüm bildirimler yalnızca birincil iletişim kişisine gider.</p>
+        {resit && (
+          <div role="alert" className={`mt-3 ${tehlikeKutusu}`}>
+            Reşit öğrenci — birincil iletişim kendisi: <span className="font-medium">{adSoyad || "Ad Soyad"}</span> ·{" "}
+            {telefon ? <span className="num">{bicimle(apiyeCevir(telefon))}</span> : <span className="underline">telefon girin</span>}
+            <p className="mt-1 text-xs font-normal">Aşağıya yalnızca ek kişileri (anne, baba, diğer) ekleyin; isteğe bağlıdır.</p>
+          </div>
+        )}
         <div className="mt-4 space-y-3">
           {kisiler.map((k) => (
             <div key={k.anahtar} className="rounded-[3px] border border-cizgi bg-yuzey-yuksek p-3 grid gap-3 sm:grid-cols-[8rem_1fr_1fr_auto] items-end">
@@ -258,13 +290,15 @@ export default function OgrenciForm() {
               </label>
               <label className="block">
                 <span className="text-xs text-metin-soluk">Telefon</span>
-                <input className={girdi} type="tel" inputMode="tel" value={k.telefon} onChange={(e) => kisiGuncelle(k.anahtar, { telefon: e.target.value })} />
+                <TelefonGirdisi value={k.telefon} onChange={(t) => kisiGuncelle(k.anahtar, { telefon: t })} />
               </label>
               <div className="flex items-center justify-between gap-3 sm:justify-end">
-                <label className="flex items-center gap-2 text-sm min-h-11 md:min-h-0">
-                  <input type="radio" name="birincil" checked={k.birincil} onChange={() => birincilSec(k.anahtar)} className="accent-altin size-4" />
-                  Birincil iletişim
-                </label>
+                {!resit && (
+                  <label className="flex items-center gap-2 text-sm min-h-11 md:min-h-0">
+                    <input type="radio" name="birincil" checked={k.birincil} onChange={() => birincilSec(k.anahtar)} className="accent-altin size-4" />
+                    Birincil iletişim
+                  </label>
+                )}
                 <button type="button" onClick={() => kisiSil(k.anahtar)} className={`${dugme} text-metin-soluk hover:border-hata hover:text-hata`}>
                   Sil
                 </button>

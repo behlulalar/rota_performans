@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import audit
 from app.config import settings
 from app.db import get_session
-from app.deps import aktif_kullanici
+from app.deps import aktif_kullanici_serbest
 from app.models.kullanici import Kullanici, Oturum, Rol
 from app.models.ogrenci import IletisimKisisi
 from app.models.program import Antrenor
@@ -46,6 +46,11 @@ class LoginIstegi(BaseModel):
     beni_hatirla: bool = False
 
 
+class SifreDegistirIstegi(BaseModel):
+    mevcut_sifre: str = Field(min_length=1, max_length=256)
+    yeni_sifre: str = Field(max_length=256)
+
+
 class BelirtecYaniti(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -57,6 +62,7 @@ class KullaniciYaniti(BaseModel):
     rol: Rol
     giris: str
     ad_soyad: str | None = None
+    sifre_degistirmeli: bool = False
 
 
 def _istemci_ip(request: Request) -> str:
@@ -215,7 +221,7 @@ async def cikis(
 
 
 @router.get("/me", response_model=KullaniciYaniti)
-async def ben(kullanici: Kullanici = Depends(aktif_kullanici), session: AsyncSession = Depends(get_session)):
+async def ben(kullanici: Kullanici = Depends(aktif_kullanici_serbest), session: AsyncSession = Depends(get_session)):
     ad = kullanici.ad_soyad
     if not ad:
         ad = (
@@ -230,4 +236,60 @@ async def ben(kullanici: Kullanici = Depends(aktif_kullanici), session: AsyncSes
                 .limit(1)
             )
         ).scalar_one_or_none()
-    return KullaniciYaniti(id=kullanici.id, rol=kullanici.rol, giris=kullanici.giris, ad_soyad=ad or None)
+    return KullaniciYaniti(
+        id=kullanici.id, rol=kullanici.rol, giris=kullanici.giris, ad_soyad=ad or None,
+        sifre_degistirmeli=kullanici.sifre_degistirmeli,
+    )
+
+
+def _yeni_sifre_hatasi(mevcut: str, yeni: str) -> str | None:
+    if len(yeni) < 10:
+        return "Yeni şifre en az 10 karakter olmalı"
+    if len(yeni) > 256:
+        return "Yeni şifre en fazla 256 karakter olabilir"
+    if not (any(c.isalpha() for c in yeni) and any(c.isdigit() for c in yeni)):
+        return "Yeni şifre en az bir harf ve bir rakam içermeli"
+    if yeni == mevcut:
+        return "Yeni şifre mevcut şifreyle aynı olamaz"
+    return None
+
+
+@router.post("/sifre-degistir", status_code=status.HTTP_204_NO_CONTENT)
+async def sifre_degistir(
+    govde: SifreDegistirIstegi,
+    request: Request,
+    response: Response,
+    kullanici: Kullanici = Depends(aktif_kullanici_serbest),
+    session: AsyncSession = Depends(get_session),
+    yenileme: str | None = Cookie(default=None, alias=COOKIE_ADI),
+):
+    ip = _istemci_ip(request)
+    simdi_ = simdi()
+    if kullanici.kilit_bitis is not None and kullanici.kilit_bitis > simdi_:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Hesap geçici olarak kilitli. Lütfen daha sonra deneyin.")
+
+    if not sifre_dogru_mu(kullanici.sifre_ozeti, govde.mevcut_sifre):
+        kullanici.basarisiz_deneme += 1
+        detay = {"neden": "hatali_mevcut_sifre"}
+        if kullanici.basarisiz_deneme >= HESAP_DENEME_LIMITI:
+            kullanici.kilit_bitis = simdi_ + timedelta(minutes=HESAP_KILIT_DAKIKA)
+            kullanici.basarisiz_deneme = 0
+            detay["kilitlendi"] = True
+        await audit.kaydet(session, "sifre_degistirme_basarisiz", kullanici_id=kullanici.id, ip=ip, detay=detay)
+        await session.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Mevcut şifre hatalı")
+
+    hata = _yeni_sifre_hatasi(govde.mevcut_sifre, govde.yeni_sifre)
+    if hata:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, hata)
+
+    kullanici.sifre_ozeti = sifre_ozeti(govde.yeni_sifre)
+    kullanici.sifre_degistirmeli = False
+    kullanici.basarisiz_deneme = 0
+    kullanici.kilit_bitis = None
+    sorgu = update(Oturum).where(Oturum.kullanici_id == kullanici.id)
+    if yenileme:
+        sorgu = sorgu.where(Oturum.token_ozeti != belirtec_ozeti(yenileme))
+    await session.execute(sorgu.values(iptal=True))
+    await audit.kaydet(session, "sifre_degistirildi", kullanici_id=kullanici.id, ip=ip)
+    await session.commit()
