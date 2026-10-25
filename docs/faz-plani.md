@@ -107,9 +107,9 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [x] Antrenör yoklaması ders başlamadan 15 dakika önce açılır (yönetici muaf)
 
 ### Faz 3: Paket, ödeme ve veli paneli (22 – 26 Kas)
-- [ ] Paket tanımları (aylık 8 ders), özel fiyat girişi
-- [ ] "Ödeme alındı" işareti → ders hakkı otomatik yüklenir
-- [ ] Ödeme geçmişi
+- [x] Paket tanımları (aylık 8 ders), özel fiyat girişi
+- [x] "Ödeme alındı" işareti → ders hakkı otomatik yüklenir
+- [x] Ödeme geçmişi
 - [ ] Veli paneli: çocuklar, program, ödemeler, kalan/telafi ders
 - [ ] Profil güncelleme, şifre değiştirme
 

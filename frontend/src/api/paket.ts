@@ -33,6 +33,19 @@ export type OgrenciPaketi = {
   bitis: string | null;
   toplam_odenen: string;
   olusturma: string;
+  odemeler?: OdemeSatiri[];
+};
+
+export type OdemeYontemi = "nakit" | "havale_eft" | "pos" | "diger";
+export type OdemeSatiri = {
+  id: string;
+  tutar: string;
+  tarih: string;
+  yontem: OdemeYontemi;
+  aciklama?: string | null;
+  iptal: boolean;
+  iptal_nedeni?: string | null;
+  alan_ad?: string | null;
 };
 
 export type PaketAtama = {

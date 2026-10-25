@@ -5,7 +5,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
 
-from app.models.paket import OgrenciPaketiDurum, PaketTuru
+from app.models.paket import OdemeYontemi, OgrenciPaketiDurum, PaketTuru
 
 # Tutarlar JSON'da her zaman "3400.00" biçiminde metin olarak çıkar (float yok).
 Tutar = Annotated[Decimal, PlainSerializer(lambda d: f"{d:.2f}", return_type=str, when_used="json")]
@@ -52,6 +52,17 @@ class PaketAta(BaseModel):
     ozel_fiyat_nedeni: str | None = Field(default=None, max_length=200)
 
 
+class OdemeSatiri(BaseModel):
+    id: uuid.UUID
+    tutar: Tutar
+    tarih: date
+    yontem: OdemeYontemi
+    aciklama: str | None
+    iptal: bool
+    iptal_nedeni: str | None = None
+    alan_ad: str | None = None
+
+
 class OgrenciPaketiYanit(BaseModel):
     id: uuid.UUID
     ogrenci_id: uuid.UUID
@@ -66,3 +77,4 @@ class OgrenciPaketiYanit(BaseModel):
     bitis: date | None
     toplam_odenen: Tutar
     olusturma: datetime
+    odemeler: list[OdemeSatiri] = []

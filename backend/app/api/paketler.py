@@ -14,6 +14,7 @@ from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import Ogrenci, OgrenciDurum
 from app.models.paket import Odeme, OgrenciPaketi, OgrenciPaketiDurum, Paket
 from app.schemas.paket import (
+    OdemeSatiri,
     OgrenciPaketiYanit,
     PaketAta,
     PaketGuncelle,
@@ -113,6 +114,7 @@ async def guncelle(
 async def _yanitlar(session: AsyncSession, kosul) -> list[OgrenciPaketiYanit]:
     odenen = (
         select(Odeme.ogrenci_paketi_id, func.coalesce(func.sum(Odeme.tutar), 0).label("toplam"))
+        .where(Odeme.iptal_zamani.is_(None))
         .group_by(Odeme.ogrenci_paketi_id)
         .subquery()
     )
@@ -123,14 +125,30 @@ async def _yanitlar(session: AsyncSession, kosul) -> list[OgrenciPaketiYanit]:
         .where(kosul)
         .order_by(OgrenciPaketi.olusturma.desc(), OgrenciPaketi.id)
     )
+    satirlar = satirlar.all()
+    odemeler: dict[uuid.UUID, list[OdemeSatiri]] = {}
+    if satirlar:
+        kayitlar = await session.execute(
+            select(Odeme, Kullanici.ad_soyad, Kullanici.giris)
+            .outerjoin(Kullanici, Kullanici.id == Odeme.olusturan_id)
+            .where(Odeme.ogrenci_paketi_id.in_([op.id for op, _, _ in satirlar]))
+            .order_by(Odeme.tarih.desc(), Odeme.olusturma.desc(), Odeme.id)
+        )
+        for o, ad_soyad, giris in kayitlar.all():
+            odemeler.setdefault(o.ogrenci_paketi_id, []).append(
+                OdemeSatiri(
+                    id=o.id, tutar=o.tutar, tarih=o.tarih, yontem=o.yontem, aciklama=o.aciklama,
+                    iptal=o.iptal_zamani is not None, iptal_nedeni=o.iptal_nedeni, alan_ad=ad_soyad or giris,
+                )
+            )
     return [
         OgrenciPaketiYanit(
             id=op.id, ogrenci_id=op.ogrenci_id, paket_id=op.paket_id, paket_adi=ad, ders_sayisi=op.ders_sayisi,
             liste_fiyati=op.liste_fiyati, uygulanan_fiyat=op.uygulanan_fiyat, fiyat_ozel_mi=op.fiyat_ozel_mi,
             durum=op.durum, baslangic=op.baslangic, bitis=op.bitis, toplam_odenen=Decimal(toplam),
-            olusturma=op.olusturma,
+            olusturma=op.olusturma, odemeler=odemeler.get(op.id, []),
         )
-        for op, ad, toplam in satirlar.all()
+        for op, ad, toplam in satirlar
     ]
 
 
@@ -229,7 +247,9 @@ async def iptal(
     if op.durum != OgrenciPaketiDurum.odeme_bekliyor:
         raise HTTPException(409, "Yalnızca ödeme bekleyen paket iptal edilebilir")
     odeme_var = (
-        await session.execute(select(Odeme.id).where(Odeme.ogrenci_paketi_id == op.id).limit(1))
+        await session.execute(select(Odeme.id)
+            .where(Odeme.ogrenci_paketi_id == op.id, Odeme.iptal_zamani.is_(None))
+            .limit(1))
     ).first()
     if odeme_var is not None:
         raise HTTPException(409, "Ödemesi alınmış paket iptal edilemez")

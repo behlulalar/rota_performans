@@ -114,5 +114,14 @@ class Odeme(Base):
         UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="SET NULL")
     )
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Ödeme geri alınırsa kayıt silinmez; iptal alanları dolar ve toplamlara girmez.
+    iptal_zamani: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    iptal_nedeni: Mapped[str | None] = mapped_column(Text)
+    iptal_eden_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="SET NULL")
+    )
 
-    __table_args__ = (CheckConstraint("tutar > 0", name="tutar_pozitif"),)
+    __table_args__ = (
+        CheckConstraint("tutar > 0", name="tutar_pozitif"),
+        CheckConstraint("(iptal_zamani IS NULL) = (iptal_nedeni IS NULL)", name="iptal_alanlari_birlikte"),
+    )

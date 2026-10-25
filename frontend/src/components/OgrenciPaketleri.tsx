@@ -3,12 +3,14 @@ import {
   DURUM_ETIKET, ogrenciPaketiniIptalEt, ogrenciPaketleriniGetir, paketAta, paketleriGetir,
   type OgrenciPaketi, type Paket, type PaketDurum,
 } from "../api/paket";
+import { odemeIptalEt, YONTEM_ETIKET } from "../api/odeme";
 import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
 import { paraBicimle } from "../lib/para";
 import { bugun } from "../lib/tarih";
-import { birincilDugme, dugme, girdi, rozetBasari, rozetBirincil, rozetNotr, rozetUyari } from "../lib/stil";
+import { birincilDugme, dugme, girdi, rozetBasari, rozetBirincil, rozetHata, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
 import Kart from "./Kart";
 import Modal from "./Modal";
+import OdemeAlPenceresi from "./OdemeAlPenceresi";
 
 const DURUM_ROZET: Record<PaketDurum, string> = {
   odeme_bekliyor: rozetUyari,
@@ -84,12 +86,50 @@ function AtamaPenceresi({ ogrenciId, paketler, onKapat, onTamam }: { ogrenciId: 
   );
 }
 
-export default function OgrenciPaketleri({ ogrenciId, aktif }: { ogrenciId: string; aktif: boolean }) {
+function GeriAlPenceresi({ odemeId, onKapat, onTamam }: { odemeId: string; onKapat: () => void; onTamam: () => void }) {
+  const [neden, setNeden] = useState("");
+  const [hata, setHata] = useState<string | null>(null);
+  const [mesgul, setMesgul] = useState(false);
+
+  async function gonder(e: FormEvent) {
+    e.preventDefault();
+    const n = neden.trim();
+    if (n.length < 3 || n.length > 200) return setHata("Geri alma nedeni 3 ile 200 karakter arasında olmalı.");
+    setMesgul(true);
+    setHata(null);
+    try {
+      await odemeIptalEt(odemeId, n);
+      onTamam();
+    } catch (err) {
+      setHata(hataMesaji(err));
+      setMesgul(false);
+    }
+  }
+
+  return (
+    <Modal baslik="Ödemeyi geri al" onKapat={onKapat}>
+      <form onSubmit={gonder} noValidate className="space-y-3">
+        <p className={uyariKutusu}>
+          Ödeme geri alınınca bu ödemeyle yüklenen ders hakkı da geri alınır ve paket yeniden "Ödeme bekliyor" olur.
+          Dersler bu arada kullanıldıysa ders bakiyesi eksiye düşebilir.
+        </p>
+        <label className="block"><span className="text-sm text-metin-soluk">Geri alma nedeni</span>
+          <input className={girdi} value={neden} onChange={(e) => setNeden(e.target.value)} maxLength={200} autoFocus /></label>
+        {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
+        <button type="submit" disabled={mesgul} className={birincilDugme}>{mesgul ? "Geri alınıyor…" : "Ödemeyi geri al"}</button>
+      </form>
+    </Modal>
+  );
+}
+
+export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: { ogrenciId: string; aktif: boolean; onOdemeDegisti?: () => void }) {
   const [liste, setListe] = useState<OgrenciPaketi[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [surum, setSurum] = useState(0);
   const [mesgul, setMesgul] = useState(false);
   const [atama, setAtama] = useState<Paket[] | null>(null);
+  const [odemeAlinan, setOdemeAlinan] = useState<OgrenciPaketi | null>(null);
+  const [geriAlinan, setGeriAlinan] = useState<string | null>(null);
 
   useEffect(() => {
     let iptal = false;
@@ -160,13 +200,49 @@ export default function OgrenciPaketleri({ ogrenciId, aktif }: { ogrenciId: stri
                   {p.fiyat_ozel_mi && <div className="text-xs text-metin-soluk line-through">{paraBicimle(p.liste_fiyati)}</div>}
                   <div className="text-xs text-metin-soluk">Ödenen {paraBicimle(p.toplam_odenen)} / {paraBicimle(p.uygulanan_fiyat)}</div>
                 </div>
+                {p.durum === "odeme_bekliyor" && (
+                  <button className={birincilDugme} disabled={mesgul} onClick={() => setOdemeAlinan(p)} aria-label={`${p.paket_adi} için ödeme al`}>Ödeme al</button>
+                )}
                 {p.durum === "odeme_bekliyor" && Number(p.toplam_odenen) === 0 && (
                   <button className={dugme} disabled={mesgul} onClick={() => void iptalEt(p)} aria-label={`${p.paket_adi} paketini iptal et`}>İptal et</button>
                 )}
               </div>
+              {(p.odemeler ?? []).length > 0 && (
+                <ul className="basis-full border-t border-cizgi pt-2 space-y-1" aria-label={`${p.paket_adi} ödemeleri`}>
+                  {(p.odemeler ?? []).map((o) => (
+                    <li key={o.id} className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[13px] ${o.iptal ? "text-metin-soluk" : ""}`}>
+                      <div className="min-w-0">
+                        <span className={`num ${o.iptal ? "line-through" : ""}`}>
+                          {tarihBicimle(o.tarih)} · {YONTEM_ETIKET[o.yontem]} · {paraBicimle(o.tutar)}
+                        </span>
+                        <span className="text-metin-soluk"> · {o.alan_ad ? `Alan: ${o.alan_ad}` : "Alan: —"}</span>
+                        {o.iptal && <span className={`${rozetHata} ml-2`}>Geri alındı</span>}
+                        {o.iptal && o.iptal_nedeni && <span className="text-metin-soluk"> · {o.iptal_nedeni}</span>}
+                      </div>
+                      {!o.iptal && p.durum === "odendi" && (
+                        <button className={dugme} disabled={mesgul} onClick={() => setGeriAlinan(o.id)} aria-label={`${paraBicimle(o.tutar)} ödemeyi geri al`}>Ödemeyi geri al</button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
         </ul>
+      )}
+      {odemeAlinan && (
+        <OdemeAlPenceresi
+          hedef={{ ogrenciPaketiId: odemeAlinan.id, paketAdi: odemeAlinan.paket_adi, tutar: odemeAlinan.uygulanan_fiyat, dersSayisi: odemeAlinan.ders_sayisi }}
+          onKapat={() => setOdemeAlinan(null)}
+          onTamam={() => { setOdemeAlinan(null); setSurum((s) => s + 1); onOdemeDegisti?.(); }}
+        />
+      )}
+      {geriAlinan && (
+        <GeriAlPenceresi
+          odemeId={geriAlinan}
+          onKapat={() => setGeriAlinan(null)}
+          onTamam={() => { setGeriAlinan(null); setSurum((s) => s + 1); onOdemeDegisti?.(); }}
+        />
       )}
       {atama && (
         <AtamaPenceresi

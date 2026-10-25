@@ -248,3 +248,28 @@ export async function yoklamaOrtamiKur(page: Page): Promise<YoklamaOrtami> {
   await page.context().clearCookies();
   return { antrenor: { giris, sifre: YENI_SIFRE, adSoyad }, grupAdi, geldi, gelmedi };
 }
+
+/** API ile paket tanımı oluşturur. */
+export async function paketOlusturAPI(
+  page: Page,
+  token: string,
+  o: { ad?: string; ders_sayisi?: number; fiyat?: string; tur?: string; sure_ay?: number } = {},
+): Promise<{ id: string; ad: string }> {
+  const ad = o.ad ?? `E2E Paket ${benzersiz()}`;
+  const yanit = await page.request.post("/api/paketler", {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { ad, tur: o.tur ?? "aylik", ders_sayisi: o.ders_sayisi ?? 8, sure_ay: o.sure_ay ?? 1, varsayilan_fiyat: o.fiyat ?? "3400" },
+  });
+  expect(yanit.status(), await yanit.text()).toBe(201);
+  return { id: ((await yanit.json()) as { id: string }).id, ad };
+}
+
+/** API ile öğrenciye paket atar; öğrenci paketi kimliğini döner. */
+export async function paketAtaAPI(page: Page, token: string, ogrenciId: string, paketId: string): Promise<string> {
+  const yanit = await page.request.post(`/api/ogrenciler/${ogrenciId}/paketler`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { paket_id: paketId },
+  });
+  expect(yanit.status(), await yanit.text()).toBe(201);
+  return ((await yanit.json()) as { id: string }).id;
+}

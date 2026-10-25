@@ -5,6 +5,7 @@ Yalnızca ENV=dev iken çalışır; var olan veriye dokunmaz, yalnızca ekler. �
 türetilir: doğrudan bakiye yazılmaz, yoklama ve düzeltme hareketleri ders_hakki modülüyle üretilir.
 """
 import itertools
+from decimal import Decimal
 import random
 import uuid
 from collections import defaultdict
@@ -28,6 +29,7 @@ from app.models.ogrenci import (
     Riza,
     RizaTuru,
 )
+from app.models.paket import Odeme, OdemeYontemi, OgrenciPaketi, OgrenciPaketiDurum, Paket, PaketTuru
 from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
 from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, YoklamaDurum
 from app.oturumlar import bugun as bugun_fn
@@ -458,3 +460,125 @@ def _grup_antrenor(gruplar: dict[str, Grup], grup_id: uuid.UUID) -> uuid.UUID:
 
 def gruplar_antrenor(gruplar: dict[str, Grup], oturum: DersOturumu) -> uuid.UUID:
     return _grup_antrenor(gruplar, oturum.grup_id)
+
+
+# --- Ödeme örnek verisi (ayrı komut: ornek-odeme-verisi) ---
+
+ODEME_OGRENCI_SAYISI = 30
+BEKLEYEN_SIRALAR = {1, 5, 9, 13, 17, 21}
+OZEL_FIYAT_SIRALARI = {0, 9, 18, 27}
+IPTAL_EDILENLER = {(3, 1): "Yanlış tutar girildi", (7, 2): "Veli ödemeyi geri istedi"}  # (sıra, kaç ay önce)
+YONTEMLER = [OdemeYontemi.nakit, OdemeYontemi.havale_eft, OdemeYontemi.pos, OdemeYontemi.havale_eft,
+             OdemeYontemi.nakit, OdemeYontemi.pos, OdemeYontemi.diger]
+
+
+def _ay_basi(bugun: date, geri: int) -> date:
+    toplam = bugun.year * 12 + bugun.month - 1 - geri
+    yil, ay = divmod(toplam, 12)
+    return date(yil, ay + 1, 1)
+
+
+async def yukle_odeme() -> int:
+    """Örnek öğrencilere son 3 ay + geçerli ay için paket ve ödeme ekler (yalnızca ENV=dev).
+
+    SINIR: Geçmiş aylar için defterde `paket_yuklemesi` YAZILMAZ; örnek ders hakkı bakiyeleri zaten
+    `ornek-veri` ile defterde vardır, çift yükleme olmasın diye. Bu yüzden 'odendi' paketlerin çoğunun
+    defterde yüklemesi yoktur (gerçek akışta ödeme alınca ders yüklenir)."""
+    from app.api.paketler import ay_ekle
+
+    if settings.env != "dev":
+        print(f"ornek-odeme-verisi yalnızca ENV=dev iken çalışır (şu an ENV={settings.env}).")
+        return 1
+    bugun = bugun_fn()
+    async with SessionLocal() as session:
+        if not await _zaten_yuklu(session):
+            print("Önce `ornek-veri` komutunu çalıştırın (örnek öğrenciler yok).")
+            return 1
+        ogrenciler = list(
+            (
+                await session.execute(
+                    select(Ogrenci)
+                    .where(Ogrenci.sentetik.is_(False), Ogrenci.durum == OgrenciDurum.aktif)
+                    .order_by(Ogrenci.kayit_tarihi, Ogrenci.id)
+                    .limit(ODEME_OGRENCI_SAYISI)
+                )
+            ).scalars()
+        )
+        if not ogrenciler:
+            print("Örnek öğrenci bulunamadı.")
+            return 1
+        var = (
+            await session.execute(
+                select(OgrenciPaketi.id).where(OgrenciPaketi.ogrenci_id.in_([o.id for o in ogrenciler])).limit(1)
+            )
+        ).first()
+        if var is not None:
+            print("Ödeme örnek verisi zaten yüklü (örnek öğrencilerin paketi var). Hiçbir şey eklenmedi.")
+            return 0
+
+        paket = (
+            await session.execute(select(Paket).where(Paket.ad == "Aylık 8 Ders").order_by(Paket.olusturma).limit(1))
+        ).scalar_one_or_none()
+        if paket is None:
+            paket = Paket(
+                ad="Aylık 8 Ders", tur=PaketTuru.aylik, ders_sayisi=8, sure_ay=1, varsayilan_fiyat=Decimal("3400.00"),
+                aktif=True,
+            )
+            session.add(paket)
+            await session.flush()
+        yonetici = (
+            await session.execute(select(Kullanici).where(Kullanici.rol == Rol.admin).order_by(Kullanici.olusturma).limit(1))
+        ).scalar_one_or_none()
+        yonetici_id = yonetici.id if yonetici else None
+
+        sayac = {"paket": 0, "odeme": 0, "iptal": 0, "bekleyen": 0, "ozel": 0}
+        for sira, ogr in enumerate(ogrenciler):
+            ozel = sira in OZEL_FIYAT_SIRALARI
+            fiyat = Decimal("2900.00") if ozel else paket.varsayilan_fiyat
+            for geri in (3, 2, 1, 0):
+                if geri and (sira + geri) % 7 == 0:
+                    continue  # her ay herkes paket almaz
+                baslangic = min(_ay_basi(bugun, geri) + timedelta(days=(sira * 3) % 20), bugun)
+                bekleyen = geri == 0 and sira in BEKLEYEN_SIRALAR
+                iptal_nedeni = IPTAL_EDILENLER.get((sira, geri))
+                durum = OgrenciPaketiDurum.odeme_bekliyor if (bekleyen or iptal_nedeni) else OgrenciPaketiDurum.odendi
+                atama_zamani = _kulup_zamani(baslangic, time(10, 0))
+                op = OgrenciPaketi(
+                    ogrenci_id=ogr.id, paket_id=paket.id, ders_sayisi=paket.ders_sayisi,
+                    liste_fiyati=paket.varsayilan_fiyat, uygulanan_fiyat=fiyat, fiyat_ozel_mi=ozel,
+                    fiyat_degistiren_id=yonetici_id if ozel else None, baslangic=baslangic,
+                    bitis=ay_ekle(baslangic, paket.sure_ay), durum=durum, olusturan_id=yonetici_id,
+                    olusturma=atama_zamani,
+                )
+                session.add(op)
+                await session.flush()
+                sayac["paket"] += 1
+                sayac["ozel"] += 1 if ozel else 0
+                if bekleyen:
+                    sayac["bekleyen"] += 1
+                    continue
+                odeme_tarihi = min(baslangic + timedelta(days=sira % 4), bugun)
+                odeme = Odeme(
+                    ogrenci_paketi_id=op.id, tutar=fiyat, tarih=odeme_tarihi,
+                    yontem=YONTEMLER[(sira + geri) % len(YONTEMLER)], olusturan_id=yonetici_id,
+                    aciklama="Örnek veri" if sira % 5 == 0 else None,
+                    olusturma=_kulup_zamani(odeme_tarihi, time(11, 30)),
+                )
+                if iptal_nedeni:
+                    odeme.iptal_zamani = _kulup_zamani(odeme_tarihi, time(15, 0))
+                    odeme.iptal_nedeni = iptal_nedeni
+                    odeme.iptal_eden_id = yonetici_id
+                    sayac["iptal"] += 1
+                session.add(odeme)
+                sayac["odeme"] += 1
+        await session.commit()
+
+    print("Ödeme örnek verisi yüklendi.")
+    print(f"  Öğrenci: {len(ogrenciler)}")
+    print(f"  Öğrenci paketi: {sayac['paket']} (özel fiyatlı: {sayac['ozel']})")
+    print(f"  Ödeme: {sayac['odeme']} (iptal edilmiş: {sayac['iptal']})")
+    print(f"  Geçerli ayda ödeme bekleyen paket: {sayac['bekleyen']}")
+    print("  NOT: Geçmiş paketler için defterde ders yüklemesi (paket_yuklemesi) YAZILMADI; örnek ders hakkı")
+    print("  verisi zaten defterde olduğundan çift yükleme olmasın diye. Bu verideki ödenmiş paketlerin")
+    print("  çoğunda defter karşılığı yoktur (yalnızca örnek veri sınırı).")
+    return 0

@@ -32,7 +32,8 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 COOKIE_ADI = "rota_yenileme"
 COOKIE_YOLU = "/api/auth"
 
-IP_LIMITI = 20  # dakikada, IP başına
+# dakikada, IP başına. E2E testleri tek IP'den çok sayıda giriş yaptığı için orada gevşektir.
+IP_LIMITI = 1000 if settings.env == "e2e" else 20
 HESAP_DENEME_LIMITI = 5
 HESAP_KILIT_DAKIKA = 15
 

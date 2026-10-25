@@ -297,3 +297,19 @@ async def test_bir_kullanici_tek_antrenor_kaydina_baglanabilir():
     k = await kullanici_olustur("antrenor@kulup.com", Rol.antrenor)
     await kaydet(Antrenor(kullanici_id=k.id, ad_soyad="Antrenör 1"))
     await ihlal("uq_antrenor_kullanici_id", Antrenor(kullanici_id=k.id, ad_soyad="Antrenör 2"))
+
+
+async def test_odeme_basina_bir_yukleme_ve_iptal_alanlari_birlikte():
+    o, p = await ogrenci_olustur(), await paket_olustur()
+    op = OgrenciPaketi(
+        ogrenci_id=o.id, paket_id=p.id, ders_sayisi=8, liste_fiyati=Decimal("3000"), uygulanan_fiyat=Decimal("3000")
+    )
+    await kaydet(op)
+    od = Odeme(ogrenci_paketi_id=op.id, tutar=Decimal("3000"), yontem=OdemeYontemi.nakit)
+    await kaydet(od)
+    await ihlal("iptal_alanlari_birlikte", Odeme(
+        ogrenci_paketi_id=op.id, tutar=Decimal("1"), yontem=OdemeYontemi.nakit, iptal_nedeni="x"))
+    yukleme = dict(ogrenci_id=o.id, sayac=Sayac.normal, miktar=8, tur=HareketTuru.paket_yuklemesi,
+                   ogrenci_paketi_id=op.id, odeme_id=od.id)
+    await kaydet(DersHakkiHareketi(**yukleme))
+    await ihlal("uq_hareket_odeme_yuklemesi", DersHakkiHareketi(**yukleme))

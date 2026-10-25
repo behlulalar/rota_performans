@@ -94,6 +94,13 @@ async def ornek_veri() -> int:
     return await modul.yukle()
 
 
+async def ornek_odeme_verisi() -> int:
+    """Örnek öğrencilere paket ve ödeme ekler (yalnızca ENV=dev)."""
+    from app import ornek_veri as modul
+
+    return await modul.yukle_odeme()
+
+
 async def main() -> int:
     ayrac = argparse.ArgumentParser(prog="app.cli")
     alt = ayrac.add_subparsers(dest="komut", required=True)
@@ -101,6 +108,7 @@ async def main() -> int:
     admin.add_argument("giris", help="E-posta veya telefon")
     alt.add_parser("e2e-tohum", help="E2E test yöneticisini oluşturur (yalnız ENV=test|e2e)")
     alt.add_parser("ornek-veri", help="Geliştirme veritabanına örnek veri ekler (yalnız ENV=dev)")
+    alt.add_parser("ornek-odeme-verisi", help="Örnek öğrencilere paket ve ödeme ekler (yalnız ENV=dev)")
     argumanlar = ayrac.parse_args()
 
     try:
@@ -110,6 +118,8 @@ async def main() -> int:
             return await e2e_tohum()
         if argumanlar.komut == "ornek-veri":
             return await ornek_veri()
+        if argumanlar.komut == "ornek-odeme-verisi":
+            return await ornek_odeme_verisi()
         return 2
     finally:
         await engine.dispose()

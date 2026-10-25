@@ -32,6 +32,7 @@ export default function OgrenciDetay() {
   const bilgi = (konum.state as { uyari?: string } | null)?.uyari ?? null;
   const [kimlik, setKimlik] = useState<string | null>(null);
   const [surum, setSurum] = useState(0);
+  const [hakSurum, setHakSurum] = useState(0);
   const [mesgul, setMesgul] = useState(false);
   const [grupSecenekleri, setGrupSecenekleri] = useState<GrupOzet[] | null>(null);
   const [secilenGrup, setSecilenGrup] = useState("");
@@ -212,9 +213,13 @@ export default function OgrenciDetay() {
         </div>
       </Kart>
 
-      <DersHakki ogrenci={o} onYenile={setO} />
+      <DersHakki key={hakSurum} ogrenci={o} onYenile={setO} />
 
-      <OgrenciPaketleri ogrenciId={id} aktif={o.durum === "aktif"} />
+      <OgrenciPaketleri
+        ogrenciId={id}
+        aktif={o.durum === "aktif"}
+        onOdemeDegisti={() => { void ogrenciGetir(id).then((y) => { setO(y); setHakSurum((s) => s + 1); }).catch((e) => setHata(hataMesaji(e))); }}
+      />
 
       <Kart baslik="Gruplar">
         {(o.gruplar ?? []).length === 0 ? (

@@ -104,6 +104,11 @@ class DersHakkiHareketi(Base):
     iptal_edilen_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("ders_hakki_hareketi.id", ondelete="RESTRICT")
     )
+    # Paket yüklemesi hangi ödemeye bağlı (ödeme iptal edilip yeniden alınınca yeni yükleme yazılabilsin).
+    # Ücretsiz paketlerde ödeme satırı yoktur, boştur.
+    odeme_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("odeme.id", ondelete="RESTRICT"), index=True
+    )
     neden: Mapped[str | None] = mapped_column(Text)
     olusturan_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="RESTRICT")
@@ -127,12 +132,20 @@ class DersHakkiHareketi(Base):
             unique=True,
             postgresql_where=text("yoklama_id IS NOT NULL AND tur <> 'iptal'"),
         ),
-        # Bir paket yalnızca bir kez yüklenir.
+        # Bir ödeme yalnızca bir kez yükleme yazar. Ödeme iptal edilip yeniden alınırsa yeni ödeme,
+        # yeni yükleme demektir (eski yükleme `iptal` hareketiyle geri alınmıştır).
+        Index(
+            "uq_hareket_odeme_yuklemesi",
+            "odeme_id",
+            unique=True,
+            postgresql_where=text("tur = 'paket_yuklemesi' AND odeme_id IS NOT NULL"),
+        ),
+        # Ödemesiz (ücretsiz) paket yalnızca bir kez yüklenir.
         Index(
             "uq_hareket_paket_yuklemesi",
             "ogrenci_paketi_id",
             unique=True,
-            postgresql_where=text("tur = 'paket_yuklemesi'"),
+            postgresql_where=text("tur = 'paket_yuklemesi' AND odeme_id IS NULL"),
         ),
         # Bir hareket yalnızca bir kez geri alınabilir.
         Index(
