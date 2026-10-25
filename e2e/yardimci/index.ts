@@ -273,3 +273,19 @@ export async function paketAtaAPI(page: Page, token: string, ogrenciId: string, 
   expect(yanit.status(), await yanit.text()).toBe(201);
   return ((await yanit.json()) as { id: string }).id;
 }
+
+/** API ile öğrenci paketi için ödeme alır (tarih verilmezse bugün). */
+export async function odemeAlAPI(page: Page, token: string, ogrenciPaketiId: string, yontem: "nakit" | "havale_eft" | "diger" = "nakit"): Promise<void> {
+  const yanit = await page.request.post(`/api/ogrenci-paketleri/${ogrenciPaketiId}/odeme`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { yontem },
+  });
+  expect(yanit.ok(), await yanit.text()).toBeTruthy();
+}
+
+/** Gelir raporu yanıtı (yalnız ihtiyaç duyulan alanlar). */
+export async function gelirRaporuAPI(page: Page, token: string, yil: number, ay: number) {
+  const yanit = await page.request.get(`/api/raporlar/gelir?yil=${yil}&ay=${ay}`, { headers: { Authorization: `Bearer ${token}` } });
+  expect(yanit.status(), await yanit.text()).toBe(200);
+  return (await yanit.json()) as { ozet: { toplam_tahsilat: string; odeme_adedi: number } };
+}

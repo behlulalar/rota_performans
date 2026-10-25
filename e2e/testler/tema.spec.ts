@@ -70,14 +70,13 @@ test.describe("Bölüm alt menüsü", () => {
     await expect(page.getByRole("complementary", { name: "Kayıtlar menüsü" })).toBeVisible();
   });
 
-  test("bölüm şeridinden bölüm değişir; Finans ve Sistem öğeleri 'Yakında' etiketli ve tıklanamaz", async ({ page }) => {
+  test("bölüm şeridinden bölüm değişir; Sistem öğeleri 'Yakında' etiketli ve tıklanamaz", async ({ page }) => {
     await yoneticiApiGirisi(page);
     await page.goto("/gruplar");
     await expect(page.getByRole("heading", { name: "Gruplar" })).toBeVisible();
     const url = page.url();
 
     for (const [bolum, ogeler] of [
-      ["Finans", ["Gelir raporu"]],
       ["Sistem", ["Bildirimler", "Denetim kaydı", "Ayarlar"]],
     ] as const) {
       await page.getByRole("button", { name: bolum, exact: true }).click();
@@ -93,11 +92,13 @@ test.describe("Bölüm alt menüsü", () => {
       }
     }
 
-    // Ödemeler ve Paketler artık gerçek bağlantı.
+    // Ödemeler, Paketler ve Gelir raporu artık gerçek bağlantı.
     await page.getByRole("button", { name: "Finans", exact: true }).click();
     const finans = page.getByRole("complementary", { name: "Finans menüsü" });
     await expect(finans.getByRole("link", { name: "Paketler" })).toBeVisible();
     await expect(finans.getByRole("link", { name: "Ödemeler" })).toBeVisible();
+    await expect(finans.getByRole("link", { name: "Gelir raporu" })).toBeVisible();
+    await expect(finans.locator('[aria-disabled="true"]')).toHaveCount(0);
 
     // Genel bölümüne geçince gerçek bağlantılar çalışır.
     await page.getByRole("button", { name: "Genel", exact: true }).click();

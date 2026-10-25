@@ -36,7 +36,7 @@ export const YONETICI_MENUSU: MenuBolumu[] = [
     ogeler: [
       { ad: "Ödemeler", simge: "odeme", yol: "/odemeler" },
       { ad: "Paketler", simge: "paket", yol: "/paketler" },
-      { ad: "Gelir raporu", simge: "gelir" },
+      { ad: "Gelir raporu", simge: "gelir", yol: "/gelir-raporu" },
     ],
   },
   {
