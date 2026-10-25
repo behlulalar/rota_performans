@@ -77,7 +77,7 @@ test.describe("Bölüm alt menüsü", () => {
     const url = page.url();
 
     for (const [bolum, ogeler] of [
-      ["Finans", ["Ödemeler", "Paketler", "Gelir raporu"]],
+      ["Finans", ["Ödemeler", "Gelir raporu"]],
       ["Sistem", ["Bildirimler", "Denetim kaydı", "Ayarlar"]],
     ] as const) {
       await page.getByRole("button", { name: bolum, exact: true }).click();
@@ -92,6 +92,10 @@ test.describe("Bölüm alt menüsü", () => {
         await expect(altMenu.getByRole("link", { name: ad })).toHaveCount(0);
       }
     }
+
+    // Paketler artık gerçek bir bağlantı.
+    await page.getByRole("button", { name: "Finans", exact: true }).click();
+    await expect(page.getByRole("complementary", { name: "Finans menüsü" }).getByRole("link", { name: "Paketler" })).toBeVisible();
 
     // Genel bölümüne geçince gerçek bağlantılar çalışır.
     await page.getByRole("button", { name: "Genel", exact: true }).click();

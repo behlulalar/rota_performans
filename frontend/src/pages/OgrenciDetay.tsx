@@ -5,6 +5,7 @@ import { aktifEt, fotoSil, fotoYukle, hesapAc, hesapKaldir, hesapSifreSifirla, k
 import { gruplariGetir, ogrenciEkle, type GrupOzet } from "../api/grup";
 import GeciciSifreKutusu from "../components/GeciciSifreKutusu";
 import DersHakki from "../components/DersHakki";
+import OgrenciPaketleri from "../components/OgrenciPaketleri";
 import ResitGecisi from "../components/ResitGecisi";
 import DurumRozeti from "../components/DurumRozeti";
 import OgrenciFoto from "../components/OgrenciFoto";
@@ -212,6 +213,8 @@ export default function OgrenciDetay() {
       </Kart>
 
       <DersHakki ogrenci={o} onYenile={setO} />
+
+      <OgrenciPaketleri ogrenciId={id} aktif={o.durum === "aktif"} />
 
       <Kart baslik="Gruplar">
         {(o.gruplar ?? []).length === 0 ? (

@@ -11,6 +11,7 @@ import OgrenciDetay from "./pages/OgrenciDetay";
 import OgrenciForm from "./pages/OgrenciForm";
 import OgrenciListe from "./pages/OgrenciListe";
 import SifreDegistir from "./pages/SifreDegistir";
+import PaketListe from "./pages/PaketListe";
 import Panel from "./pages/Panel";
 import AntrenorYerlesim from "./components/AntrenorYerlesim";
 import Takvim from "./pages/Takvim";
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="/ogrenciler/:id" element={<OgrenciDetay />} />
             <Route path="/ogrenciler/:id/duzenle" element={<OgrenciForm />} />
             <Route path="/antrenorler" element={<AntrenorListe />} />
+            <Route path="/paketler" element={<PaketListe />} />
             <Route path="/gruplar" element={<GrupListe />} />
             <Route path="/gruplar/yeni" element={<GrupForm />} />
             <Route path="/gruplar/:id" element={<GrupDetay />} />

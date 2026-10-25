@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import antrenorler, auth, genel_bakis, gruplar, ogrenciler, oturumlar, saglik
+from app.api import antrenorler, auth, genel_bakis, gruplar, ogrenciler, oturumlar, paketler, saglik
 from app.config import settings
 
 app = FastAPI(
@@ -37,5 +37,8 @@ app.include_router(auth.router)
 app.include_router(ogrenciler.router)
 app.include_router(antrenorler.router)
 app.include_router(gruplar.router)
+app.include_router(paketler.router)
+app.include_router(paketler.ogrenci_router)
+app.include_router(paketler.ogrenci_paketi_router)
 app.include_router(genel_bakis.router)
 app.include_router(oturumlar.router)
