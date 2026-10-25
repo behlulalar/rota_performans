@@ -168,12 +168,24 @@ export default function Takvim() {
                   type="button"
                   onClick={() => gunToggle(s)}
                   aria-expanded={acik}
-                  className={`md:cursor-default w-full flex items-center justify-between rounded-[3px] px-3 min-h-11 md:min-h-9 text-left text-[13px] border bg-yuzey ${
-                    buGun ? "border-altin text-altin-metin" : "border-cizgi text-metin-soluk"
+                  aria-current={buGun ? "date" : undefined}
+                  className={`md:cursor-default w-full flex items-center gap-3 rounded-[3px] px-3 py-2 min-h-14 text-left border ${
+                    buGun
+                      ? "border-2 border-altin bg-altin/15 text-altin-metin"
+                      : "border-cizgi bg-yuzey text-metin"
                   }`}
                 >
-                  <span className="font-medium">{GUNLER[i]} <span className="num font-normal">{kisaTarih(g)}</span></span>
-                  <span className="num md:hidden text-xs">{liste.length} ders {acik ? "▲" : "▼"}</span>
+                  <span className="num font-display font-medium text-[32px] leading-none w-11 text-center shrink-0">{g.getDate()}</span>
+                  <span className="flex-1 min-w-0 leading-tight">
+                    <span className="block text-[15px] font-semibold">{GUNLER[i]}</span>
+                    <span className={`block text-[13px] ${buGun ? "" : "text-metin-orta"}`}>
+                      {g.toLocaleDateString("tr-TR", { month: "long" })}
+                    </span>
+                  </span>
+                  {buGun && (
+                    <span className="rounded-full bg-altin text-[#111] text-[10px] font-semibold uppercase tracking-[0.12em] px-2 py-0.5">Bugün</span>
+                  )}
+                  <span className="num md:hidden text-xs text-metin-soluk">{liste.length} ders {acik ? "▲" : "▼"}</span>
                 </button>
                 <div className={`${acik ? "block" : "hidden"} md:block mt-2 space-y-2`}>
                   {liste.length === 0 ? (

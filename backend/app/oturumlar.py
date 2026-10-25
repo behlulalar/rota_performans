@@ -31,16 +31,17 @@ def bugun(an: datetime | None = None) -> date:
     return an.astimezone(ZoneInfo(settings.saat_dilimi)).date()
 
 
-async def oturumlari_uret(session: AsyncSession, baslangic: date, bitis: date) -> int:
+async def oturumlari_uret(
+    session: AsyncSession, baslangic: date, bitis: date, grup_idleri: list[uuid.UUID] | None = None
+) -> int:
     """Aktif grupların haftalık programından [baslangic, bitis] aralığındaki dersleri üretir.
-    Var olan oturum tekrar oluşturulmaz. Dönen sayı: yeni oluşturulan oturum sayısı. Çağıran commit eder."""
+    `grup_idleri` verilirse yalnızca o gruplar için üretilir. Var olan oturum tekrar oluşturulmaz. Dönen sayı: yeni oluşturulan oturum sayısı. Çağıran commit eder."""
     if bitis < baslangic:
         return 0
-    slotlar = (
-        await session.execute(
-            select(GrupProgrami).join(Grup, Grup.id == GrupProgrami.grup_id).where(Grup.aktif.is_(True))
-        )
-    ).scalars().all()
+    sorgu = select(GrupProgrami).join(Grup, Grup.id == GrupProgrami.grup_id).where(Grup.aktif.is_(True))
+    if grup_idleri is not None:
+        sorgu = sorgu.where(Grup.id.in_(grup_idleri))
+    slotlar = (await session.execute(sorgu)).scalars().all()
     gunluk: dict[int, list[GrupProgrami]] = {}
     for s in slotlar:
         gunluk.setdefault(s.gun, []).append(s)

@@ -87,12 +87,20 @@ async def e2e_tohum() -> int:
     return 0
 
 
+async def ornek_veri() -> int:
+    """Geliştirme veritabanına örnek veri ekler (yalnızca ENV=dev)."""
+    from app import ornek_veri as modul
+
+    return await modul.yukle()
+
+
 async def main() -> int:
     ayrac = argparse.ArgumentParser(prog="app.cli")
     alt = ayrac.add_subparsers(dest="komut", required=True)
     admin = alt.add_parser("admin-olustur", help="Yönetici hesabı oluşturur")
     admin.add_argument("giris", help="E-posta veya telefon")
     alt.add_parser("e2e-tohum", help="E2E test yöneticisini oluşturur (yalnız ENV=test|e2e)")
+    alt.add_parser("ornek-veri", help="Geliştirme veritabanına örnek veri ekler (yalnız ENV=dev)")
     argumanlar = ayrac.parse_args()
 
     try:
@@ -100,6 +108,8 @@ async def main() -> int:
             return await admin_olustur(argumanlar.giris)
         if argumanlar.komut == "e2e-tohum":
             return await e2e_tohum()
+        if argumanlar.komut == "ornek-veri":
+            return await ornek_veri()
         return 2
     finally:
         await engine.dispose()

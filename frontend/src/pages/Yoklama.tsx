@@ -85,9 +85,15 @@ export default function Yoklama() {
     setBilgi(null);
     setSecim((s) => ({ ...s, [ogrenciId]: d }));
   };
+  // Gelmedi işaretlenmiş öğrencilere dokunulmaz; yalnızca geri kalanlar geldi olur.
+  const gelmediSayisi = Object.values(secim).filter((v) => v === "gelmedi").length;
+  const geldiYapilacak = o.ogrenciler.filter((x) => secim[x.ogrenci_id] !== "gelmedi" && secim[x.ogrenci_id] !== "geldi").length;
   const tumuGeldi = () => {
     setBilgi(null);
-    setSecim(Object.fromEntries(o.ogrenciler.map((x) => [x.ogrenci_id, "geldi" as const])));
+    setSecim((s) => ({
+      ...s,
+      ...Object.fromEntries(o.ogrenciler.filter((x) => s[x.ogrenci_id] !== "gelmedi").map((x) => [x.ogrenci_id, "geldi" as const])),
+    }));
   };
 
   const kaydet = async () => {
@@ -119,7 +125,7 @@ export default function Yoklama() {
     }`;
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <div>
         <Link to="/takvim" className="inline-flex items-center min-h-11 md:min-h-0 text-[13px] text-metin-soluk hover:text-metin">← Takvim</Link>
       </div>
@@ -160,13 +166,13 @@ export default function Yoklama() {
       ) : (
         <>
           <button
-            className="mb-3 w-full min-h-12 rounded-[3px] border border-basari/60 bg-basari-zemin text-basari font-semibold disabled:opacity-40"
-            disabled={kilit || mesgul}
+            className="mb-3 w-full md:w-auto md:min-w-64 min-h-12 rounded-[3px] border border-basari/60 bg-basari-zemin text-basari font-semibold disabled:opacity-40"
+            disabled={kilit || mesgul || (gelmediSayisi > 0 && geldiYapilacak === 0)}
             onClick={tumuGeldi}
           >
-            Tümü geldi
+            {gelmediSayisi > 0 ? `Gelmedi dışındakileri geldi işaretle (${geldiYapilacak})` : "Tümü geldi"}
           </button>
-          <ul className="space-y-2">
+          <ul className="grid gap-2 md:grid-cols-2 min-[1360px]:grid-cols-3 items-start">
             {o.ogrenciler.map((x) => (
               <li key={x.ogrenci_id} className="rounded-[5px] border border-cizgi bg-yuzey p-3" aria-label={`${x.ad} ${x.soyad}`}>
                 <div className="flex items-center gap-3">
@@ -201,14 +207,14 @@ export default function Yoklama() {
             ))}
           </ul>
 
-          <div className="sticky bottom-[var(--sekme-yuk,0px)] z-10 mt-4 -mx-4 md:-mx-6 bg-yuzey border-t border-cizgi px-4 md:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="sticky bottom-[var(--sekme-yuk,0px)] z-10 mt-4 -mx-4 md:-mx-8 bg-yuzey border-t border-cizgi px-4 md:px-8 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {isaretli < toplam && isaretli > 0 && !kilit && (
               <p className="mb-2 text-xs text-uyari">
                 {toplam - isaretli} öğrenci işaretlenmedi; yalnızca işaretliler kaydedilir.
               </p>
             )}
             <button
-              className={`${birincilDugme} w-full min-h-14 text-base`}
+              className={`${birincilDugme} w-full md:w-auto md:min-w-96 md:block md:ml-auto min-h-14 text-base`}
               disabled={kilit || mesgul || isaretli === 0}
               onClick={() => void kaydet()}
             >
