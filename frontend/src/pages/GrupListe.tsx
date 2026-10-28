@@ -46,10 +46,10 @@ export default function GrupListe() {
       {!liste ? (
         <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>
       ) : liste.length === 0 ? (
-        <div className="bg-yuzey border border-cizgi rounded-[5px] p-10 text-center text-metin-soluk">Grup bulunamadı.</div>
+        <div className="bg-yuzey border border-cizgi rounded-[14px] p-10 text-center text-metin-soluk">Grup bulunamadı.</div>
       ) : (
         <>
-          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[5px] overflow-hidden">
+          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[14px] overflow-hidden">
             <table className="w-full text-[13px]">
               <thead>
                 <tr>
@@ -79,7 +79,7 @@ export default function GrupListe() {
           <ul className="md:hidden space-y-2">
             {liste.map((g) => (
               <li key={g.id}>
-                <Link to={`/gruplar/${g.id}`} className="block bg-yuzey border border-cizgi rounded-[5px] p-4 hover:border-altin transition-colors space-y-2">
+                <Link to={`/gruplar/${g.id}`} className="block bg-yuzey border border-cizgi rounded-[14px] p-4 hover:border-altin transition-colors space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-medium">{g.ad}</span>
                     <span className={g.aktif ? rozetBasari : rozetNotr}>{g.aktif ? "Aktif" : "Pasif"}</span>

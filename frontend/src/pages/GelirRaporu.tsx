@@ -12,9 +12,9 @@ const kisaAy = (ay: number) => new Date(2000, ay - 1, 1).toLocaleDateString("tr-
 const sayi = (d: string | number) => Number(d) || 0;
 const yuzdeYaz = (d: number | string) => `%${sayi(d).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`;
 
-const kpiKutu = "bg-yuzey border border-cizgi rounded-[5px] p-5 min-w-0";
+const kpiKutu = "bg-yuzey border border-cizgi rounded-[14px] p-5 min-w-0";
 const kpiEtiket = "text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk";
-const kpiDeger = "num font-display font-medium text-[32px] leading-[1.15] mt-2";
+const kpiDeger = "num font-display text-[32px] leading-[1.15] mt-2";
 
 /** Dikey çubuk grafiği: HTML/CSS, tema token'larıyla. Çubuklar düğmedir (dokunma/odak/klavye). */
 type Cubuk = { anahtar: string; deger: number; etiket: string; metin: string; vurgulu?: boolean; etiketGoster: boolean };
@@ -165,7 +165,7 @@ export default function GelirRaporu() {
       </div>
 
       {hata && (
-        <div role="alert" className="bg-yuzey border border-hata/50 rounded-[5px] p-4 flex flex-wrap items-center justify-between gap-3">
+        <div role="alert" className="bg-yuzey border border-hata/50 rounded-[14px] p-4 flex flex-wrap items-center justify-between gap-3">
           <span className="text-[13px] text-hata">{hata}</span>
           <button className={dugme} onClick={() => setDeneme((n) => n + 1)}>Yeniden dene</button>
         </div>

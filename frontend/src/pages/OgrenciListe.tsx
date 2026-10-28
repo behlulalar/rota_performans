@@ -80,13 +80,13 @@ export default function OgrenciListe() {
       {yukleniyor && !veri ? (
         <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>
       ) : kayitlar.length === 0 && !yukleniyor && !hata ? (
-        <div className="bg-yuzey border border-cizgi rounded-[5px] p-10 text-center text-metin-soluk">
+        <div className="bg-yuzey border border-cizgi rounded-[14px] p-10 text-center text-metin-soluk">
           {q || durum ? "Aramanıza uyan öğrenci bulunamadı." : "Henüz kayıtlı öğrenci yok."}
         </div>
       ) : (
         <div className={yukleniyor ? "opacity-60 transition-opacity" : ""}>
           {/* Masaüstü tablo */}
-          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[5px] overflow-hidden">
+          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[14px] overflow-hidden">
             <table className="w-full text-[13px]">
               <thead>
                 <tr>
@@ -128,7 +128,7 @@ export default function OgrenciListe() {
           <ul className="md:hidden space-y-2">
             {kayitlar.map((o) => (
               <li key={o.id}>
-                <Link to={`/ogrenciler/${o.id}`} className="flex gap-3 bg-yuzey border border-cizgi rounded-[5px] p-4 min-h-11">
+                <Link to={`/ogrenciler/${o.id}`} className="flex gap-3 bg-yuzey border border-cizgi rounded-[14px] p-4 min-h-11">
                   <OgrenciFoto id={o.id} fotoVar={o.foto_var} ad={o.ad} soyad={o.soyad} boyut="kucuk" />
                   <div className="min-w-0 flex-1 text-[13px]">
                     <div className="flex items-start justify-between gap-2">

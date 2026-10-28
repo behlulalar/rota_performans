@@ -184,7 +184,7 @@ export default function OgrenciDetay() {
       <Kart baslik="Kişisel bilgiler">
         <div className="flex flex-col sm:flex-row gap-5">
           <div className="shrink-0">
-            <OgrenciFoto id={o.id} fotoVar={o.foto_var} ad={o.ad} soyad={o.soyad} boyut="buyuk" sinif="size-32 rounded-[3px] text-3xl" surum={surum} />
+            <OgrenciFoto id={o.id} fotoVar={o.foto_var} ad={o.ad} soyad={o.soyad} boyut="buyuk" sinif="size-32 rounded-[10px] text-3xl" surum={surum} />
             <input ref={dosyaGirdisi} type="file" accept="image/*" hidden onChange={(e) => { void fotoDegistir(e.target.files?.[0]); e.target.value = ""; }} />
             <div className="mt-3 flex gap-2">
               <button className={dugme} disabled={mesgul || !fotoRizasi} onClick={() => dosyaGirdisi.current?.click()}>
@@ -228,7 +228,7 @@ export default function OgrenciDetay() {
           <ul className="flex flex-wrap gap-2">
             {o.gruplar.map((g) => (
               <li key={g.id}>
-                <Link to={`/gruplar/${g.id}`} className="inline-flex items-center min-h-11 rounded-[3px] border border-cizgi-guclu bg-yuzey-yuksek px-3 text-[13px] hover:border-altin hover:text-altin-metin">{g.ad}</Link>
+                <Link to={`/gruplar/${g.id}`} className="inline-flex items-center min-h-11 rounded-[10px] border border-cizgi-guclu bg-yuzey-yuksek px-3 text-[13px] hover:border-altin hover:text-altin-metin">{g.ad}</Link>
               </li>
             ))}
           </ul>

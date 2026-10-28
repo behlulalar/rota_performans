@@ -238,7 +238,7 @@ export default function OgrenciForm() {
           </select>
         </Alan>
         {yas !== null && yas >= 0 && yas < 5 && (
-          <p className="col-span-full rounded-[3px] border border-uyari/40 bg-uyari-zemin text-uyari text-[13px] px-3 py-2">
+          <p className="col-span-full rounded-[10px] border border-uyari/40 bg-uyari-zemin text-uyari text-[13px] px-3 py-2">
             Dikkat: Öğrenci 5 yaşından küçük ({yas} yaş). Doğum tarihini kontrol edin; kayda devam edebilirsiniz.
           </p>
         )}
@@ -275,7 +275,7 @@ export default function OgrenciForm() {
         )}
         <div className="mt-4 space-y-3">
           {kisiler.map((k) => (
-            <div key={k.anahtar} className="rounded-[3px] border border-cizgi bg-yuzey-yuksek p-3 grid gap-3 sm:grid-cols-[8rem_1fr_1fr_auto] items-end">
+            <div key={k.anahtar} className="rounded-[10px] border border-cizgi bg-yuzey-yuksek p-3 grid gap-3 sm:grid-cols-[8rem_1fr_1fr_auto] items-end">
               <label className="block">
                 <span className="text-xs text-metin-soluk">Rol</span>
                 <select className={girdi} value={k.rol} onChange={(e) => kisiGuncelle(k.anahtar, { rol: e.target.value as IletisimRol })}>
@@ -344,11 +344,11 @@ export default function OgrenciForm() {
             <p className="text-sm text-metin-soluk">Fotoğraf eklemek için yukarıda fotoğraf rızasının işaretlenmesi gerekir.</p>
           ) : (
             <div className="mt-3 flex items-center gap-4">
-              <div className="size-20 rounded-[3px] overflow-hidden bg-yuzey-yuksek border border-cizgi shrink-0">
+              <div className="size-20 rounded-[10px] overflow-hidden bg-yuzey-yuksek border border-cizgi shrink-0">
                 {onizleme && <img src={onizleme} alt="Seçilen fotoğraf önizlemesi" className="size-full object-cover" />}
               </div>
               <div>
-                <input type="file" accept="image/*" onChange={(e) => void fotoSec(e.target.files?.[0])} className="text-sm text-metin-soluk file:mr-3 file:rounded-[3px] file:border file:border-cizgi file:bg-yuzey-yuksek file:px-3 file:py-1.5 file:text-metin" />
+                <input type="file" accept="image/*" onChange={(e) => void fotoSec(e.target.files?.[0])} className="text-sm text-metin-soluk file:mr-3 file:rounded-[10px] file:border file:border-cizgi file:bg-yuzey-yuksek file:px-3 file:py-1.5 file:text-metin" />
                 {foto && (
                   <button type="button" onClick={() => setFoto(null)} className="mt-2 block text-sm text-metin-soluk hover:text-hata">Fotoğrafı kaldır</button>
                 )}

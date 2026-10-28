@@ -132,7 +132,7 @@ export default function GrupForm() {
         {satirlar.length === 0 && <p className="text-sm text-metin-soluk mb-3">Henüz program satırı yok.</p>}
         <div className="space-y-3">
           {satirlar.map((s) => (
-            <div key={s.anahtar} className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end rounded-[3px] border border-cizgi bg-yuzey-yuksek p-3">
+            <div key={s.anahtar} className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end rounded-[10px] border border-cizgi bg-yuzey-yuksek p-3">
               <label className="block col-span-2 sm:col-span-1"><span className="text-xs text-metin-soluk">Gün</span>
                 <select className={girdi} value={s.gun} onChange={(e) => satirGuncelle(s.anahtar, { gun: Number(e.target.value) })}>
                   {GUNLER.map((g, i) => <option key={g} value={i + 1}>{g}</option>)}

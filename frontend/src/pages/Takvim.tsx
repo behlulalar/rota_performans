@@ -16,7 +16,7 @@ function OturumKarti({ o, bugunStr }: { o: OturumOzet; bugunStr: string }) {
   return (
     <Link
       to={`/oturum/${o.id}`}
-      className={`block rounded-[3px] border border-cizgi bg-yuzey-yuksek px-3 py-2.5 hover:border-altin transition-colors ${iptal ? "opacity-50" : ""}`}
+      className={`block rounded-[10px] border border-cizgi bg-yuzey-yuksek px-3 py-2.5 hover:border-altin transition-colors ${iptal ? "opacity-50" : ""}`}
     >
       <div className="num text-[13px] font-semibold">
         {saat(o.baslangic)}–{saat(o.bitis)}
@@ -146,7 +146,7 @@ export default function Takvim() {
       {oturumlar === null && !hata && <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>}
 
       {oturumlar !== null && oturumlar.length === 0 && (
-        <p className="rounded-[5px] border border-cizgi bg-yuzey px-4 py-6 text-sm text-metin-soluk text-center">
+        <p className="rounded-[14px] border border-cizgi bg-yuzey px-4 py-6 text-sm text-metin-soluk text-center">
           {admin
             ? "Bu hafta için ders oturumu yok. Oturumları üret butonuyla grup programlarından oluşturabilirsiniz."
             : "Bu hafta için ders oturumu yok."}
@@ -169,13 +169,13 @@ export default function Takvim() {
                   onClick={() => gunToggle(s)}
                   aria-expanded={acik}
                   aria-current={buGun ? "date" : undefined}
-                  className={`md:cursor-default w-full flex items-center gap-3 rounded-[3px] px-3 py-2 min-h-14 text-left border ${
+                  className={`md:cursor-default w-full flex items-center gap-3 rounded-[10px] px-3 py-2 min-h-14 text-left border ${
                     buGun
                       ? "border-2 border-altin bg-altin/15 text-altin-metin"
                       : "border-cizgi bg-yuzey text-metin"
                   }`}
                 >
-                  <span className="num font-display font-medium text-[32px] leading-none w-11 text-center shrink-0">{g.getDate()}</span>
+                  <span className="num font-display text-[32px] leading-none w-11 text-center shrink-0">{g.getDate()}</span>
                   <span className="flex-1 min-w-0 leading-tight">
                     <span className="block text-[15px] font-semibold">{GUNLER[i]}</span>
                     <span className={`block text-[13px] ${buGun ? "" : "text-metin-orta"}`}>

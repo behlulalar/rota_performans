@@ -1,41 +1,17 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { aktifBolum, aktifOge, ogeAktifMi, type MenuBolumu, type MenuOgesi } from "../lib/menu";
-import Simge, { Ok } from "./Simge";
+import Logo from "./Logo";
+import { BolumBaglami } from "./SayfaBasligi";
+import Simge from "./Simge";
 import TemaDugmesi from "./TemaDugmesi";
-
-const MENU_ANAHTARI = "rota-alt-menu";
-
-type KabukDegeri = { bolumAdi: string; menuGizli: boolean; menuyuGoster: () => void };
-const KabukBaglami = createContext<KabukDegeri>({ bolumAdi: "", menuGizli: false, menuyuGoster: () => {} });
-export const useKabuk = () => useContext(KabukBaglami);
-
-function menuTercihiOku(): boolean {
-  try {
-    return localStorage.getItem(MENU_ANAHTARI) !== "kapali";
-  } catch {
-    return true;
-  }
-}
-function menuTercihiYaz(acik: boolean) {
-  try {
-    localStorage.setItem(MENU_ANAHTARI, acik ? "acik" : "kapali");
-  } catch {
-    /* depolama kapalıysa tercih bu oturumla sınırlı kalır */
-  }
-}
-
-function basHarfler(giris: string | undefined): string {
-  const temiz = (giris ?? "").replace(/[^\p{L}\p{N}]/gu, "");
-  return (temiz.slice(0, 2) || "?").toLocaleUpperCase("tr-TR");
-}
 
 function PasifOge({ o }: { o: MenuOgesi }) {
   return (
     <div
       aria-disabled="true"
-      className="flex items-center gap-2.5 rounded-[3px] px-2.5 min-h-11 md:min-h-9 text-[13px] text-metin-soluk opacity-80 cursor-not-allowed select-none"
+      className="flex items-center gap-2.5 rounded-[10px] px-2.5 min-h-11 md:min-h-9 text-[14px] text-metin-soluk opacity-80 cursor-not-allowed select-none"
     >
       <Simge ad={o.simge} />
       <span className="flex-1">{o.ad}</span>
@@ -54,13 +30,13 @@ function OgeListesi({ ogeler, yol, onGit }: { ogeler: MenuOgesi[]; yol: string; 
               to={o.yol}
               onClick={onGit}
               aria-current={ogeAktifMi(o, yol) ? "page" : undefined}
-              className={`flex items-center gap-2.5 rounded-[3px] px-2.5 min-h-11 md:min-h-9 text-[13px] transition-colors ${
+              className={`flex items-center gap-2.5 rounded-[10px] px-2.5 min-h-11 md:min-h-9 text-[14px] transition-colors ${
                 ogeAktifMi(o, yol)
-                  ? "bg-yuzey-yuksek text-metin font-medium"
+                  ? "bg-birincil text-birincil-metin font-semibold"
                   : "text-metin-orta hover:bg-yuzey-yuksek hover:text-metin"
               }`}
             >
-              <Simge ad={o.simge} sinif={ogeAktifMi(o, yol) ? "text-altin-metin" : ""} />
+              <Simge ad={o.simge} />
               {o.ad}
             </Link>
           ) : (
@@ -72,19 +48,31 @@ function OgeListesi({ ogeler, yol, onGit }: { ogeler: MenuOgesi[]; yol: string; 
   );
 }
 
-export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler?: MenuOgesi[] }) {
+function BolumBasligi({ b }: { b: MenuBolumu }) {
+  return <div className="px-2.5 mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-metin-soluk">{b.ad}</div>;
+}
+
+/**
+ * Siyah marka çubuğu + içerik. `yan`: masaüstünde gruplu sol menü (yönetici).
+ * `ust`: menü bağlantıları çubuğun içinde, sol menü yok (veli, antrenör).
+ * Mobilde ikisi de üst çubuk, çekmece ve (verilirse) altta sabit sekmeler kullanır.
+ */
+export default function Kabuk({
+  menu,
+  sekmeler,
+  yerlesim = "yan",
+}: {
+  menu: MenuBolumu[];
+  sekmeler?: MenuOgesi[];
+  yerlesim?: "yan" | "ust";
+}) {
   const { kullanici, cikisYap } = useAuth();
   const { pathname } = useLocation();
   const rotaBolumu = aktifBolum(menu, pathname) ?? menu[0];
-  const [secili, setSecili] = useState(rotaBolumu.anahtar);
-  const [menuAcik, setMenuAcik] = useState(menuTercihiOku);
   const [cekmece, setCekmece] = useState(false);
+  const tumOgeler = menu.flatMap((b) => b.ogeler);
 
-  // Rota değişince bölüm yeniden rotadan seçilir; çekmece kapanır.
-  useEffect(() => {
-    setSecili(rotaBolumu.anahtar);
-    setCekmece(false);
-  }, [rotaBolumu.anahtar, pathname]);
+  useEffect(() => setCekmece(false), [pathname]);
 
   useEffect(() => {
     if (!cekmece) return;
@@ -93,176 +81,129 @@ export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler
     return () => window.removeEventListener("keydown", kapat);
   }, [cekmece]);
 
-  const gosterilen = menu.find((b) => b.anahtar === secili) ?? rotaBolumu;
   const sayfaAdi = aktifOge(menu, pathname)?.ad ?? "Rota Performans";
 
-  const menuDegistir = (acik: boolean) => {
-    setMenuAcik(acik);
-    menuTercihiYaz(acik);
-  };
-  const bolumSec = (anahtar: string) => {
-    setSecili(anahtar);
-    if (!menuAcik) menuDegistir(true);
-  };
-
   return (
-    <KabukBaglami.Provider
-      value={{ bolumAdi: rotaBolumu.ad, menuGizli: !menuAcik, menuyuGoster: () => menuDegistir(true) }}
-    >
-      <div className={`min-h-dvh md:flex ${sekmeler ? "sekmeli-kabuk" : ""}`}>
-        {/* Masaüstü: bölüm şeridi */}
-        <nav
-          aria-label="Bölümler"
-          className="hidden md:flex flex-col items-center w-[76px] shrink-0 sticky top-0 h-dvh bg-serit py-3 gap-1"
-        >
-          <div
-            aria-hidden="true"
-            className="size-9 mb-3 rounded-lg border border-serit-ikon-secili/50 grid place-items-center text-serit-ikon-secili text-xs font-semibold tracking-wider"
-          >
-            RP
-          </div>
-          {menu.map((b) => {
-            const sec = b.anahtar === secili;
-            return (
-              <button
-                key={b.anahtar}
-                type="button"
-                onClick={() => bolumSec(b.anahtar)}
-                aria-label={b.ad}
-                aria-pressed={sec}
-                title={b.ad}
-                className={`relative flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-lg transition-colors ${
-                  sec
-                    ? "bg-white/10 text-serit-ikon-secili"
-                    : "text-serit-ikon hover:text-serit-ikon-secili hover:bg-white/5"
-                }`}
-              >
-                {sec && <span aria-hidden="true" className="absolute -left-2.5 top-2.5 bottom-2.5 w-[3px] rounded-r bg-serit-ikon-secili" />}
-                <Simge ad={b.simge} />
-                <span className="text-[11px] leading-none font-medium">{b.ad}</span>
-              </button>
-            );
-          })}
-          <div className="mt-auto flex flex-col items-center gap-1">
-            <TemaDugmesi gorunum="serit" etiket />
-            <div
-              title={kullanici?.giris}
-              className="size-9 rounded-full border border-serit-ikon/40 grid place-items-center text-serit-ikon-secili text-[11px] font-semibold"
-            >
-              {basHarfler(kullanici?.giris)}
-            </div>
+    <BolumBaglami.Provider value={rotaBolumu.ad}>
+      <div className={`min-h-dvh flex flex-col ${sekmeler ? "sekmeli-kabuk" : ""}`}>
+        {/* Siyah marka çubuğu */}
+        <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center gap-3 px-4 md:px-6 bg-serit text-white">
+          <Logo />
+          <span className="hidden md:block font-display text-[17px] leading-none mr-2">Rota Performans</span>
+          <span className="md:hidden flex-1 min-w-0 font-display text-[18px] leading-none truncate">{sayfaAdi}</span>
+
+          {yerlesim === "ust" && (
+            <nav aria-label="Ana menü" className="hidden md:flex items-center gap-1 ml-2">
+              {tumOgeler.map((o) =>
+                o.yol ? (
+                  <Link
+                    key={o.ad}
+                    to={o.yol}
+                    aria-current={ogeAktifMi(o, pathname) ? "page" : undefined}
+                    className={`px-3 min-h-9 inline-flex items-center rounded-[10px] text-[14px] transition-colors ${
+                      ogeAktifMi(o, pathname) ? "text-altin font-semibold" : "text-serit-ikon hover:text-white"
+                    }`}
+                  >
+                    {o.ad}
+                  </Link>
+                ) : null,
+              )}
+            </nav>
+          )}
+
+          <div className="hidden md:flex items-center gap-3 ml-auto">
+            <TemaDugmesi gorunum="serit" />
+            <span className="max-w-[16rem] truncate text-[13px] text-serit-ikon" title={kullanici?.giris}>
+              {kullanici?.ad_soyad || kullanici?.giris}
+            </span>
             <button
               type="button"
               onClick={() => void cikisYap()}
               aria-label="Çıkış"
-              title="Çıkış"
-              className="flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-lg text-serit-ikon hover:text-serit-ikon-secili hover:bg-white/5 transition-colors"
+              className="inline-flex items-center gap-2 rounded-[10px] border border-serit-ikon/40 px-3 min-h-9 text-[13px] text-white hover:border-altin hover:text-altin transition-colors"
             >
-              <Simge ad="cikis" />
-              <span className="text-[11px] leading-none font-medium">Çıkış</span>
+              <Simge ad="cikis" boyut={16} />
+              Çıkış
             </button>
           </div>
-        </nav>
 
-        {/* Masaüstü: bölüm alt menüsü */}
-        {menuAcik && (
-          <aside
-            aria-label={`${gosterilen.ad} menüsü`}
-            className="hidden md:block w-[220px] shrink-0 sticky top-0 h-dvh bg-menu border-r border-cizgi overflow-y-auto"
-          >
-            <div className="flex items-start justify-between gap-2 px-4 pt-5 pb-4 border-b border-cizgi">
-              <div className="min-w-0">
-                <div className="font-display font-medium text-[19px] leading-6">Rota Performans</div>
-                <div className="eyebrow mt-1.5">{gosterilen.ad}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => menuDegistir(false)}
-                aria-label="Menüyü gizle"
-                title="Menüyü gizle"
-                className="grid place-items-center size-8 rounded-[3px] text-metin-soluk hover:text-metin hover:bg-yuzey-yuksek shrink-0"
-              >
-                <Ok yon="sol" />
-              </button>
-            </div>
-            <div className="p-2">
-              <OgeListesi ogeler={gosterilen.ogeler} yol={pathname} />
-            </div>
-          </aside>
-        )}
-
-        <div className="flex-1 min-w-0">
-          {/* Mobil: üst çubuk */}
-          <header className="md:hidden sticky top-0 z-30 h-14 flex items-center gap-2 pl-4 pr-2 bg-serit text-white">
-            <div className="flex-1 min-w-0">
-              <div className="text-[11px] leading-4 font-semibold uppercase tracking-[0.18em] text-serit-ikon-secili truncate">
-                {rotaBolumu.ad}
-              </div>
-              <div className="font-display font-medium text-[19px] leading-6 truncate">{sayfaAdi}</div>
-            </div>
+          <div className="md:hidden flex items-center">
             <TemaDugmesi gorunum="serit" />
             <button
               type="button"
               onClick={() => setCekmece((a) => !a)}
               aria-label="Menüyü aç/kapat"
               aria-expanded={cekmece}
-              className="grid place-items-center size-11 rounded-[3px] text-serit-ikon-secili"
+              className="grid place-items-center size-11 rounded-[10px] text-altin"
             >
               <Simge ad={cekmece ? "kapat" : "menu"} />
             </button>
-          </header>
+          </div>
+        </header>
 
-          {cekmece && (
-            <div className={`md:hidden fixed inset-x-0 top-14 z-20 ${sekmeler ? "bottom-[calc(3.5rem+env(safe-area-inset-bottom))]" : "bottom-0"}`}>
-              <button
-                type="button"
-                tabIndex={-1}
-                aria-hidden="true"
-                onClick={() => setCekmece(false)}
-                className="absolute inset-0 bg-black/60"
-              />
-              <div
-                role="dialog"
-                aria-label="Menü"
-                className="absolute inset-y-0 right-0 w-[min(20rem,88vw)] bg-menu border-l border-cizgi overflow-y-auto flex flex-col"
-              >
-                <div className="p-3 space-y-4 flex-1">
-                  {menu.map((b) => (
-                    <div key={b.anahtar}>
-                      <div className="flex items-center gap-2 px-2.5 mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-metin-soluk">
-                        <Simge ad={b.simge} boyut={14} />
-                        {b.ad}
-                      </div>
-                      <OgeListesi ogeler={b.ogeler} yol={pathname} onGit={() => setCekmece(false)} />
-                    </div>
-                  ))}
+        <div className="flex flex-1 min-w-0">
+          {yerlesim === "yan" && (
+            <aside
+              aria-label="Menü"
+              className="hidden md:block w-[232px] shrink-0 sticky top-14 h-[calc(100dvh-3.5rem)] overflow-y-auto bg-menu border-r border-cizgi p-3 space-y-5"
+            >
+              {menu.map((b) => (
+                <div key={b.anahtar}>
+                  <BolumBasligi b={b} />
+                  <OgeListesi ogeler={b.ogeler} yol={pathname} />
                 </div>
-                <div className="p-3 border-t border-cizgi flex items-center gap-2">
-                  <TemaDugmesi />
-                  <span className="flex-1 min-w-0 truncate text-[13px] text-metin-soluk" title={kullanici?.giris}>
-                    {kullanici?.giris}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void cikisYap()}
-                    className="inline-flex items-center gap-2 rounded-[3px] border border-cizgi-guclu px-3 min-h-11 text-[13px] text-metin hover:border-altin"
-                  >
-                    <Simge ad="cikis" />
-                    Çıkış
-                  </button>
-                </div>
-              </div>
-            </div>
+              ))}
+            </aside>
           )}
 
           <main
-            className={`px-4 md:px-8 pt-6 md:py-8 max-w-[1800px] ${
+            className={`flex-1 min-w-0 px-4 md:px-8 pt-6 md:py-8 ${yerlesim === "ust" ? "max-w-6xl mx-auto w-full" : "max-w-[1800px]"} ${
               sekmeler ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8" : "pb-8"
             }`}
           >
             <Outlet />
           </main>
         </div>
+
+        {/* Mobil çekmece */}
+        {cekmece && (
+          <div className={`md:hidden fixed inset-x-0 top-14 z-20 ${sekmeler ? "bottom-[calc(3.5rem+env(safe-area-inset-bottom))]" : "bottom-0"}`}>
+            <button
+              type="button"
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={() => setCekmece(false)}
+              className="absolute inset-0 bg-black/60"
+            />
+            <div
+              role="dialog"
+              aria-label="Menü"
+              className="absolute inset-y-0 right-0 w-[min(20rem,88vw)] bg-menu border-l border-cizgi overflow-y-auto flex flex-col"
+            >
+              <div className="p-3 space-y-4 flex-1">
+                {menu.map((b) => (
+                  <div key={b.anahtar}>
+                    <BolumBasligi b={b} />
+                    <OgeListesi ogeler={b.ogeler} yol={pathname} onGit={() => setCekmece(false)} />
+                  </div>
+                ))}
+              </div>
+              <div className="p-3 border-t border-cizgi flex items-center gap-2">
+                <span className="flex-1 min-w-0 truncate text-[13px] text-metin-soluk" title={kullanici?.giris}>
+                  {kullanici?.ad_soyad || kullanici?.giris}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void cikisYap()}
+                  className="inline-flex items-center gap-2 rounded-[10px] border border-cizgi-guclu px-3 min-h-11 text-[13px] text-metin hover:border-altin"
+                >
+                  <Simge ad="cikis" />
+                  Çıkış
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mobil: altta sabit hızlı sekme çubuğu */}
         {sekmeler && (
@@ -278,7 +219,7 @@ export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler
                     <Link
                       to={o.yol ?? "#"}
                       aria-current={sec ? "page" : undefined}
-                      className={`flex flex-col items-center justify-center gap-1 min-h-14 px-1 text-[11px] leading-none ${
+                      className={`flex flex-col items-center justify-center gap-1 min-h-14 px-1 text-[12px] leading-none ${
                         sec ? "text-altin-metin font-semibold" : "text-metin-soluk"
                       }`}
                     >
@@ -293,7 +234,7 @@ export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler
                   type="button"
                   onClick={() => setCekmece((a) => !a)}
                   aria-expanded={cekmece}
-                  className={`w-full flex flex-col items-center justify-center gap-1 min-h-14 px-1 text-[11px] leading-none ${
+                  className={`w-full flex flex-col items-center justify-center gap-1 min-h-14 px-1 text-[12px] leading-none ${
                     cekmece ? "text-altin-metin font-semibold" : "text-metin-soluk"
                   }`}
                 >
@@ -305,6 +246,6 @@ export default function Kabuk({ menu, sekmeler }: { menu: MenuBolumu[]; sekmeler
           </nav>
         )}
       </div>
-    </KabukBaglami.Provider>
+    </BolumBaglami.Provider>
   );
 }

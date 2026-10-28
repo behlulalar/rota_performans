@@ -18,12 +18,12 @@ function CocukKarti({ c }: { c: CocukOzet }) {
   return (
     <Link
       to={`/panel/cocuk/${c.id}`}
-      className="block bg-yuzey border border-cizgi rounded-[5px] p-5 hover:border-altin transition-colors"
+      className="block bg-yuzey border border-cizgi rounded-[14px] p-5 hover:border-altin transition-colors"
     >
       <div className="flex items-center gap-4">
         <OgrenciFoto id={c.id} fotoVar={c.foto_var} ad={c.ad} soyad={c.soyad} boyut="kucuk" sinif="size-14 rounded-full" veli />
         <div className="min-w-0 flex-1">
-          <h2 className="font-display font-medium text-[22px] leading-[1.2] break-words">
+          <h2 className="font-display text-[22px] leading-[1.2] break-words">
             {c.ad} {c.soyad}
           </h2>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -38,14 +38,14 @@ function CocukKarti({ c }: { c: CocukOzet }) {
         </div>
       </div>
 
-      <dl className="mt-5 grid grid-cols-2 gap-px bg-cizgi border border-cizgi rounded-[3px] overflow-hidden">
+      <dl className="mt-5 grid grid-cols-2 gap-px bg-cizgi border border-cizgi rounded-[10px] overflow-hidden">
         <div className="bg-yuzey px-4 py-3">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk">Kalan ders</dt>
-          <dd className={`num font-display font-medium text-[26px] leading-[1.15] mt-1 ${h.normal < 0 ? "text-hata" : ""}`}>{h.normal}</dd>
+          <dd className={`num font-display text-[26px] leading-[1.15] mt-1 ${h.normal < 0 ? "text-hata" : ""}`}>{h.normal}</dd>
         </div>
         <div className="bg-yuzey px-4 py-3">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk">Telafi hakkı</dt>
-          <dd className={`num font-display font-medium text-[26px] leading-[1.15] mt-1 ${h.kullanilabilir_telafi < 0 ? "text-hata" : ""}`}>{h.kullanilabilir_telafi}</dd>
+          <dd className={`num font-display text-[26px] leading-[1.15] mt-1 ${h.kullanilabilir_telafi < 0 ? "text-hata" : ""}`}>{h.kullanilabilir_telafi}</dd>
         </div>
       </dl>
 
@@ -96,7 +96,7 @@ export default function VeliAna() {
       {liste === null && !hata && (
         <div role="status" aria-label="Yükleniyor" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[0, 1].map((i) => (
-            <div key={i} aria-hidden="true" className="animate-pulse rounded-[5px] bg-yuzey-yuksek h-56" />
+            <div key={i} aria-hidden="true" className="animate-pulse rounded-[14px] bg-yuzey-yuksek h-56" />
           ))}
         </div>
       )}

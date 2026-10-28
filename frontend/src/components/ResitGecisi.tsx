@@ -38,9 +38,9 @@ export default function ResitGecisi({
 
   return (
     <div className="fixed inset-0 z-30 bg-black/70 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Reşit geçişi">
-      <div className="w-full max-w-md max-h-full overflow-y-auto bg-yuzey border border-cizgi-guclu rounded-[5px]">
+      <div className="w-full max-w-md max-h-full overflow-y-auto bg-yuzey border border-cizgi-guclu rounded-[14px]">
         <div className="flex items-center justify-between px-4 min-h-11 border-b border-cizgi">
-          <h2 className="font-display font-medium text-[19px] leading-6">Reşit geçişi: {ogrenci.ad} {ogrenci.soyad}</h2>
+          <h2 className="font-display text-[19px] leading-6">Reşit geçişi: {ogrenci.ad} {ogrenci.soyad}</h2>
           <button onClick={onKapat} className="px-2 min-h-11 text-[13px] text-metin-soluk hover:text-metin" aria-label="Kapat">Kapat</button>
         </div>
         <div className="p-4">

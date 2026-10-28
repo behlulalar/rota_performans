@@ -1,8 +1,10 @@
-import type { ReactNode } from "react";
-import { useKabuk } from "./Kabuk";
-import { Ok } from "./Simge";
+import { createContext, useContext, type ReactNode } from "react";
 
-/** Üst etiket (bölüm adı) → büyük serif başlık → açıklama; sağda eylemler. */
+/** Kabuk, geçerli bölüm adını sayfa başlıklarına bu bağlamla iletir. */
+export const BolumBaglami = createContext("");
+export const useBolum = () => useContext(BolumBaglami);
+
+/** Büyük başlık, altında açıklama; sağda eylemler. `bolum` verilirse üstte küçük etiket çıkar. */
 export default function SayfaBasligi({
   baslik,
   bolum,
@@ -16,26 +18,12 @@ export default function SayfaBasligi({
   rozet?: ReactNode;
   eylemler?: ReactNode;
 }) {
-  const kabuk = useKabuk();
   return (
     <header className="mb-7 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div className="min-w-0">
-        <div className="eyebrow flex items-center gap-1.5">
-          {kabuk.menuGizli && (
-            <button
-              type="button"
-              onClick={kabuk.menuyuGoster}
-              aria-label="Menüyü göster"
-              title="Menüyü göster"
-              className="hidden md:grid place-items-center size-7 -ml-1.5 rounded-[3px] border border-cizgi bg-yuzey text-metin-soluk hover:text-metin hover:border-cizgi-guclu"
-            >
-              <Ok yon="sag" />
-            </button>
-          )}
-          <span>{bolum ?? kabuk.bolumAdi}</span>
-        </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h1 className="font-display font-medium text-[28px] md:text-[38px] leading-[1.1] break-words">{baslik}</h1>
+        {bolum && <div className="eyebrow mb-1.5">{bolum}</div>}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="font-display text-[28px] md:text-[34px] leading-[1.1] break-words">{baslik}</h1>
           {rozet}
         </div>
         {aciklama && <p className="num mt-2 text-[15px] text-metin-soluk">{aciklama}</p>}

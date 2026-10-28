@@ -155,9 +155,9 @@ export default function OdemeListe() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <OzetKarti etiket="Toplam tahsilat" deger={veri ? paraBicimle(veri.ozet.toplam_tutar) : "—"} ton="altin" ipucu="İptal edilenler hariç" />
+        <OzetKarti etiket="Toplam tahsilat" deger={veri ? paraBicimle(veri.ozet.toplam_tutar) : "—"} ton="vurgu" ipucu="İptal edilenler hariç" />
         <OzetKarti etiket="Ödeme adedi" deger={veri ? veri.ozet.adet : "—"} />
-        <div className="bg-yuzey border border-cizgi rounded-[5px] p-5 min-w-0">
+        <div className="bg-yuzey border border-cizgi rounded-[14px] p-5 min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk">Yönteme göre</div>
           {!veri || veri.ozet.yontem_dagilimi.length === 0 ? (
             <p className="text-sm text-metin-soluk mt-2">Bu dönemde ödeme yok.</p>
@@ -188,10 +188,10 @@ export default function OdemeListe() {
       {!veri ? (
         !hata && <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>
       ) : veri.kayitlar.length === 0 ? (
-        <div className="bg-yuzey border border-cizgi rounded-[5px] p-10 text-center text-metin-soluk">Bu dönemde ve filtrede ödeme kaydı yok.</div>
+        <div className="bg-yuzey border border-cizgi rounded-[14px] p-10 text-center text-metin-soluk">Bu dönemde ve filtrede ödeme kaydı yok.</div>
       ) : (
         <div className={yukleniyor ? "opacity-60" : ""}>
-          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[5px] overflow-hidden">
+          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[14px] overflow-hidden">
             <table className="w-full text-[13px]" aria-label="Ödemeler">
               <thead><tr>
                 <th className={th}>Tarih</th><th className={th}>Öğrenci</th><th className={th}>Paket</th><th className={th}>Tutar</th><th className={th}>Yöntem</th><th className={th}>Alan</th><th className={th}>Durum</th>
@@ -213,7 +213,7 @@ export default function OdemeListe() {
           </div>
           <ul className="md:hidden space-y-2">
             {veri.kayitlar.map((o) => (
-              <li key={o.id} className={`bg-yuzey border border-cizgi rounded-[5px] p-4 space-y-1 ${o.iptal ? "opacity-60" : ""}`}>
+              <li key={o.id} className={`bg-yuzey border border-cizgi rounded-[14px] p-4 space-y-1 ${o.iptal ? "opacity-60" : ""}`}>
                 <div className="flex items-start justify-between gap-2">
                   <Link to={`/ogrenciler/${o.ogrenci.id}`} className="font-medium hover:text-altin-metin">{o.ogrenci.ad} {o.ogrenci.soyad}</Link>
                   {durum(o)}

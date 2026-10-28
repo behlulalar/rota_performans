@@ -57,10 +57,10 @@ export default function GeciciSifreKutusu({
 
   return (
     <div className="fixed inset-0 z-40 bg-black/70 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={baslik}>
-      <div className="w-full max-w-md bg-yuzey border border-cizgi-guclu rounded-[5px] p-4 space-y-4">
-        <h2 className="font-display font-medium text-[19px] leading-6">{baslik}</h2>
+      <div className="w-full max-w-md bg-yuzey border border-cizgi-guclu rounded-[14px] p-4 space-y-4">
+        <h2 className="font-display text-[19px] leading-6">{baslik}</h2>
         <div className="flex items-center gap-2">
-          <code className="flex-1 min-w-0 break-all rounded-[3px] bg-zemin border border-cizgi-guclu px-3 py-2.5 font-mono text-altin-metin select-all">{sifre}</code>
+          <code className="flex-1 min-w-0 break-all rounded-[10px] bg-zemin border border-cizgi-guclu px-3 py-2.5 font-mono text-altin-metin select-all">{sifre}</code>
           <button onClick={() => void kopyala()} className={dugme}>
             {kopyalandi ? "Kopyalandı" : "Kopyala"}
           </button>
@@ -74,7 +74,7 @@ export default function GeciciSifreKutusu({
               href={whatsappLinki}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-[3px] bg-[#25D366] text-black font-medium text-[13px] px-3 min-h-11 hover:brightness-95"
+              className="inline-flex items-center gap-2 rounded-[10px] bg-[#25D366] text-black font-medium text-[13px] px-3 min-h-11 hover:brightness-95"
             >
               <WhatsAppSimgesi />
               WhatsApp ile gönder

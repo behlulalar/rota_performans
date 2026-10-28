@@ -12,7 +12,7 @@ export default function BeniHatirla({ isaretli, degisti }: Props) {
       />
       <span
         aria-hidden="true"
-        className="size-5 shrink-0 rounded-[3px] border border-cizgi-guclu bg-zemin grid place-items-center text-birincil-metin transition-colors peer-checked:bg-birincil peer-checked:border-birincil peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-altin [&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100"
+        className="size-5 shrink-0 rounded-[10px] border border-cizgi-guclu bg-zemin grid place-items-center text-birincil-metin transition-colors peer-checked:bg-birincil peer-checked:border-birincil peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-altin [&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100"
       >
         <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3.5 8.5l3 3 6-7" />

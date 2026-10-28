@@ -26,9 +26,9 @@ const saat = (s: string) => s.slice(0, 5);
 function Pencere({ baslik, onKapat, children }: { baslik: string; onKapat: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-30 bg-black/70 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={baslik}>
-      <div className="w-full max-w-md max-h-full overflow-y-auto bg-yuzey border border-cizgi-guclu rounded-[5px]">
+      <div className="w-full max-w-md max-h-full overflow-y-auto bg-yuzey border border-cizgi-guclu rounded-[14px]">
         <div className="flex items-center justify-between px-4 min-h-11 border-b border-cizgi">
-          <h2 className="font-display font-medium text-[19px] leading-6">{baslik}</h2>
+          <h2 className="font-display text-[19px] leading-6">{baslik}</h2>
           <button onClick={onKapat} className="px-2 min-h-11 text-[13px] text-metin-soluk hover:text-metin" aria-label="Kapat">Kapat</button>
         </div>
         <div className="p-4">{children}</div>
@@ -126,7 +126,7 @@ function TelafiPenceresi({ ogrenciId, onKapat, onTamam }: { ogrenciId: string; o
       ) : (
         <ul className="space-y-2">
           {adaylar.map((a) => (
-            <li key={a.oturum.id} className="rounded-[3px] border border-cizgi px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            <li key={a.oturum.id} className="rounded-[10px] border border-cizgi px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm min-w-0">
                 <div className="font-medium">{gunMetni(a.oturum.tarih)} · {saat(a.oturum.baslangic)}–{saat(a.oturum.bitis)}</div>
                 <div className="text-metin-soluk">
@@ -205,7 +205,7 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
   const hucre = (etiket: string, deger: number) => (
     <div className="bg-yuzey px-6 py-4">
       <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk">{etiket}</div>
-      <div className={`num font-display font-medium text-[28px] leading-[1.15] mt-1 ${sayi(deger)}`}>{deger}</div>
+      <div className={`num font-display text-[28px] leading-[1.15] mt-1 ${sayi(deger)}`}>{deger}</div>
     </div>
   );
 

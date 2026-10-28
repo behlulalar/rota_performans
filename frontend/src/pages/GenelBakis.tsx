@@ -24,12 +24,12 @@ const simdiSaat = () => {
 };
 
 function Iskelet({ sinif = "" }: { sinif?: string }) {
-  return <div aria-hidden="true" className={`animate-pulse rounded-[3px] bg-yuzey-yuksek ${sinif}`} />;
+  return <div aria-hidden="true" className={`animate-pulse rounded-[10px] bg-yuzey-yuksek ${sinif}`} />;
 }
 
 function KartIskeleti({ satir = 3 }: { satir?: number }) {
   return (
-    <div className="bg-yuzey border border-cizgi rounded-[5px] p-6 space-y-4">
+    <div className="bg-yuzey border border-cizgi rounded-[14px] p-6 space-y-4">
       <Iskelet sinif="h-5 w-40" />
       {Array.from({ length: satir }, (_, i) => (
         <Iskelet key={i} sinif="h-9 w-full" />
@@ -130,7 +130,7 @@ function BugunYapilacaklar({ isler }: { isler: Is[] }) {
                     el.scrollIntoView({ behavior: "smooth", block: "start" });
                   }
                 }}
-                className="inline-flex items-center gap-2.5 min-h-11 rounded-[3px] border border-cizgi-guclu bg-yuzey-yuksek px-3 text-[13px] hover:border-altin transition-colors"
+                className="inline-flex items-center gap-2.5 min-h-11 rounded-[10px] border border-cizgi-guclu bg-yuzey-yuksek px-3 text-[13px] hover:border-altin transition-colors"
               >
                 <span className="num rounded-full bg-uyari-zemin text-uyari px-2 py-0.5 text-xs font-semibold leading-4">{i.sayi}</span>
                 {i.ad}

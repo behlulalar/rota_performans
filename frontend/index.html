@@ -1,31 +1,39 @@
 <!doctype html>
-<html lang="tr" data-theme="dark">
+<html lang="tr" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f0f10" />
+    <meta name="theme-color" content="#fbfaf6" />
     <title>Rota Performans Akademi</title>
     <script>
       // Render'dan önce tema seçilir; böylece yanıp sönme olmaz.
+      // Kayıtlı tercih önceliklidir. Yoksa veli sayfaları (giriş, panel, profil) açık temayla başlar,
+      // yönetici ve antrenör sayfaları cihazın temasını izler.
       (function () {
-        var t = "dark";
+        var yol = location.pathname;
+        var veli = yol === "/" || yol === "/giris" || yol.indexOf("/panel") === 0 || yol.indexOf("/profil") === 0;
+        var t = "light";
         try {
           var k = localStorage.getItem("rota-tema");
           if (k === "light" || k === "dark") t = k;
-          else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) t = "light";
+          else if (!veli) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         } catch (e) {
-          try {
-            if (window.matchMedia("(prefers-color-scheme: light)").matches) t = "light";
-          } catch (e2) {}
+          if (!veli) {
+            try {
+              t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            } catch (e2) {}
+          }
         }
         document.documentElement.dataset.theme = t;
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute("content", t === "light" ? "#fbfaf6" : "#0e0e0f");
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Work+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap"
       media="print"
       onload="this.media='all'"
     />

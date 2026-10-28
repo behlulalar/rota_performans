@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import TemaDugmesi from "../components/TemaDugmesi";
+import Karsilama from "../components/Karsilama";
 import { api, ApiHata } from "../lib/api";
 import { yeniSifreHatasi } from "../lib/dogrulama";
 import { PANEL_YOLU, rolPaneli } from "../lib/panel";
@@ -70,27 +70,9 @@ export default function SifreDegistir() {
     ) : null;
 
   return (
-    <main className="min-h-dvh grid place-items-center px-4 relative">
-      <div className="absolute top-3 right-3">
-        <TemaDugmesi />
-      </div>
-      <div className="w-full max-w-sm">
-        <div className="mb-7 flex items-center gap-4">
-          <span
-            aria-hidden="true"
-            className="size-10 rounded-[3px] bg-serit border border-serit-ikon-secili/50 grid place-items-center text-serit-ikon-secili text-xs font-semibold tracking-wider"
-          >
-            RP
-          </span>
-          <div>
-              <div className="eyebrow">Rota Performans</div>
-              <h1 className="mt-1 font-display font-medium text-[28px] md:text-[34px] leading-[1.1]">Şifrenizi belirleyin</h1>
-          </div>
-        </div>
-
-        <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[5px] p-6 space-y-4" noValidate>
-          <p className="text-[13px] text-metin-soluk">Geçici şifreyle giriş yaptınız. Devam etmek için kendi şifrenizi belirleyin.</p>
-
+    <Karsilama baslik="Şifrenizi belirleyin" aciklama="Geçici şifreyle giriş yaptınız. Devam etmek için kendi şifrenizi belirleyin.">
+      <div>
+        <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[14px] p-6 space-y-4" noValidate>
           <div>
             <label className="block">
               <span className="text-[13px] text-metin-soluk">Mevcut (geçici) şifre</span>
@@ -129,6 +111,6 @@ export default function SifreDegistir() {
           </button>
         </form>
       </div>
-    </main>
+    </Karsilama>
   );
 }

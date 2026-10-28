@@ -21,7 +21,7 @@ export default function TelefonGirdisi({
     onChange(rakamlaraCevir(e.target.value));
   }
   return (
-    <div className="mt-1 flex items-stretch w-full rounded-[3px] bg-zemin border border-cizgi-guclu focus-within:border-altin">
+    <div className="mt-1 flex items-stretch w-full rounded-[10px] bg-zemin border border-cizgi-guclu focus-within:border-altin">
       <span aria-hidden="true" className="flex items-center pl-3 pr-2 text-sm text-metin-soluk select-none">+90</span>
       <input
         {...aria}

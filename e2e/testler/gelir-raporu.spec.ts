@@ -27,8 +27,7 @@ test.describe("Gelir raporu", () => {
     await expect(page).toHaveURL(/\/genel-bakis$/);
 
     // Menüden
-    await page.getByRole("button", { name: "Finans", exact: true }).click();
-    await page.getByRole("complementary", { name: "Finans menüsü" }).getByRole("link", { name: "Gelir raporu" }).click();
+    await page.getByRole("complementary", { name: "Menü" }).getByRole("link", { name: "Gelir raporu" }).click();
     await expect(page).toHaveURL(/\/gelir-raporu$/);
     await expect(page.getByRole("heading", { name: "Gelir raporu" })).toBeVisible();
 

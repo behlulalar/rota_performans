@@ -11,6 +11,7 @@ import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
 import { paraBicimle } from "../lib/para";
 import { GUNLER, saat } from "../lib/program";
 import { dugme, listeSatiri, rozetBasari, rozetBirincil, rozetHata, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
+import { tarihCoz } from "../lib/tarih";
 import { dersMetni } from "./VeliAna";
 
 const TUR_ETIKET: Record<HakTur, string> = {
@@ -109,9 +110,9 @@ export default function VeliCocuk() {
   if (!c)
     return (
       <div role="status" aria-label="Yükleniyor" className="space-y-4">
-        <div aria-hidden="true" className="animate-pulse rounded-[5px] bg-yuzey-yuksek h-20" />
-        <div aria-hidden="true" className="animate-pulse rounded-[5px] bg-yuzey-yuksek h-28" />
-        <div aria-hidden="true" className="animate-pulse rounded-[5px] bg-yuzey-yuksek h-56" />
+        <div aria-hidden="true" className="animate-pulse rounded-[14px] bg-yuzey-yuksek h-20" />
+        <div aria-hidden="true" className="animate-pulse rounded-[14px] bg-yuzey-yuksek h-28" />
+        <div aria-hidden="true" className="animate-pulse rounded-[14px] bg-yuzey-yuksek h-56" />
       </div>
     );
 
@@ -137,17 +138,31 @@ export default function VeliCocuk() {
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-px bg-cizgi border border-cizgi rounded-[5px] overflow-hidden">
-        {[
-          { etiket: "Kalan ders", deger: h.normal, renk: h.normal < 0 ? "text-hata" : "" },
-          { etiket: "Telafi hakkı", deger: h.telafi, renk: h.telafi < 0 ? "text-hata" : "" },
-          { etiket: "Kullanılabilir telafi", deger: h.kullanilabilir_telafi, renk: "text-altin-metin" },
-        ].map((x) => (
-          <div key={x.etiket} className="bg-yuzey px-3 py-4 md:px-6 md:py-5 min-w-0">
-            <div className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.1em] md:tracking-[0.12em] text-metin-soluk leading-4">{x.etiket}</div>
-            <div className={`num font-display font-medium text-[28px] md:text-[32px] leading-[1.15] mt-1.5 ${x.renk}`}>{x.deger}</div>
-          </div>
-        ))}
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
+        <div className="bg-yuzey border border-cizgi rounded-[14px] px-3 py-4 md:p-5 min-w-0">
+          <div className="text-[12px] md:text-[11px] font-semibold md:uppercase md:tracking-[0.12em] text-metin-soluk leading-4">Kalan ders</div>
+          <div className={`num font-display text-[32px] leading-[1.15] mt-1.5 ${h.normal < 0 ? "text-hata" : ""}`}>{h.normal}</div>
+        </div>
+        <div className="bg-yuzey border border-cizgi rounded-[14px] px-3 py-4 md:p-5 min-w-0">
+          <div className="text-[12px] md:text-[11px] font-semibold md:uppercase md:tracking-[0.12em] text-metin-soluk leading-4">Telafi hakkı</div>
+          <div className={`num font-display text-[32px] leading-[1.15] mt-1.5 ${h.telafi < 0 ? "text-hata" : ""}`}>{h.telafi}</div>
+          <div className="num text-xs text-metin-soluk mt-0.5">{h.kullanilabilir_telafi} planlanabilir</div>
+        </div>
+        <div className="bg-birincil border border-birincil rounded-[14px] px-3 py-4 md:p-5 min-w-0 text-birincil-metin">
+          <div className="text-[12px] md:text-[11px] font-semibold md:uppercase md:tracking-[0.12em] leading-4 opacity-75">Sıradaki ders</div>
+          {c.siradaki_ders ? (
+            <>
+              <div className="num font-display text-[19px] md:text-[28px] leading-[1.2] mt-2">
+                {tarihCoz(c.siradaki_ders.tarih).toLocaleDateString("tr-TR", { weekday: "short" })} {saat(c.siradaki_ders.baslangic)}
+              </div>
+              <div className="num text-xs mt-0.5 opacity-75">
+                {tarihCoz(c.siradaki_ders.tarih).toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}
+              </div>
+            </>
+          ) : (
+            <div className="font-display text-[22px] leading-[1.2] mt-2">Yok</div>
+          )}
+        </div>
       </div>
       {(h.normal < 0 || h.telafi < 0) && (
         <p className="mt-3 text-[13px] text-metin-soluk">Negatif değer, paket yüklemesinin henüz yapılmadığını gösterir.</p>

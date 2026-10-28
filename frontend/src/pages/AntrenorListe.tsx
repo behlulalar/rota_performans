@@ -91,10 +91,10 @@ export default function AntrenorListe() {
       {!liste ? (
         <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>
       ) : liste.length === 0 ? (
-        <div className="bg-yuzey border border-cizgi rounded-[5px] p-10 text-center text-metin-soluk">Antrenör bulunamadı.</div>
+        <div className="bg-yuzey border border-cizgi rounded-[14px] p-10 text-center text-metin-soluk">Antrenör bulunamadı.</div>
       ) : (
         <>
-          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[5px] overflow-hidden">
+          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[14px] overflow-hidden">
             <table className="w-full text-[13px]">
               <thead>
                 <tr>
@@ -129,7 +129,7 @@ export default function AntrenorListe() {
 
           <ul className="md:hidden space-y-2">
             {liste.map((a) => (
-              <li key={a.id} className="bg-yuzey border border-cizgi rounded-[5px] p-4 text-[13px]">
+              <li key={a.id} className="bg-yuzey border border-cizgi rounded-[14px] p-4 text-[13px]">
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-medium">{a.ad_soyad}</span>
                   <AktifRozeti aktif={a.aktif} />
@@ -175,9 +175,9 @@ export default function AntrenorListe() {
 function Modal({ baslik, children, onKapat }: { baslik: string; children: React.ReactNode; onKapat: () => void }) {
   return (
     <div className="fixed inset-0 z-30 bg-black/70 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={baslik}>
-      <div className="w-full max-w-md bg-yuzey border border-cizgi-guclu rounded-[5px]">
+      <div className="w-full max-w-md bg-yuzey border border-cizgi-guclu rounded-[14px]">
         <div className="flex items-center justify-between px-4 min-h-11 border-b border-cizgi">
-          <h2 className="font-display font-medium text-[19px] leading-6">{baslik}</h2>
+          <h2 className="font-display text-[19px] leading-6">{baslik}</h2>
           <button onClick={onKapat} className="px-2 min-h-11 text-[13px] text-metin-soluk hover:text-metin" aria-label="Kapat">Kapat</button>
         </div>
         <div className="p-4">{children}</div>

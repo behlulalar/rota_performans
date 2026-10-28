@@ -116,7 +116,7 @@ export default function Yoklama() {
   };
 
   const butonSinif = (aktif: boolean, renk: "basari" | "hata") =>
-    `min-h-12 rounded-[3px] border-2 px-2 text-base font-semibold transition-colors disabled:opacity-40 ${
+    `min-h-12 rounded-[10px] border-2 px-2 text-base font-semibold transition-colors disabled:opacity-40 ${
       aktif
         ? renk === "basari"
           ? "bg-basari border-basari text-zemin"
@@ -151,7 +151,7 @@ export default function Yoklama() {
         </p>
       )}
       {iptal && (
-        <p className="mb-3 rounded-[3px] border border-cizgi-guclu text-metin-soluk text-[13px] px-3 py-2">
+        <p className="mb-3 rounded-[10px] border border-cizgi-guclu text-metin-soluk text-[13px] px-3 py-2">
           Bu ders iptal edildiği için yoklama alınamaz.
         </p>
       )}
@@ -162,11 +162,11 @@ export default function Yoklama() {
       {hata && <p role="alert" className="mb-3 text-[13px] text-hata">{hata}</p>}
 
       {toplam === 0 ? (
-        <p className="rounded-[5px] border border-cizgi bg-yuzey px-4 py-6 text-sm text-metin-soluk text-center">Bu derste öğrenci yok.</p>
+        <p className="rounded-[14px] border border-cizgi bg-yuzey px-4 py-6 text-sm text-metin-soluk text-center">Bu derste öğrenci yok.</p>
       ) : (
         <>
           <button
-            className="mb-3 w-full md:w-auto md:min-w-64 min-h-12 rounded-[3px] border border-basari/60 bg-basari-zemin text-basari font-semibold disabled:opacity-40"
+            className="mb-3 w-full md:w-auto md:min-w-64 min-h-12 rounded-[10px] border border-basari/60 bg-basari-zemin text-basari font-semibold disabled:opacity-40"
             disabled={kilit || mesgul || (gelmediSayisi > 0 && geldiYapilacak === 0)}
             onClick={tumuGeldi}
           >
@@ -174,7 +174,7 @@ export default function Yoklama() {
           </button>
           <ul className="grid gap-2 md:grid-cols-2 min-[1360px]:grid-cols-3 items-start">
             {o.ogrenciler.map((x) => (
-              <li key={x.ogrenci_id} className="rounded-[5px] border border-cizgi bg-yuzey p-3" aria-label={`${x.ad} ${x.soyad}`}>
+              <li key={x.ogrenci_id} className="rounded-[14px] border border-cizgi bg-yuzey p-3" aria-label={`${x.ad} ${x.soyad}`}>
                 <div className="flex items-center gap-3">
                   <OgrenciFoto id={x.ogrenci_id} fotoVar={x.foto_var} ad={x.ad} soyad={x.soyad} boyut="kucuk" sinif="size-12 rounded-full" />
                   <div className="min-w-0 flex-1">

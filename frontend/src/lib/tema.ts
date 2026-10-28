@@ -23,7 +23,7 @@ export function temaAyarla(t: Tema) {
   } catch {
     /* depolama kapalı olabilir; tercih yalnızca bu oturumda geçerli olur */
   }
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t === "light" ? "#f4f3ef" : "#0f0f10");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t === "light" ? "#fbfaf6" : "#0e0e0f");
   dinleyiciler.forEach((fn) => fn());
 }
 

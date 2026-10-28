@@ -4,9 +4,9 @@ const tema = (page: import("@playwright/test").Page) =>
   page.evaluate(() => document.documentElement.dataset.theme);
 
 test.describe("Tema", () => {
-  test("giriş sayfasında tema düğmesi temayı değiştirir ve tercih yenilemede korunur", async ({ page }) => {
+  test("yönetici giriş sayfasında tema düğmesi temayı değiştirir ve tercih yenilemede korunur", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
-    await page.goto("/giris");
+    await page.goto("/yonetici-giris");
     expect(await tema(page)).toBe("dark");
     const govdeKoyu = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
@@ -25,21 +25,33 @@ test.describe("Tema", () => {
     expect(await tema(page)).toBe("dark");
   });
 
-  test("kayıtlı tercih yoksa sistem renk şeması kullanılır", async ({ page }) => {
+  test("kayıtlı tercih yoksa yönetici sayfaları sistem renk şemasını izler", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/yonetici-giris");
+    expect(await tema(page)).toBe("light");
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto("/antrenor-giris");
+    expect(await tema(page)).toBe("dark");
+  });
+
+  test("veli sayfaları cihaz koyu olsa bile açık temayla başlar; seçilen tema hatırlanır", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/giris");
     expect(await tema(page)).toBe("light");
+    await page.getByRole("button", { name: "Koyu temaya geç" }).click();
+    await page.reload();
+    expect(await tema(page)).toBe("dark");
   });
 });
 
-test.describe("Bölüm alt menüsü", () => {
-  test("bölüm aktif rotadan seçilir; alt menü gizlenir, göster düğmesi çıkar; menü ve tema tercihi yenilemede korunur", async ({ page }) => {
+test.describe("Yönetici menüsü", () => {
+  test("sol menü gruplu ve her zaman açık; aktif öğe işaretlenir; tema tercihi yenilemede korunur", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
     await yoneticiApiGirisi(page);
     await page.goto("/ogrenciler");
     await expect(page.getByRole("heading", { name: "Öğrenciler" })).toBeVisible();
 
-    // Şeritteki tema düğmesi de çalışır ve tercih korunur.
+    // Üstteki siyah çubukta tema düğmesi çalışır ve tercih korunur.
     expect(await tema(page)).toBe("dark");
     await page.getByRole("button", { name: "Açık temaya geç" }).click();
     expect(await tema(page)).toBe("light");
@@ -47,64 +59,32 @@ test.describe("Bölüm alt menüsü", () => {
     await expect(page.getByRole("heading", { name: "Öğrenciler" })).toBeVisible();
     expect(await tema(page)).toBe("light");
 
-    const altMenu = page.getByRole("complementary", { name: "Kayıtlar menüsü" });
-    await expect(altMenu).toBeVisible();
-    await expect(altMenu.getByRole("link", { name: "Öğrenciler" })).toHaveAttribute("aria-current", "page");
-    await expect(altMenu.getByRole("link", { name: "Antrenörler" })).toBeVisible();
-    await expect(altMenu.getByRole("link", { name: "Gruplar" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Kayıtlar" })).toHaveAttribute("aria-pressed", "true");
-
-    await page.getByRole("button", { name: "Menüyü gizle" }).click();
-    await expect(page.getByRole("complementary")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Menüyü göster" })).toBeVisible();
-
-    await page.reload();
-    await expect(page.getByRole("heading", { name: "Öğrenciler" })).toBeVisible();
-    await expect(page.getByRole("complementary")).toHaveCount(0);
-    expect(await page.evaluate(() => localStorage.getItem("rota-alt-menu"))).toBe("kapali");
-
-    await page.getByRole("button", { name: "Menüyü göster" }).click();
-    await expect(page.getByRole("complementary", { name: "Kayıtlar menüsü" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Menüyü göster" })).toHaveCount(0);
-    await page.reload();
-    await expect(page.getByRole("complementary", { name: "Kayıtlar menüsü" })).toBeVisible();
+    const menu = page.getByRole("complementary", { name: "Menü" });
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Öğrenciler" })).toHaveAttribute("aria-current", "page");
+    for (const ad of ["Genel bakış", "Takvim", "Antrenörler", "Gruplar", "Ödemeler", "Paketler", "Gelir raporu"]) {
+      await expect(menu.getByRole("link", { name: ad })).toBeVisible();
+    }
   });
 
-  test("bölüm şeridinden bölüm değişir; Sistem öğeleri 'Yakında' etiketli ve tıklanamaz", async ({ page }) => {
+  test("Sistem öğeleri 'Yakında' etiketli ve tıklanamaz; gerçek bağlantılar çalışır", async ({ page }) => {
     await yoneticiApiGirisi(page);
     await page.goto("/gruplar");
     await expect(page.getByRole("heading", { name: "Gruplar" })).toBeVisible();
     const url = page.url();
+    const menu = page.getByRole("complementary", { name: "Menü" });
 
-    for (const [bolum, ogeler] of [
-      ["Sistem", ["Bildirimler", "Denetim kaydı", "Ayarlar"]],
-    ] as const) {
-      await page.getByRole("button", { name: bolum, exact: true }).click();
-      const altMenu = page.getByRole("complementary", { name: `${bolum} menüsü` });
-      await expect(altMenu).toBeVisible();
-      for (const ad of ogeler) {
-        const oge = altMenu.locator('[aria-disabled="true"]', { hasText: ad });
-        await expect(oge).toBeVisible();
-        await expect(oge).toContainText("Yakında");
-        await oge.click({ force: true });
-        await expect(page).toHaveURL(url);
-        await expect(altMenu.getByRole("link", { name: ad })).toHaveCount(0);
-      }
+    for (const ad of ["Bildirimler", "Denetim kaydı", "Ayarlar"]) {
+      const oge = menu.locator('[aria-disabled="true"]', { hasText: ad });
+      await expect(oge).toBeVisible();
+      await expect(oge).toContainText("Yakında");
+      await oge.click({ force: true });
+      await expect(page).toHaveURL(url);
+      await expect(menu.getByRole("link", { name: ad })).toHaveCount(0);
     }
 
-    // Ödemeler, Paketler ve Gelir raporu artık gerçek bağlantı.
-    await page.getByRole("button", { name: "Finans", exact: true }).click();
-    const finans = page.getByRole("complementary", { name: "Finans menüsü" });
-    await expect(finans.getByRole("link", { name: "Paketler" })).toBeVisible();
-    await expect(finans.getByRole("link", { name: "Ödemeler" })).toBeVisible();
-    await expect(finans.getByRole("link", { name: "Gelir raporu" })).toBeVisible();
-    await expect(finans.locator('[aria-disabled="true"]')).toHaveCount(0);
-
-    // Genel bölümüne geçince gerçek bağlantılar çalışır.
-    await page.getByRole("button", { name: "Genel", exact: true }).click();
-    await page.getByRole("complementary", { name: "Genel menüsü" }).getByRole("link", { name: "Genel bakış" }).click();
+    await menu.getByRole("link", { name: "Genel bakış" }).click();
     await expect(page).toHaveURL(/\/genel-bakis$/);
     await expect(page.getByRole("heading", { name: "Genel bakış" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Genel", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 });

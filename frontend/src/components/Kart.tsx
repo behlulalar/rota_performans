@@ -23,11 +23,11 @@ export default function Kart({
   vurgulu?: boolean;
 }) {
   return (
-    <section className={`${vurgulu ? "bg-yuzey border border-altin/60 rounded-[5px]" : kartKutusu} overflow-hidden ${sinif}`}>
+    <section className={`${vurgulu ? "bg-yuzey border border-altin/60 rounded-[14px]" : kartKutusu} overflow-hidden ${sinif}`}>
       {baslik && (
         <div className="px-6 pt-6 pb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="font-display font-medium text-[19px] leading-[1.25]">{baslik}</h2>
+            <h2 className="font-display text-[19px] leading-[1.25]">{baslik}</h2>
             {aciklama && <p className="mt-1 text-sm text-metin-soluk">{aciklama}</p>}
           </div>
           {sag && <div className="flex items-center gap-2 shrink-0">{sag}</div>}

@@ -15,7 +15,7 @@ export default function TemaDugmesi({ gorunum = "normal", sinif = "", etiket = f
       aria-label={tema === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
       title={tema === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
       className={`${
-        etiket ? "flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-lg hover:bg-white/5" : "grid place-items-center size-11 rounded-[3px]"
+        etiket ? "flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-lg hover:bg-white/5" : "grid place-items-center size-11 rounded-[10px]"
       } transition-colors ${renk} ${sinif}`}
     >
       <Simge ad={tema === "dark" ? "gunes" : "ay"} />

@@ -2,20 +2,21 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import BeniHatirla from "../components/BeniHatirla";
-import TemaDugmesi from "../components/TemaDugmesi";
+import Karsilama from "../components/Karsilama";
 import { ApiHata } from "../lib/api";
 import { PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
 import { girisiBicimle, hatirlananiOku, hatirlananiSil, varsayilanHatirla } from "../lib/hatirla";
 import { bilgiKutusu, birincilDugme, girdi } from "../lib/stil";
 
-const BASLIK: Record<Panel, { baslik: string; ipucu: string; yer: string }> = {
+const BASLIK: Record<Panel, { baslik: string; karsilama: string; ipucu: string; yer: string }> = {
   veli: {
     baslik: "Veli / öğrenci girişi",
+    karsilama: "Hoş geldiniz.",
     ipucu: "Kulübe kayıtlı telefon numaranızla ve size verilen şifreyle giriş yapın.",
     yer: "05xx xxx xx xx",
   },
-  antrenor: { baslik: "Antrenör girişi", ipucu: "Kulübün size verdiği giriş bilgileriyle giriş yapın.", yer: "e-posta veya telefon" },
-  yonetici: { baslik: "Yönetici girişi", ipucu: "Yönetici hesabınızla giriş yapın.", yer: "e-posta veya telefon" },
+  antrenor: { baslik: "Antrenör girişi", karsilama: "İyi dersler.", ipucu: "Kulübün size verdiği giriş bilgileriyle giriş yapın.", yer: "e-posta veya telefon" },
+  yonetici: { baslik: "Yönetici girişi", karsilama: "Yönetim paneli.", ipucu: "Yönetici hesabınızla giriş yapın.", yer: "e-posta veya telefon" },
 };
 const DIGER: Record<Panel, Panel | null> = { veli: null, antrenor: "yonetici", yonetici: "antrenor" };
 
@@ -59,27 +60,11 @@ export default function Giris({ panel = "veli" }: { panel?: Panel }) {
   }
 
   return (
-    <main className="min-h-dvh grid place-items-center px-4 relative">
-      <div className="absolute top-3 right-3">
-        <TemaDugmesi />
-      </div>
-      <div className="w-full max-w-sm">
-        <div className="mb-7 flex items-center gap-4">
-          <span
-            aria-hidden="true"
-            className="size-10 rounded-[3px] bg-serit border border-serit-ikon-secili/50 grid place-items-center text-serit-ikon-secili text-xs font-semibold tracking-wider"
-          >
-            RP
-          </span>
-          <div>
-            <div className="eyebrow">Rota Performans</div>
-            <h1 className="mt-1 font-display font-medium text-[28px] md:text-[34px] leading-[1.1]">{BASLIK[panel].baslik}</h1>
-          </div>
-        </div>
-        <p className="mb-4 text-[13px] text-metin-soluk">{BASLIK[panel].ipucu}</p>
-
+    <Karsilama baslik={BASLIK[panel].karsilama} aciklama={BASLIK[panel].ipucu}>
+      <div>
+        <h2 className="mb-3 font-display text-[19px]">{BASLIK[panel].baslik}</h2>
         {hatirlanan ? (
-          <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[5px] p-6 space-y-4" noValidate>
+          <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[14px] p-6 space-y-4" noValidate>
             {oturumSuresiDoldu && (
               <p role="status" className={bilgiKutusu}>
                 Oturum süreniz doldu, şifrenizle tekrar giriş yapın.
@@ -87,7 +72,7 @@ export default function Giris({ panel = "veli" }: { panel?: Panel }) {
             )}
             <div>
               <div className="eyebrow">Tekrar hoş geldiniz</div>
-              <div className="mt-1 font-display font-medium text-[26px] leading-[1.15] break-words">{girisiBicimle(hatirlanan.ad)}</div>
+              <div className="mt-1 font-display text-[26px] leading-[1.15] break-words">{girisiBicimle(hatirlanan.ad)}</div>
               {hatirlanan.ad !== hatirlanan.giris && (
                 <div className="mt-1 text-[13px] text-metin-soluk break-all">{girisiBicimle(hatirlanan.giris)}</div>
               )}
@@ -126,7 +111,7 @@ export default function Giris({ panel = "veli" }: { panel?: Panel }) {
             </button>
           </form>
         ) : (
-          <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[5px] p-6 space-y-4" noValidate>
+          <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[14px] p-6 space-y-4" noValidate>
             <label className="block">
               <span className="text-[13px] text-metin-soluk">Telefon veya e-posta</span>
               <input
@@ -174,6 +159,6 @@ export default function Giris({ panel = "veli" }: { panel?: Panel }) {
           </p>
         )}
       </div>
-    </main>
+    </Karsilama>
   );
 }

@@ -173,12 +173,12 @@ export default function PaketListe() {
       {!liste ? (
         !hata && <p className="text-metin-soluk py-10 text-center">Yükleniyor…</p>
       ) : gorunen.length === 0 ? (
-        <div className="bg-yuzey border border-cizgi rounded-[5px] p-10 text-center text-metin-soluk">
+        <div className="bg-yuzey border border-cizgi rounded-[14px] p-10 text-center text-metin-soluk">
           {liste.length === 0 ? "Henüz paket tanımlanmamış. \"Yeni paket\" ile başlayın." : "Bu filtreye uyan paket yok."}
         </div>
       ) : (
         <>
-          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[5px] overflow-hidden">
+          <div className="hidden md:block bg-yuzey border border-cizgi rounded-[14px] overflow-hidden">
             <table className="w-full text-[13px]">
               <thead>
                 <tr>
@@ -208,7 +208,7 @@ export default function PaketListe() {
           </div>
           <ul className="md:hidden space-y-2">
             {gorunen.map((p) => (
-              <li key={p.id} className="bg-yuzey border border-cizgi rounded-[5px] p-4 space-y-2">
+              <li key={p.id} className="bg-yuzey border border-cizgi rounded-[14px] p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-medium">{p.ad}</span>
                   {rozet(p)}

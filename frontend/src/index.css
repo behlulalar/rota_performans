@@ -5,59 +5,59 @@
  * açık tema aynı değişkenleri :root[data-theme="light"] altında geçersiz kılar.
  */
 @theme static {
-  --color-zemin: #0f0f10;
-  --color-yuzey: #161617;
-  --color-yuzey-yuksek: #24221e;
-  --color-menu: #121213;
-  --color-serit: #0a0a0b;
-  --color-cizgi: #262627;
-  --color-cizgi-guclu: #35342f;
-  --color-metin: #ede8dd;
-  --color-metin-orta: #b7b2a8;
-  --color-metin-soluk: #8c8a85;
-  --color-altin: #c9a23e;
-  --color-altin-acik: #e2be5a;
-  --color-altin-metin: #e2be5a;
-  --color-birincil: #c9a23e;
-  --color-birincil-metin: #0f0f10;
-  --color-basari: #7fbf9a;
-  --color-uyari: #e0a458;
-  --color-hata: #e2786b;
-  --color-basari-zemin: #18291f;
-  --color-uyari-zemin: #2e2616;
-  --color-hata-zemin: #33201d;
-  --color-serit-ikon: #8c8a85;
-  --color-serit-ikon-secili: #e2be5a;
+  --color-zemin: #0e0e0f;
+  --color-yuzey: #19191b;
+  --color-yuzey-yuksek: #232326;
+  --color-menu: #19191b;
+  --color-serit: #0d0d0e;
+  --color-cizgi: #2c2c30;
+  --color-cizgi-guclu: #3a3a3f;
+  --color-metin: #f2f0e9;
+  --color-metin-orta: #cfcdc6;
+  --color-metin-soluk: #a4a4a9;
+  --color-altin: #e0b52e;
+  --color-altin-acik: #ecc95a;
+  --color-altin-metin: #e0b52e;
+  --color-birincil: #e0b52e;
+  --color-birincil-metin: #0d0d0e;
+  --color-basari: #8bd36b;
+  --color-uyari: #f0c75a;
+  --color-hata: #f08a80;
+  --color-basari-zemin: #1c2b17;
+  --color-uyari-zemin: #33280a;
+  --color-hata-zemin: #3a1f1c;
+  --color-serit-ikon: #b9b9bd;
+  --color-serit-ikon-secili: #e0b52e;
 
-  --font-sans: "Work Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Açık tema: sıcak beyaz zemin, siyah marka çubuğu, altın yalnızca vurgu. */
 :root[data-theme="light"] {
-  --color-zemin: #f4f3ef;
+  --color-zemin: #fbfaf6;
   --color-yuzey: #ffffff;
-  --color-yuzey-yuksek: #f1efea;
+  --color-yuzey-yuksek: #f3f1ea;
   --color-menu: #ffffff;
-  --color-serit: #14202e;
-  --color-cizgi: #e4e2dc;
-  --color-cizgi-guclu: #d6d3cc;
-  --color-metin: #17191c;
-  --color-metin-orta: #3e4248;
-  --color-metin-soluk: #61656c;
-  --color-altin: #c9a227;
-  --color-altin-acik: #e9d9a6;
-  --color-altin-metin: #6e5410;
-  --color-birincil: #14202e;
-  --color-birincil-metin: #ffffff;
-  /* Belirtilen #2E7D4F, açık yeşil rozet zemininde 4.39:1 verdiği için hafifçe koyultuldu (4.76:1). */
-  --color-basari: #2a774a;
-  --color-uyari: #8a5a00;
+  --color-serit: #0d0d0e;
+  --color-cizgi: #e8e5dc;
+  --color-cizgi-guclu: #d9d6cc;
+  --color-metin: #151515;
+  --color-metin-orta: #3b3b40;
+  --color-metin-soluk: #66666b;
+  --color-altin: #e0b52e;
+  --color-altin-acik: #f0cf62;
+  --color-altin-metin: #8a6a00;
+  --color-birincil: #0d0d0e;
+  --color-birincil-metin: #e0b52e;
+  --color-basari: #1d6b32;
+  --color-uyari: #8a5d00;
   --color-hata: #a1291b;
-  --color-basari-zemin: #e6f2ea;
-  --color-uyari-zemin: #fbefd9;
+  --color-basari-zemin: #e8f4ea;
+  --color-uyari-zemin: #fbf0d4;
   --color-hata-zemin: #fbe7e4;
-  --color-serit-ikon: #b8c2ce;
-  --color-serit-ikon-secili: #e9d9a6;
+  --color-serit-ikon: #b9b9bd;
+  --color-serit-ikon-secili: #e0b52e;
 }
 
 html {
@@ -72,7 +72,7 @@ body {
   background: var(--color-zemin);
   color: var(--color-metin);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -95,9 +95,10 @@ body {
   color: var(--color-altin-metin);
 }
 
-/* Fraunces: optik boyut tarayıcıda otomatik seçilir. */
+/* Başlıklar ve büyük rakamlar: Outfit, kalın ve sıkı aralıklı. */
 .font-display {
-  font-optical-sizing: auto;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 /* Rakamlar sabit genişlikte hizalansın. */
