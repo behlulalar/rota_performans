@@ -4,7 +4,7 @@ import { useAuth } from "../auth/AuthProvider";
 import BeniHatirla from "../components/BeniHatirla";
 import TemaDugmesi from "../components/TemaDugmesi";
 import { ApiHata } from "../lib/api";
-import { PANEL_YOLU, type Panel } from "../lib/panel";
+import { PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
 import { girisiBicimle, hatirlananiOku, hatirlananiSil, varsayilanHatirla } from "../lib/hatirla";
 import { bilgiKutusu, birincilDugme, girdi } from "../lib/stil";
 
@@ -33,7 +33,8 @@ export default function Giris({ panel = "veli" }: { panel?: Panel }) {
   const [hatirlanan, setHatirlanan] = useState(panelHesabi);
   const [beniHatirla, setBeniHatirla] = useState(() => (panelHesabi() ? true : varsayilanHatirla()));
 
-  if (kullanici) return <Navigate to="/" replace />;
+  // Başka panelin hesabıyla açık oturum varken bu panelin giriş sayfası form gösterir (hesap değiştirmek için).
+  if (kullanici && rolPaneli(kullanici.rol) === panel) return <Navigate to="/" replace />;
 
   async function gonder(e: FormEvent) {
     e.preventDefault();

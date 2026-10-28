@@ -1,4 +1,4 @@
-import { arayuzdenGiris, expect, test, YONETICI_GIRIS, YONETICI_SIFRE } from "../yardimci";
+import { arayuzdenGiris, expect, ogrenciOlusturAPI, telefonBosluklu, test, YONETICI_GIRIS, YONETICI_SIFRE, yoneticiApiGirisi } from "../yardimci";
 
 test.describe("Giriş", () => {
   test("yanlış şifre hata mesajı gösterir ve giriş yapılmaz", async ({ page }) => {
@@ -41,5 +41,21 @@ test.describe("Giriş", () => {
     await expect(page).toHaveURL(/\/yonetici-giris$/);
     await page.goto("/");
     await expect(page).toHaveURL(/\/giris$/);
+  });
+
+  test("yönetici açıkken veli giriş adresi formu gösterir; veli hesabıyla girince oturum değişir", async ({ page }) => {
+    const token = await yoneticiApiGirisi(page);
+    const ogr = await ogrenciOlusturAPI(page, token, "Gecis");
+    const h = await page.request.post(`/api/ogrenciler/${ogr.id}/hesap`, { headers: { Authorization: `Bearer ${token}` }, data: {} });
+    const gecici = ((await h.json()) as { gecici_sifre: string }).gecici_sifre;
+
+    await page.goto("/genel-bakis");
+    await expect(page.getByRole("heading", { name: "Genel bakış" })).toBeVisible();
+    await page.goto("/giris");
+    await expect(page.getByRole("heading", { name: "Veli / öğrenci girişi" })).toBeVisible();
+    await expect(page.getByLabel("Telefon veya e-posta")).toBeVisible();
+
+    await arayuzdenGiris(page, telefonBosluklu(ogr.telefon), gecici);
+    await expect(page).toHaveURL(/\/sifre-degistir$/);
   });
 });
