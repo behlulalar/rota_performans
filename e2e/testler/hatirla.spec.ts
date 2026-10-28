@@ -4,7 +4,7 @@ import type { Page } from "@playwright/test";
 const GUN_MS = 86_400_000;
 
 async function hatirlaIsaretliGiris(page: Page): Promise<void> {
-  await page.goto("/giris");
+  await page.goto("/yonetici-giris");
   await page.getByLabel("Telefon veya e-posta").fill(YONETICI_GIRIS);
   await page.getByLabel("Şifre", { exact: true }).fill(YONETICI_SIFRE);
   await page.getByLabel("Beni hatırla").check();
@@ -28,7 +28,7 @@ test.describe("Beni hatırla", () => {
     await expect(page).toHaveURL(/\/genel-bakis$/);
 
     await page.getByRole("button", { name: "Çıkış" }).click();
-    await expect(page).toHaveURL(/\/giris$/);
+    await expect(page).toHaveURL(/\/yonetici-giris$/);
     await expect(page.getByText("Tekrar hoş geldiniz")).toBeVisible();
     // Kendi çıkışında "oturum süreniz doldu" uyarısı çıkmamalı (yalnız gerçek süre dolumunda).
     await expect(page.getByText("Oturum süreniz doldu")).toHaveCount(0);
@@ -63,7 +63,7 @@ test.describe("Beni hatırla", () => {
     expect(cerez!.expires).toBe(-1);
 
     await page.getByRole("button", { name: "Çıkış" }).click();
-    await expect(page).toHaveURL(/\/giris$/);
+    await expect(page).toHaveURL(/\/yonetici-giris$/);
     await expect(page.getByLabel("Telefon veya e-posta")).toBeVisible();
     await expect(page.getByText("Tekrar hoş geldiniz")).toHaveCount(0);
   });

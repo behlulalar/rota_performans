@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
+import { PANEL_YOLU } from "./lib/panel";
 import YoneticiYerlesim from "./components/YoneticiYerlesim";
 import AntrenorListe from "./pages/AntrenorListe";
 import GrupDetay from "./pages/GrupDetay";
@@ -25,7 +26,7 @@ import Yoklama from "./pages/Yoklama";
 function KorumaliRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
-  if (!kullanici) return <Navigate to="/giris" replace />;
+  if (!kullanici) return <Navigate to={PANEL_YOLU.veli} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin") return <Navigate to="/genel-bakis" replace />;
   if (kullanici.rol === "antrenor") return <Navigate to="/takvim" replace />;
@@ -35,7 +36,7 @@ function KorumaliRota() {
 function YoneticiRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
-  if (!kullanici) return <Navigate to="/giris" replace />;
+  if (!kullanici) return <Navigate to={PANEL_YOLU.yonetici} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "admin") return <Navigate to="/" replace />;
   return <YoneticiYerlesim />;
@@ -44,7 +45,7 @@ function YoneticiRota() {
 function VeliRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
-  if (!kullanici) return <Navigate to="/giris" replace />;
+  if (!kullanici) return <Navigate to={PANEL_YOLU.veli} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "veli" && kullanici.rol !== "ogrenci") return <Navigate to="/" replace />;
   return <VeliYerlesim />;
@@ -54,7 +55,7 @@ function VeliRota() {
 function TakvimRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
-  if (!kullanici) return <Navigate to="/giris" replace />;
+  if (!kullanici) return <Navigate to={PANEL_YOLU.antrenor} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin") return <YoneticiYerlesim />;
   if (kullanici.rol === "antrenor") return <AntrenorYerlesim />;
@@ -66,7 +67,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/giris" element={<Giris />} />
+          <Route path="/giris" element={<Giris panel="veli" />} />
+          <Route path="/antrenor-giris" element={<Giris panel="antrenor" />} />
+          <Route path="/yonetici-giris" element={<Giris panel="yonetici" />} />
           <Route path="/sifre-degistir" element={<SifreDegistir />} />
           <Route path="/" element={<KorumaliRota />} />
           <Route element={<TakvimRota />}>

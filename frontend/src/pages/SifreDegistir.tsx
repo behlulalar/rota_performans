@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthProvider";
 import TemaDugmesi from "../components/TemaDugmesi";
 import { api, ApiHata } from "../lib/api";
 import { yeniSifreHatasi } from "../lib/dogrulama";
+import { PANEL_YOLU, rolPaneli } from "../lib/panel";
 import { birincilDugme, dugme, girdi } from "../lib/stil";
 
 type Hatalar = { mevcut?: string; yeni?: string; tekrar?: string };
@@ -53,10 +54,11 @@ export default function SifreDegistir() {
   }
 
   async function cik() {
+    const yol = kullanici ? PANEL_YOLU[rolPaneli(kullanici.rol)] : PANEL_YOLU.veli;
     try {
       await cikisYap();
     } finally {
-      gezin("/giris", { replace: true });
+      gezin(yol, { replace: true });
     }
   }
 

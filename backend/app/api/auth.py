@@ -1,5 +1,6 @@
 import uuid
 from datetime import timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
@@ -37,6 +38,12 @@ IP_LIMITI = 1000 if settings.env == "e2e" else 20
 HESAP_DENEME_LIMITI = 5
 HESAP_KILIT_DAKIKA = 15
 
+PANEL_ROLLERI = {
+    "veli": {Rol.veli, Rol.ogrenci},
+    "antrenor": {Rol.antrenor},
+    "yonetici": {Rol.admin},
+}
+
 # Hesabın var olup olmadığını sızdırmamak için tüm başarısız girişler aynı yanıtı verir.
 GENEL_HATA = "Giriş bilgileri hatalı veya hesap geçici olarak kilitli."
 
@@ -45,6 +52,9 @@ class LoginIstegi(BaseModel):
     giris: str = Field(min_length=3, max_length=255)
     sifre: str = Field(min_length=1, max_length=256)
     beni_hatirla: bool = False
+    # Giriş sayfasının paneli. Verilirse yalnız o panelin rolleri girebilir (yanlış panel = hatalı şifre gibi reddedilir).
+    # Yetki yine her istekte rolden verilir; bu alan yalnız kullanıcıyı doğru sayfaya yönlendirmek içindir.
+    panel: Literal["veli", "antrenor", "yonetici"] | None = None
 
 
 class SifreDegistirIstegi(BaseModel):
@@ -140,9 +150,10 @@ async def login(
         await session.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, GENEL_HATA)
 
-    if not (sifre_dogru_mu(kullanici.sifre_ozeti, govde.sifre) and kullanici.aktif):
+    panel_uygun = govde.panel is None or kullanici.rol in PANEL_ROLLERI[govde.panel]
+    if not (sifre_dogru_mu(kullanici.sifre_ozeti, govde.sifre) and kullanici.aktif and panel_uygun):
         kullanici.basarisiz_deneme += 1
-        detay = {"neden": "hatali_sifre"}
+        detay = {"neden": "hatali_sifre" if panel_uygun else "yanlis_panel"}
         if kullanici.basarisiz_deneme >= HESAP_DENEME_LIMITI:
             kullanici.kilit_bitis = simdi_ + timedelta(minutes=HESAP_KILIT_DAKIKA)
             kullanici.basarisiz_deneme = 0

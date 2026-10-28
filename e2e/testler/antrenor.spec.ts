@@ -22,7 +22,7 @@ test.describe("Antrenör", () => {
     await expect(page.getByRole("row", { name: new RegExp(adSoyad) })).toBeVisible();
 
     await page.getByRole("button", { name: "Çıkış" }).click();
-    await expect(page).toHaveURL(/\/giris$/);
+    await expect(page).toHaveURL(/\/yonetici-giris$/);
 
     await geciciSifreyleGiris(page, giris, sifre);
     await expect(page).toHaveURL(/\/takvim$/);

@@ -265,3 +265,39 @@ async def test_me_ad_soyad_yonetici_antrenor_veli(istemci):
         )
         await session.commit()
     assert await me("veli@kulup.com") == "Fatma Yılmaz"
+
+
+async def test_panel_yalniz_kendi_rollerini_alir(istemci):
+    await kullanici_olustur("yonetici@kulup.com", Rol.admin)
+    await kullanici_olustur("hoca@kulup.com", Rol.antrenor)
+    await kullanici_olustur("+905551112233", Rol.veli)
+    await kullanici_olustur("ogrenci@kulup.com", Rol.ogrenci)
+
+    async def dene(giris, panel):
+        return await istemci.post("/api/auth/login", json={"giris": giris, "sifre": SIFRE, "panel": panel})
+
+    uygun = [
+        ("yonetici@kulup.com", "yonetici"), ("hoca@kulup.com", "antrenor"),
+        ("+905551112233", "veli"), ("ogrenci@kulup.com", "veli"),
+    ]
+    for giris, panel in uygun:
+        assert (await dene(giris, panel)).status_code == 200, (giris, panel)
+    # Doğru şifre bile olsa yanlış panel, hatalı şifreyle aynı yanıtı verir (rol sızdırılmaz).
+    for giris, panel in [
+        ("yonetici@kulup.com", "veli"), ("yonetici@kulup.com", "antrenor"), ("hoca@kulup.com", "yonetici"),
+        ("+905551112233", "yonetici"), ("+905551112233", "antrenor"), ("ogrenci@kulup.com", "yonetici"),
+    ]:
+        yanit = await dene(giris, panel)
+        assert yanit.status_code == 401 and yanit.json()["detail"] == GENEL_HATA, (giris, panel)
+    async with SessionLocal() as session:
+        log = (
+            await session.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "giris_basarisiz"))
+        ).scalars().first()
+        assert log.detay["neden"] == "yanlis_panel"
+
+
+async def test_panel_verilmezse_kisitlama_yok_ve_gecersiz_panel_422(istemci):
+    await kullanici_olustur("yonetici@kulup.com", Rol.admin)
+    assert (await giris_yap(istemci)).status_code == 200
+    y = await istemci.post("/api/auth/login", json={"giris": "yonetici@kulup.com", "sifre": SIFRE, "panel": "root"})
+    assert y.status_code == 422

@@ -125,9 +125,18 @@ export async function yoneticiApiGirisi(page: Page): Promise<string> {
   return ((await yanit.json()) as { access_token: string }).access_token;
 }
 
-/** Arayüzden giriş formunu doldurur. */
-export async function arayuzdenGiris(page: Page, giris: string, sifre: string): Promise<void> {
-  await page.goto("/giris");
+export type Panel = "veli" | "antrenor" | "yonetici";
+const PANEL_YOLU: Record<Panel, string> = { veli: "/giris", antrenor: "/antrenor-giris", yonetici: "/yonetici-giris" };
+
+/** Giriş bilgisinden panel çıkarılır: e2e yöneticisi, "antrenor." ile başlayanlar antrenör, kalanı veli. */
+function panelBul(giris: string): Panel {
+  if (giris === YONETICI_GIRIS) return "yonetici";
+  return giris.startsWith("antrenor.") ? "antrenor" : "veli";
+}
+
+/** Arayüzden giriş formunu doldurur. Panel verilmezse giriş bilgisinden bulunur. */
+export async function arayuzdenGiris(page: Page, giris: string, sifre: string, panel: Panel = panelBul(giris)): Promise<void> {
+  await page.goto(PANEL_YOLU[panel]);
   await page.getByLabel("Telefon veya e-posta").fill(giris);
   await page.getByLabel("Şifre", { exact: true }).fill(sifre);
   await page.getByRole("button", { name: "Giriş yap", exact: true }).click();

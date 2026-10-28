@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, belirteciAyarla, oturumuYenile, sifreZorunluDinleyiciAyarla } from "../lib/api";
+import type { Panel } from "../lib/panel";
 import { cikisIsaretle, cikisYapildiMi, hatirlananiKaydet, hatirlananiOku, hatirlananiSil } from "../lib/hatirla";
 
 export type Rol = "admin" | "antrenor" | "veli" | "ogrenci";
@@ -10,7 +11,7 @@ type AuthDegeri = {
   yukleniyor: boolean;
   /** Hatırlanan kullanıcı varken sessiz yenileme başarısız olduysa (oturum süresi dolmuş) true. */
   oturumSuresiDoldu: boolean;
-  girisYap: (giris: string, sifre: string, beniHatirla: boolean) => Promise<void>;
+  girisYap: (giris: string, sifre: string, beniHatirla: boolean, panel: Panel) => Promise<void>;
   cikisYap: () => Promise<void>;
   /** Zorunlu şifre değişiminden sonra çağrılır; kullanıcı durumunu sunucudan yeniler. */
   sifreDegistirildi: () => Promise<void>;
@@ -45,14 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const girisYap = useCallback(async (giris: string, sifre: string, beniHatirla: boolean) => {
+  const girisYap = useCallback(async (giris: string, sifre: string, beniHatirla: boolean, panel: Panel) => {
     const yanit = await api<{ access_token: string }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ giris, sifre, beni_hatirla: beniHatirla }),
+      body: JSON.stringify({ giris, sifre, beni_hatirla: beniHatirla, panel }),
     });
     belirteciAyarla(yanit.access_token);
     const ben = await api<Kullanici>("/api/auth/me");
-    if (beniHatirla) hatirlananiKaydet({ giris: ben.giris, ad: ben.ad_soyad || ben.giris });
+    if (beniHatirla) hatirlananiKaydet({ giris: ben.giris, ad: ben.ad_soyad || ben.giris, panel });
     else hatirlananiSil();
     cikisIsaretle(false);
     setOturumSuresiDoldu(false);

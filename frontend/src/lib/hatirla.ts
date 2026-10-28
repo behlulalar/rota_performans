@@ -1,15 +1,20 @@
+import type { Panel } from "./panel";
+
 // "Beni hatırla" tercihi ve hatırlanan hesap (yalnızca giriş bilgisi ve görünen ad; şifre asla saklanmaz).
 const HATIRLA_ANAHTARI = "rota-hatirla";
 const TERCIH_ANAHTARI = "rota-hatirla-tercih";
 
-export type HatirlananHesap = { giris: string; ad: string };
+export type HatirlananHesap = { giris: string; ad: string; panel?: Panel };
 
 export function hatirlananiOku(): HatirlananHesap | null {
   try {
     const ham = localStorage.getItem(HATIRLA_ANAHTARI);
     if (!ham) return null;
     const v = JSON.parse(ham) as Partial<HatirlananHesap>;
-    return typeof v.giris === "string" && v.giris ? { giris: v.giris, ad: typeof v.ad === "string" && v.ad ? v.ad : v.giris } : null;
+    const panel = v.panel === "veli" || v.panel === "antrenor" || v.panel === "yonetici" ? v.panel : undefined;
+    return typeof v.giris === "string" && v.giris
+      ? { giris: v.giris, ad: typeof v.ad === "string" && v.ad ? v.ad : v.giris, panel }
+      : null;
   } catch {
     return null;
   }

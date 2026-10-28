@@ -16,7 +16,7 @@ test.describe("Veli hesabı", () => {
     await expect(page.getByText(telefonGorunen(ogrenci.telefon)).first()).toBeVisible();
 
     await page.getByRole("button", { name: "Çıkış" }).click();
-    await expect(page).toHaveURL(/\/giris$/);
+    await expect(page).toHaveURL(/\/yonetici-giris$/);
 
     await geciciSifreyleGiris(page, telefonBosluklu(ogrenci.telefon), sifre);
     await expect(page).toHaveURL(/\/panel\/cocuk\//);
@@ -33,7 +33,7 @@ test.describe("Veli hesabı", () => {
     const gecici = (await sifreKutusu.locator("code").innerText()).trim();
     await sifreKutusu.getByRole("button", { name: "Kapat" }).click();
     await page.getByRole("button", { name: "Çıkış" }).click();
-    await expect(page).toHaveURL(/\/giris$/);
+    await expect(page).toHaveURL(/\/yonetici-giris$/);
 
     const giris = telefonBosluklu(ogrenci.telefon);
     await arayuzdenGiris(page, giris, gecici);

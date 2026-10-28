@@ -1,20 +1,37 @@
 import { useState, type FormEvent } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import BeniHatirla from "../components/BeniHatirla";
 import TemaDugmesi from "../components/TemaDugmesi";
 import { ApiHata } from "../lib/api";
+import { PANEL_YOLU, type Panel } from "../lib/panel";
 import { girisiBicimle, hatirlananiOku, hatirlananiSil, varsayilanHatirla } from "../lib/hatirla";
 import { bilgiKutusu, birincilDugme, girdi } from "../lib/stil";
 
-export default function Giris() {
+const BASLIK: Record<Panel, { baslik: string; ipucu: string; yer: string }> = {
+  veli: {
+    baslik: "Veli / öğrenci girişi",
+    ipucu: "Kulübe kayıtlı telefon numaranızla ve size verilen şifreyle giriş yapın.",
+    yer: "05xx xxx xx xx",
+  },
+  antrenor: { baslik: "Antrenör girişi", ipucu: "Kulübün size verdiği giriş bilgileriyle giriş yapın.", yer: "e-posta veya telefon" },
+  yonetici: { baslik: "Yönetici girişi", ipucu: "Yönetici hesabınızla giriş yapın.", yer: "e-posta veya telefon" },
+};
+const DIGER: Record<Panel, Panel | null> = { veli: null, antrenor: "yonetici", yonetici: "antrenor" };
+
+export default function Giris({ panel = "veli" }: { panel?: Panel }) {
   const { kullanici, girisYap, oturumSuresiDoldu } = useAuth();
   const [giris, setGiris] = useState("");
   const [sifre, setSifre] = useState("");
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
-  const [hatirlanan, setHatirlanan] = useState(hatirlananiOku);
-  const [beniHatirla, setBeniHatirla] = useState(() => (hatirlananiOku() ? true : varsayilanHatirla()));
+  // Hatırlanan hesap yalnız kendi panelinin giriş sayfasında gösterilir.
+  const panelHesabi = () => {
+    const h = hatirlananiOku();
+    return h && h.panel === panel ? h : null;
+  };
+  const [hatirlanan, setHatirlanan] = useState(panelHesabi);
+  const [beniHatirla, setBeniHatirla] = useState(() => (panelHesabi() ? true : varsayilanHatirla()));
 
   if (kullanici) return <Navigate to="/" replace />;
 
@@ -23,7 +40,7 @@ export default function Giris() {
     setHata(null);
     setGonderiliyor(true);
     try {
-      await girisYap(hatirlanan ? hatirlanan.giris : giris, sifre, beniHatirla);
+      await girisYap(hatirlanan ? hatirlanan.giris : giris, sifre, beniHatirla, panel);
     } catch (err) {
       setHata(err instanceof ApiHata ? err.message : "Bağlantı kurulamadı. Lütfen tekrar deneyin.");
     } finally {
@@ -55,9 +72,10 @@ export default function Giris() {
           </span>
           <div>
             <div className="eyebrow">Rota Performans</div>
-            <h1 className="mt-1 font-display font-medium text-[28px] md:text-[34px] leading-[1.1]">Akademi'ye giriş</h1>
+            <h1 className="mt-1 font-display font-medium text-[28px] md:text-[34px] leading-[1.1]">{BASLIK[panel].baslik}</h1>
           </div>
         </div>
+        <p className="mb-4 text-[13px] text-metin-soluk">{BASLIK[panel].ipucu}</p>
 
         {hatirlanan ? (
           <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[5px] p-6 space-y-4" noValidate>
@@ -117,7 +135,7 @@ export default function Giris() {
                 autoComplete="username"
                 type="text"
                 autoCapitalize="none"
-                placeholder="05xx xxx xx xx veya e-posta"
+                placeholder={BASLIK[panel].yer}
                 required
               />
             </label>
@@ -146,6 +164,13 @@ export default function Giris() {
               {gonderiliyor ? "Giriş yapılıyor…" : "Giriş yap"}
             </button>
           </form>
+        )}
+        {DIGER[panel] && (
+          <p className="mt-5 text-center text-[13px] text-metin-soluk">
+            <Link to={PANEL_YOLU[DIGER[panel]!]} className="underline underline-offset-4 hover:text-altin-metin">
+              {BASLIK[DIGER[panel]!].baslik}
+            </Link>
+          </p>
         )}
       </div>
     </main>
