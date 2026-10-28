@@ -110,3 +110,12 @@ body {
   outline: 2px solid var(--color-altin);
   outline-offset: 2px;
 }
+
+/* Başlıkta vurgulanan sözcük: açık temada sarı fosforlu kalem, koyu temada altın yazı. */
+.vurgu-kalem {
+  background: linear-gradient(transparent 62%, var(--color-altin-acik) 62%);
+}
+:root[data-theme="dark"] .vurgu-kalem {
+  background: none;
+  color: var(--color-altin);
+}

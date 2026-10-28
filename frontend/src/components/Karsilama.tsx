@@ -8,7 +8,7 @@ export default function Karsilama({
   aciklama,
   children,
 }: {
-  baslik: string;
+  baslik: ReactNode;
   aciklama?: ReactNode;
   children: ReactNode;
 }) {

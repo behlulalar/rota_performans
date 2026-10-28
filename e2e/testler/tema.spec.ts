@@ -13,7 +13,7 @@ test.describe("Tema", () => {
     await page.getByRole("button", { name: "Açık temaya geç" }).click();
     expect(await tema(page)).toBe("light");
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).not.toBe(govdeKoyu);
-    expect(await page.evaluate(() => localStorage.getItem("rota-tema"))).toBe("light");
+    expect(await page.evaluate(() => localStorage.getItem("rota-tema-2"))).toBe("light");
 
     await page.reload();
     expect(await tema(page)).toBe("light");

@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from "react";
 
 export type Tema = "light" | "dark";
 
-const ANAHTAR = "rota-tema";
+const ANAHTAR = "rota-tema-2";
 const dinleyiciler = new Set<() => void>();
 
 function oku(): Tema {

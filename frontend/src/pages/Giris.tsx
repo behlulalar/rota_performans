@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import BeniHatirla from "../components/BeniHatirla";
@@ -8,10 +8,16 @@ import { PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
 import { girisiBicimle, hatirlananiOku, hatirlananiSil, varsayilanHatirla } from "../lib/hatirla";
 import { bilgiKutusu, birincilDugme, girdi } from "../lib/stil";
 
-const BASLIK: Record<Panel, { baslik: string; karsilama: string; ipucu: string; yer: string }> = {
+const BASLIK: Record<Panel, { baslik: string; karsilama: ReactNode; ipucu: string; yer: string }> = {
   veli: {
     baslik: "Veli / öğrenci girişi",
-    karsilama: "Hoş geldiniz.",
+    karsilama: (
+      <>
+        Hoş geldiniz,
+        <br />
+        <span className="vurgu-kalem">havuza</span> bir adım kaldı.
+      </>
+    ),
     ipucu: "Kulübe kayıtlı telefon numaranızla ve size verilen şifreyle giriş yapın.",
     yer: "05xx xxx xx xx",
   },
@@ -64,7 +70,7 @@ export default function Giris({ panel = "veli" }: { panel?: Panel }) {
       <div>
         <h2 className="mb-3 font-display text-[19px]">{BASLIK[panel].baslik}</h2>
         {hatirlanan ? (
-          <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[14px] p-6 space-y-4" noValidate>
+          <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[16px] p-6 space-y-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.35)]" noValidate>
             {oturumSuresiDoldu && (
               <p role="status" className={bilgiKutusu}>
                 Oturum süreniz doldu, şifrenizle tekrar giriş yapın.
@@ -111,7 +117,7 @@ export default function Giris({ panel = "veli" }: { panel?: Panel }) {
             </button>
           </form>
         ) : (
-          <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[14px] p-6 space-y-4" noValidate>
+          <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[16px] p-6 space-y-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.35)]" noValidate>
             <label className="block">
               <span className="text-[13px] text-metin-soluk">Telefon veya e-posta</span>
               <input
