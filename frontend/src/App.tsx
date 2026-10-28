@@ -14,9 +14,12 @@ import OgrenciListe from "./pages/OgrenciListe";
 import SifreDegistir from "./pages/SifreDegistir";
 import OdemeListe from "./pages/OdemeListe";
 import PaketListe from "./pages/PaketListe";
-import Panel from "./pages/Panel";
 import AntrenorYerlesim from "./components/AntrenorYerlesim";
 import Takvim from "./pages/Takvim";
+import VeliAna from "./pages/VeliAna";
+import VeliCocuk from "./pages/VeliCocuk";
+import VeliProfil from "./pages/VeliProfil";
+import VeliYerlesim from "./components/VeliYerlesim";
 import Yoklama from "./pages/Yoklama";
 
 function KorumaliRota() {
@@ -26,7 +29,7 @@ function KorumaliRota() {
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin") return <Navigate to="/genel-bakis" replace />;
   if (kullanici.rol === "antrenor") return <Navigate to="/takvim" replace />;
-  return <Panel />;
+  return <Navigate to="/panel" replace />;
 }
 
 function YoneticiRota() {
@@ -36,6 +39,15 @@ function YoneticiRota() {
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "admin") return <Navigate to="/" replace />;
   return <YoneticiYerlesim />;
+}
+
+function VeliRota() {
+  const { kullanici, yukleniyor } = useAuth();
+  if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
+  if (!kullanici) return <Navigate to="/giris" replace />;
+  if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
+  if (kullanici.rol !== "veli" && kullanici.rol !== "ogrenci") return <Navigate to="/" replace />;
+  return <VeliYerlesim />;
 }
 
 // Takvim ve yoklama ekranlarını yönetici ve antrenör kullanır; her biri kendi yerleşimini görür.
@@ -60,6 +72,11 @@ export default function App() {
           <Route element={<TakvimRota />}>
             <Route path="/takvim" element={<Takvim />} />
             <Route path="/oturum/:id" element={<Yoklama />} />
+          </Route>
+          <Route element={<VeliRota />}>
+            <Route path="/panel" element={<VeliAna />} />
+            <Route path="/panel/cocuk/:id" element={<VeliCocuk />} />
+            <Route path="/profil" element={<VeliProfil />} />
           </Route>
           <Route element={<YoneticiRota />}>
             <Route path="/genel-bakis" element={<GenelBakis />} />

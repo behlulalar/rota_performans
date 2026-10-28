@@ -9,9 +9,10 @@ type Props = {
   boyut: "kucuk" | "buyuk";
   sinif?: string; // boyut ve şekil sınıfları
   surum?: number; // değiştiğinde fotoğraf yeniden yüklenir
+  veli?: boolean; // veli / reşit öğrenci paneli: fotoğraf kendi uç noktasından gelir
 };
 
-export default function OgrenciFoto({ id, fotoVar, ad, soyad, boyut, sinif = "size-10 rounded-full", surum = 0 }: Props) {
+export default function OgrenciFoto({ id, fotoVar, ad, soyad, boyut, sinif = "size-10 rounded-full", surum = 0, veli = false }: Props) {
   const kap = useRef<HTMLDivElement>(null);
   const [gorunur, setGorunur] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export default function OgrenciFoto({ id, fotoVar, ad, soyad, boyut, sinif = "si
     }
     let iptal = false;
     let olusan: string | null = null;
-    apiBlob(`/api/ogrenciler/${id}/foto?boyut=${boyut}&v=${surum}`)
+    apiBlob(`${veli ? "/api/benim/cocuklar" : "/api/ogrenciler"}/${id}/foto?boyut=${boyut}&v=${surum}`)
       .then((b) => {
         if (iptal) return;
         olusan = URL.createObjectURL(b);
@@ -52,7 +53,7 @@ export default function OgrenciFoto({ id, fotoVar, ad, soyad, boyut, sinif = "si
       iptal = true;
       if (olusan) URL.revokeObjectURL(olusan);
     };
-  }, [gorunur, fotoVar, id, boyut, surum]);
+  }, [gorunur, fotoVar, id, boyut, surum, veli]);
 
   const bas = `${ad.charAt(0)}${soyad.charAt(0)}`.toLocaleUpperCase("tr-TR");
   return (

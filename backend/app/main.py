@@ -12,6 +12,7 @@ from app.api import (
     paketler,
     raporlar,
     saglik,
+    veli,
 )
 from app.config import settings
 
@@ -56,3 +57,4 @@ app.include_router(odemeler.router)
 app.include_router(genel_bakis.router)
 app.include_router(raporlar.router)
 app.include_router(oturumlar.router)
+app.include_router(veli.router)

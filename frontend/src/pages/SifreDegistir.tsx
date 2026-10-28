@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import TemaDugmesi from "../components/TemaDugmesi";
 import { api, ApiHata } from "../lib/api";
+import { yeniSifreHatasi } from "../lib/dogrulama";
 import { birincilDugme, dugme, girdi } from "../lib/stil";
 
 type Hatalar = { mevcut?: string; yeni?: string; tekrar?: string };
@@ -10,9 +11,8 @@ type Hatalar = { mevcut?: string; yeni?: string; tekrar?: string };
 function dogrula(mevcut: string, yeni: string, tekrar: string): Hatalar {
   const h: Hatalar = {};
   if (!mevcut) h.mevcut = "Geçici şifrenizi girin.";
-  if (yeni.length < 10) h.yeni = "Yeni şifre en az 10 karakter olmalı.";
-  else if (!/[A-Za-zÇĞİÖŞÜçğıöşü]/.test(yeni) || !/\d/.test(yeni)) h.yeni = "Yeni şifre en az bir harf ve bir rakam içermeli.";
-  else if (yeni === mevcut) h.yeni = "Yeni şifre mevcut şifreyle aynı olamaz.";
+  const yeniHata = yeniSifreHatasi(mevcut, yeni);
+  if (yeniHata) h.yeni = yeniHata;
   if (tekrar !== yeni) h.tekrar = "Şifreler eşleşmiyor.";
   return h;
 }

@@ -110,8 +110,8 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [x] Paket tanımları (aylık 8 ders), özel fiyat girişi
 - [x] "Ödeme alındı" işareti → ders hakkı otomatik yüklenir
 - [x] Ödeme geçmişi
-- [ ] Veli paneli: çocuklar, program, ödemeler, kalan/telafi ders
-- [ ] Profil güncelleme, şifre değiştirme
+- [x] Veli paneli: çocuklar, program, ödemeler, kalan/telafi ders
+- [x] Profil güncelleme, şifre değiştirme
 
 ### Faz 4: Bildirimler (24 – 28 Kas)
 - [ ] Web Push (VAPID), cihaz kaydı, bildirim ayarları

@@ -19,8 +19,8 @@ test.describe("Veli hesabı", () => {
     await expect(page).toHaveURL(/\/giris$/);
 
     await geciciSifreyleGiris(page, telefonBosluklu(ogrenci.telefon), sifre);
-    await expect(page.getByRole("heading", { name: "Hoş geldiniz" })).toBeVisible();
-    await expect(page.getByText("Veli paneli yakında burada olacak.")).toBeVisible();
+    await expect(page).toHaveURL(/\/panel\/cocuk\//);
+    await expect(page.getByRole("heading", { name: `${ogrenci.ad} ${ogrenci.soyad}` })).toBeVisible();
     await expect(page.getByRole("link", { name: "Öğrenciler" })).toHaveCount(0);
   });
 
@@ -58,12 +58,12 @@ test.describe("Veli hesabı", () => {
 
     const yeni = "gucluyeni-sifre-2025";
     await zorunluSifreyiBelirle(page, gecici, yeni);
-    await expect(page.getByRole("heading", { name: "Hoş geldiniz" })).toBeVisible();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { name: `${ogrenci.ad} ${ogrenci.soyad}` })).toBeVisible();
+    await expect(page).toHaveURL(/\/panel\/cocuk\//);
 
-    await page.getByRole("button", { name: "Çıkış yap" }).click();
+    await page.getByRole("button", { name: "Çıkış" }).click();
     await expect(page).toHaveURL(/\/giris$/);
     await arayuzdenGiris(page, giris, yeni);
-    await expect(page.getByRole("heading", { name: "Hoş geldiniz" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: `${ogrenci.ad} ${ogrenci.soyad}` })).toBeVisible();
   });
 });

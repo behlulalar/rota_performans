@@ -28,3 +28,11 @@ export function tarihBicimle(iso: string): string {
 export function hataMesaji(err: unknown): string {
   return err instanceof Error ? err.message : "Bağlantı kurulamadı. Lütfen tekrar deneyin.";
 }
+
+/** Yeni şifre kuralları (sunucudaki kuralların aynısı). Hata yoksa null. */
+export function yeniSifreHatasi(mevcut: string, yeni: string): string | null {
+  if (yeni.length < 10) return "Yeni şifre en az 10 karakter olmalı.";
+  if (!/[A-Za-zÇĞİÖŞÜçğıöşü]/.test(yeni) || !/\d/.test(yeni)) return "Yeni şifre en az bir harf ve bir rakam içermeli.";
+  if (yeni === mevcut) return "Yeni şifre mevcut şifreyle aynı olamaz.";
+  return null;
+}

@@ -1,0 +1,246 @@
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { YONTEM_ETIKET } from "../api/odeme";
+import type { HakTur, Sayac } from "../api/ogrenci";
+import { cocukGetir, type CocukDetay, type VeliDers, type VeliPaket } from "../api/veli";
+import Kart from "../components/Kart";
+import OgrenciFoto from "../components/OgrenciFoto";
+import SayfaBasligi from "../components/SayfaBasligi";
+import { ApiHata } from "../lib/api";
+import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
+import { paraBicimle } from "../lib/para";
+import { GUNLER, saat } from "../lib/program";
+import { dugme, listeSatiri, rozetBasari, rozetBirincil, rozetHata, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
+import { dersMetni } from "./VeliAna";
+
+const TUR_ETIKET: Record<HakTur, string> = {
+  paket_yuklemesi: "Paket yüklendi",
+  ders_kullanimi: "Derse katıldı",
+  devamsizlik: "Devamsızlık (telafi hakkı doğdu)",
+  telafi_kullanimi: "Telafi dersine katıldı",
+  manuel_duzeltme: "Kulüp düzeltmesi",
+  iptal: "Düzeltme",
+};
+const SAYAC_ETIKET: Record<Sayac, string> = { normal: "Kalan ders", telafi: "Telafi" };
+
+function DersSatiri({ d, yoklamaGoster = false }: { d: VeliDers; yoklamaGoster?: boolean }) {
+  return (
+    <li className={`${listeSatiri} py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1`}>
+      <div className="min-w-0">
+        <div className="num text-sm font-medium">{dersMetni(d)}</div>
+        <div className="text-[13px] text-metin-soluk">{d.grup_ad}</div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        {d.telafi_mi && <span className={rozetBirincil}>Telafi</span>}
+        {yoklamaGoster &&
+          (d.yoklama === "geldi" ? (
+            <span className={rozetBasari}>Geldi</span>
+          ) : d.yoklama === "gelmedi" ? (
+            <span className={rozetHata}>Gelmedi</span>
+          ) : (
+            <span className={rozetNotr}>Kayıt yok</span>
+          ))}
+      </div>
+    </li>
+  );
+}
+
+function PaketSatiri({ p }: { p: VeliPaket }) {
+  const odenmis = p.durum === "odendi";
+  return (
+    <li className="px-6 py-4 border-t border-cizgi first:border-t-0">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-medium">
+          {p.paket_adi} <span className="text-metin-soluk font-normal">· {p.ders_sayisi} ders</span>
+        </div>
+        <span className={odenmis ? rozetBasari : rozetUyari}>{odenmis ? "Ödendi" : "Ödeme bekliyor"}</span>
+      </div>
+      <div className="num mt-1 text-sm text-metin-soluk">
+        Tutar {paraBicimle(p.uygulanan_fiyat)}
+        {!odenmis && <> · Ödenen {paraBicimle(p.toplam_odenen)}</>}
+        {p.baslangic && <> · {tarihBicimle(p.baslangic)}</>}
+      </div>
+      {p.odemeler.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {p.odemeler.map((o, i) => (
+            <li key={i} className={`num text-[13px] flex flex-wrap gap-x-3 ${o.iptal ? "text-metin-soluk line-through" : ""}`}>
+              <span>{tarihBicimle(o.tarih)}</span>
+              <span>{paraBicimle(o.tutar)}</span>
+              <span>{YONTEM_ETIKET[o.yontem]}</span>
+              {o.iptal && <span className="no-underline">(iptal edildi)</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+export default function VeliCocuk() {
+  const { id = "" } = useParams();
+  const [c, setC] = useState<CocukDetay | null>(null);
+  const [hata, setHata] = useState<string | null>(null);
+  const [hareketAcik, setHareketAcik] = useState(false);
+
+  useEffect(() => {
+    let iptal = false;
+    setC(null);
+    setHata(null);
+    cocukGetir(id)
+      .then((v) => !iptal && setC(v))
+      .catch((e) => !iptal && setHata(e instanceof ApiHata && e.durum === 404 ? "Öğrenci bulunamadı." : hataMesaji(e)));
+    return () => {
+      iptal = true;
+    };
+  }, [id]);
+
+  if (hata)
+    return (
+      <>
+        <SayfaBasligi baslik="Öğrenci" />
+        <p role="alert" className="text-sm text-hata">
+          {hata}
+        </p>
+        <Link to="/panel" className={`${dugme} mt-4`}>
+          Ana sayfaya dön
+        </Link>
+      </>
+    );
+  if (!c)
+    return (
+      <div role="status" aria-label="Yükleniyor" className="space-y-4">
+        <div aria-hidden="true" className="animate-pulse rounded-[5px] bg-yuzey-yuksek h-20" />
+        <div aria-hidden="true" className="animate-pulse rounded-[5px] bg-yuzey-yuksek h-28" />
+        <div aria-hidden="true" className="animate-pulse rounded-[5px] bg-yuzey-yuksek h-56" />
+      </div>
+    );
+
+  const h = c.ders_hakki;
+  const bekleyenler = c.paketler.filter((p) => p.durum === "odeme_bekliyor");
+  return (
+    <>
+      <SayfaBasligi
+        baslik={`${c.ad} ${c.soyad}`}
+        aciklama={c.gruplar.length > 0 ? c.gruplar.map((g) => g.ad).join(" · ") : "Henüz bir gruba atanmadı"}
+        rozet={c.durum === "pasif" ? <span className={rozetNotr}>Pasif</span> : undefined}
+        eylemler={
+          c.foto_var ? (
+            <OgrenciFoto id={c.id} fotoVar ad={c.ad} soyad={c.soyad} boyut="buyuk" sinif="size-16 rounded-full" veli />
+          ) : undefined
+        }
+      />
+
+      {bekleyenler.length > 0 && (
+        <p role="status" className={`${uyariKutusu} mb-5`}>
+          Ödemesi bekleyen paket var: {bekleyenler.map((p) => `${p.paket_adi} (${paraBicimle(p.uygulanan_fiyat)})`).join(", ")}.
+          Ödeme için lütfen kulüple iletişime geçin.
+        </p>
+      )}
+
+      <div className="grid grid-cols-3 gap-px bg-cizgi border border-cizgi rounded-[5px] overflow-hidden">
+        {[
+          { etiket: "Kalan ders", deger: h.normal, renk: h.normal < 0 ? "text-hata" : "" },
+          { etiket: "Telafi hakkı", deger: h.telafi, renk: h.telafi < 0 ? "text-hata" : "" },
+          { etiket: "Kullanılabilir telafi", deger: h.kullanilabilir_telafi, renk: "text-altin-metin" },
+        ].map((x) => (
+          <div key={x.etiket} className="bg-yuzey px-3 py-4 md:px-6 md:py-5 min-w-0">
+            <div className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.1em] md:tracking-[0.12em] text-metin-soluk leading-4">{x.etiket}</div>
+            <div className={`num font-display font-medium text-[28px] md:text-[32px] leading-[1.15] mt-1.5 ${x.renk}`}>{x.deger}</div>
+          </div>
+        ))}
+      </div>
+      {(h.normal < 0 || h.telafi < 0) && (
+        <p className="mt-3 text-[13px] text-metin-soluk">Negatif değer, paket yüklemesinin henüz yapılmadığını gösterir.</p>
+      )}
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2 items-start">
+        <Kart baslik="Yaklaşan dersler" aciklama="Önümüzdeki 4 hafta" bosluksuz>
+          {c.yaklasan_dersler.length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-metin-soluk">Planlanmış yaklaşan ders yok.</p>
+          ) : (
+            <ul className="px-6 pb-3">
+              {c.yaklasan_dersler.map((d) => (
+                <DersSatiri key={d.oturum_id} d={d} />
+              ))}
+            </ul>
+          )}
+        </Kart>
+
+        <Kart baslik="Haftalık program" bosluksuz>
+          {c.program.length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-metin-soluk">Haftalık program yok.</p>
+          ) : (
+            <ul className="px-6 pb-3">
+              {c.program.map((p, i) => (
+                <li key={i} className={`${listeSatiri} py-2.5 flex flex-wrap items-center justify-between gap-2`}>
+                  <span className="text-sm font-medium">{GUNLER[p.gun - 1]}</span>
+                  <span className="num text-sm text-metin-soluk">
+                    {saat(p.baslangic)}–{saat(p.bitis)} · {p.grup_ad}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Kart>
+
+        <Kart baslik="Paket ve ödemeler" bosluksuz>
+          {c.paketler.length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-metin-soluk">Henüz paket tanımlanmamış.</p>
+          ) : (
+            <ul className="pb-2">
+              {c.paketler.map((p) => (
+                <PaketSatiri key={p.id} p={p} />
+              ))}
+            </ul>
+          )}
+        </Kart>
+
+        <Kart baslik="Son dersler" bosluksuz>
+          {c.gecmis_dersler.length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-metin-soluk">Geçmiş ders kaydı yok.</p>
+          ) : (
+            <ul className="px-6 pb-3">
+              {c.gecmis_dersler.map((d) => (
+                <DersSatiri key={d.oturum_id} d={d} yoklamaGoster />
+              ))}
+            </ul>
+          )}
+        </Kart>
+      </div>
+
+      <Kart sinif="mt-4" bosluksuz>
+        <div className="px-6 py-4">
+          <button
+            type="button"
+            className="text-[13px] font-semibold hover:text-altin-metin min-h-11 md:min-h-0"
+            aria-expanded={hareketAcik}
+            onClick={() => setHareketAcik((a) => !a)}
+          >
+            {hareketAcik ? "▾" : "▸"} Ders hakkı hareketleri
+          </button>
+          {hareketAcik &&
+            (c.hareketler.length === 0 ? (
+              <p className="mt-2 text-sm text-metin-soluk">Henüz hareket yok.</p>
+            ) : (
+              <ul className="mt-2 divide-y divide-cizgi border-y border-cizgi">
+                {c.hareketler.map((x, i) => (
+                  <li key={i} className="py-2 text-sm flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      <span className="font-medium">{TUR_ETIKET[x.tur] ?? x.tur}</span>{" "}
+                      <span className="text-metin-soluk">· {SAYAC_ETIKET[x.sayac]}</span>
+                    </span>
+                    <span className="num flex items-center gap-3">
+                      <span className="text-metin-soluk">{tarihBicimle(x.zaman)}</span>
+                      <span className={`font-medium ${x.miktar < 0 ? "text-hata" : "text-basari"}`}>
+                        {x.miktar > 0 ? `+${x.miktar}` : x.miktar}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ))}
+        </div>
+      </Kart>
+    </>
+  );
+}

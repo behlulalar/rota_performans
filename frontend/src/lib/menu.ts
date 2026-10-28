@@ -76,3 +76,15 @@ export function aktifOge(menu: MenuBolumu[], yol: string): MenuOgesi | undefined
   for (const b of menu) for (const o of b.ogeler) if (ogeAktifMi(o, yol)) return o;
   return undefined;
 }
+
+export const VELI_MENUSU: MenuBolumu[] = [
+  {
+    anahtar: "panel",
+    ad: "Panelim",
+    simge: "genel",
+    ogeler: [
+      { ad: "Ana sayfa", simge: "genel", yol: "/panel" },
+      { ad: "Profil", simge: "kayit", yol: "/profil" },
+    ],
+  },
+];
