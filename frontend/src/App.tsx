@@ -4,6 +4,7 @@ import { OnayProvider } from "./components/OnayPenceresi";
 import { PANEL_YOLU } from "./lib/panel";
 import YoneticiYerlesim from "./components/YoneticiYerlesim";
 import AntrenorListe from "./pages/AntrenorListe";
+import YoneticiListe from "./pages/YoneticiListe";
 import GrupDetay from "./pages/GrupDetay";
 import GrupForm from "./pages/GrupForm";
 import GrupListe from "./pages/GrupListe";
@@ -112,6 +113,7 @@ export default function App() {
             <Route path="/ogrenciler/:id" element={<OgrenciDetay />} />
             <Route path="/ogrenciler/:id/duzenle" element={<OgrenciForm />} />
             <Route path="/antrenorler" element={<AntrenorListe />} />
+            <Route path="/yoneticiler" element={<YoneticiListe />} />
             <Route path="/odemeler" element={<OdemeListe />} />
             <Route path="/gelir-raporu" element={<GelirRaporu />} />
             <Route path="/duyurular" element={<Duyurular />} />

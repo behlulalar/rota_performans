@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ayarlariGetir, ayarlariGuncelle, type Ayarlar as AyarVeri } from "../api/ayarlar";
+import { girisDegistir } from "../api/yonetici";
 import { sifreDegistir } from "../api/veli";
+import { hatirlananiKaydet, hatirlananiOku } from "../lib/hatirla";
 import { useAuth } from "../auth/AuthProvider";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
@@ -126,8 +128,45 @@ function GorunumKarti() {
   );
 }
 
+function GirisFormu() {
+  const { kullanici, sifreDegistirildi: kullaniciyiYenile } = useAuth();
+  const [yeni, setYeni] = useState(kullanici?.giris ?? "");
+  const [sifre, setSifre] = useState("");
+  const k = useKayit();
+
+  function gonder(e: FormEvent) {
+    e.preventDefault();
+    if (!yeni.trim()) return k.setHata("Giriş bilgisi boş olamaz.");
+    if (yeni.trim().toLowerCase() === kullanici?.giris) return k.setHata("Yeni giriş bilgisi mevcut olanla aynı.");
+    if (!sifre) return k.setHata("Onay için şifrenizi girin.");
+    k.calistir(async () => {
+      const eski = kullanici?.giris;
+      const y = await girisDegistir(yeni.trim(), sifre);
+      // Hatırlanan hesap bu hesapsa yeni girişle güncellenir; yoksa giriş ekranı eski bilgiyi gösterirdi.
+      const h = hatirlananiOku();
+      if (h && h.giris === eski) hatirlananiKaydet({ ...h, giris: y.giris });
+      setSifre("");
+      setYeni(y.giris);
+      await kullaniciyiYenile();
+    });
+  }
+
+  return (
+    <form onSubmit={gonder} noValidate className="space-y-4 max-w-md pb-5 mb-5 border-b border-cizgi">
+      <label className="block"><span className={etiket}>Giriş (e-posta veya telefon)</span>
+        <input className={girdi} value={yeni} onChange={(e) => setYeni(e.target.value)} autoCapitalize="none" autoComplete="username" /></label>
+      <label className="block"><span className={etiket}>Şifreniz (onay için)</span>
+        <input className={girdi} type="password" value={sifre} onChange={(e) => setSifre(e.target.value)} autoComplete="current-password" /></label>
+      <p className="-mt-2 text-[12px] text-metin-soluk">Giriş değişince diğer cihazlardaki oturumlar kapatılır.</p>
+      <Sonuc hata={k.hata} tamam={k.tamam} mesaj="Giriş bilginiz değiştirildi." />
+      <button type="submit" disabled={k.mesgul} className={birincilDugme}>
+        {k.mesgul ? "Kaydediliyor…" : "Girişi değiştir"}
+      </button>
+    </form>
+  );
+}
+
 function HesapKarti() {
-  const { kullanici } = useAuth();
   const [mevcut, setMevcut] = useState("");
   const [yeni, setYeni] = useState("");
   const [tekrar, setTekrar] = useState("");
@@ -146,10 +185,9 @@ function HesapKarti() {
   }
 
   return (
-    <Kart baslik="Hesabım" aciklama="Şifre değişince diğer cihazlardaki oturumlar kapatılır">
+    <Kart baslik="Hesabım" aciklama="Giriş bilgisi ve şifre; değişince diğer cihazlardaki oturumlar kapatılır">
+      <GirisFormu />
       <form onSubmit={gonder} noValidate className="space-y-4 max-w-md">
-        <label className="block"><span className={etiket}>Giriş</span>
-          <input className={`${girdi} opacity-70`} value={kullanici?.giris ?? ""} readOnly /></label>
         <label className="block"><span className={etiket}>Mevcut şifre</span>
           <input className={girdi} type="password" value={mevcut} onChange={(e) => setMevcut(e.target.value)} autoComplete="current-password" /></label>
         <label className="block"><span className={etiket}>Yeni şifre</span>

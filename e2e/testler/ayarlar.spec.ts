@@ -32,12 +32,14 @@ test.describe("Ayarlar", () => {
     await expect(page.getByText("Bildirim ayarları kaydedildi.")).toBeVisible();
   });
 
-  test("Hesabım kartı giriş bilgisini ve şifre alanlarını gösterir", async ({ page }) => {
+  test("Hesabım kartı giriş bilgisini ve şifre alanlarını gösterir; giriş düzenlenebilir", async ({ page }) => {
     await arayuzdenGiris(page, YONETICI_GIRIS, YONETICI_SIFRE);
     await page.goto("/ayarlar");
     const hesap = page.locator("section").filter({ has: page.getByRole("heading", { name: "Hesabım" }) });
     await expect(hesap.getByLabel("Giriş")).toHaveValue(YONETICI_GIRIS);
-    await expect(hesap.getByLabel("Giriş")).toHaveAttribute("readonly", "");
+    await expect(hesap.getByLabel("Giriş")).toBeEditable();
+    await expect(hesap.getByLabel("Şifreniz (onay için)")).toBeVisible();
+    await expect(hesap.getByRole("button", { name: "Girişi değiştir" })).toBeVisible();
     await expect(hesap.getByLabel("Mevcut şifre")).toBeVisible();
     await expect(hesap.getByLabel("Yeni şifre", { exact: true })).toBeVisible();
     await expect(hesap.getByLabel("Yeni şifre (tekrar)")).toBeVisible();

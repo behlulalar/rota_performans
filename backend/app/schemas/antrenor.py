@@ -20,6 +20,7 @@ class AntrenorGuncelle(BaseModel):
     ad_soyad: Baslik | None = Field(default=None, min_length=1, max_length=200)
     telefon: str | None = Field(default=None, max_length=40)
     aktif: bool | None = None
+    giris: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 class AntrenorOzet(BaseModel):

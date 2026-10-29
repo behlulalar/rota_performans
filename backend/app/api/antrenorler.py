@@ -168,6 +168,17 @@ async def guncelle(
         antrenor.ad_soyad = govde.ad_soyad
         if kullanici is not None:
             kullanici.ad_soyad = govde.ad_soyad
+    if "giris" in verilen:
+        if govde.giris is None:
+            raise _hata422("giris boş olamaz")
+        if kullanici is None:
+            raise _hata422("Antrenörün giriş hesabı yok")
+        giris = _giris_hazirla(govde.giris)
+        if giris != kullanici.giris:
+            if (await session.execute(select(Kullanici.id).where(Kullanici.giris == giris))).first() is not None:
+                raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+            kullanici.giris = giris
+            await _oturumlari_iptal_et(session, kullanici.id)
     if "telefon" in verilen:
         antrenor.telefon = _telefon_normalize(govde.telefon) if govde.telefon else None
     if "aktif" in verilen:
@@ -180,7 +191,11 @@ async def guncelle(
         session, "antrenor_guncellendi", kullanici_id=yonetici.id, hedef_tur="antrenor", hedef_id=str(antrenor.id),
         ip=_ip(request), detay={"alanlar": sorted(verilen)},
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
     return await _ozet(session, antrenor.id)
 
 

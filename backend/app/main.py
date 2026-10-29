@@ -8,6 +8,7 @@ from app.api import (
     duyurular,
     antrenor_paneli,
     antrenorler,
+    yoneticiler,
     auth,
     genel_bakis,
     gruplar,
@@ -53,6 +54,7 @@ app.include_router(saglik.router)
 app.include_router(auth.router)
 app.include_router(ogrenciler.router)
 app.include_router(antrenorler.router)
+app.include_router(yoneticiler.router)
 app.include_router(gruplar.router)
 app.include_router(paketler.router)
 app.include_router(paketler.ogrenci_router)

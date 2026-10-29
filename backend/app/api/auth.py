@@ -3,12 +3,14 @@ from datetime import timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from redis.asyncio import Redis
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
+from app.api.antrenorler import GIRIS_TEKRAR, _giris_hazirla
 from app.config import settings
 from app.db import get_session
 from app.deps import aktif_kullanici_serbest
@@ -60,6 +62,13 @@ class LoginIstegi(BaseModel):
 class SifreDegistirIstegi(BaseModel):
     mevcut_sifre: str = Field(min_length=1, max_length=256)
     yeni_sifre: str = Field(max_length=256)
+
+
+class GirisDegistirIstegi(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    yeni_giris: str = Field(min_length=1, max_length=255)
+    sifre: str = Field(min_length=1, max_length=256)
 
 
 class BelirtecYaniti(BaseModel):
@@ -305,3 +314,51 @@ async def sifre_degistir(
     await session.execute(sorgu.values(iptal=True))
     await audit.kaydet(session, "sifre_degistirildi", kullanici_id=kullanici.id, ip=ip)
     await session.commit()
+
+
+@router.patch("/giris", response_model=KullaniciYaniti)
+async def giris_degistir(
+    govde: GirisDegistirIstegi,
+    request: Request,
+    kullanici: Kullanici = Depends(aktif_kullanici_serbest),
+    session: AsyncSession = Depends(get_session),
+    yenileme: str | None = Cookie(default=None, alias=COOKIE_ADI),
+):
+    """Personelin (yönetici, antrenör) kendi giriş bilgisini, şifresini doğrulayarak değiştirmesi."""
+    if kullanici.rol not in (Rol.admin, Rol.antrenor):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Bu işlem için yetkiniz yok")
+    ip = _istemci_ip(request)
+    simdi_ = simdi()
+    if kullanici.kilit_bitis is not None and kullanici.kilit_bitis > simdi_:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Hesap geçici olarak kilitli. Lütfen daha sonra deneyin.")
+
+    if not sifre_dogru_mu(kullanici.sifre_ozeti, govde.sifre):
+        kullanici.basarisiz_deneme += 1
+        detay = {"neden": "hatali_sifre"}
+        if kullanici.basarisiz_deneme >= HESAP_DENEME_LIMITI:
+            kullanici.kilit_bitis = simdi_ + timedelta(minutes=HESAP_KILIT_DAKIKA)
+            kullanici.basarisiz_deneme = 0
+            detay["kilitlendi"] = True
+        await audit.kaydet(session, "giris_degistirme_basarisiz", kullanici_id=kullanici.id, ip=ip, detay=detay)
+        await session.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Şifre hatalı")
+
+    yeni = _giris_hazirla(govde.yeni_giris)
+    if yeni == kullanici.giris:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Yeni giriş bilgisi mevcut olanla aynı")
+    if (await session.execute(select(Kullanici.id).where(Kullanici.giris == yeni))).first() is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+
+    kullanici.giris = yeni
+    kullanici.basarisiz_deneme = 0
+    sorgu = update(Oturum).where(Oturum.kullanici_id == kullanici.id)
+    if yenileme:
+        sorgu = sorgu.where(Oturum.token_ozeti != belirtec_ozeti(yenileme))
+    await session.execute(sorgu.values(iptal=True))
+    await audit.kaydet(session, "giris_degisti", kullanici_id=kullanici.id, ip=ip)
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+    return await ben(kullanici, session)

@@ -231,17 +231,24 @@ function YeniAntrenor({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
 function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; onKapat: () => void; onKaydedildi: () => void }) {
   const [ad, setAd] = useState(antrenor.ad_soyad);
   const [telefon, setTelefon] = useState(rakamlaraCevir(antrenor.telefon));
+  const [giris, setGiris] = useState(antrenor.giris ?? "");
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
+  const girisDegisti = antrenor.giris !== null && giris.trim().toLowerCase() !== antrenor.giris;
 
   async function gonder(e: FormEvent) {
     e.preventDefault();
     if (!ad.trim()) return setHata("Ad soyad zorunludur.");
+    if (antrenor.giris !== null && !giris.trim()) return setHata("Giriş bilgisi boş olamaz.");
     if (telefon && !gecerliMi(telefon)) return setHata(TELEFON_HATA);
     setGonderiliyor(true);
     setHata(null);
     try {
-      await antrenorGuncelle(antrenor.id, { ad_soyad: ad.trim(), telefon: apiyeCevir(telefon) ?? undefined });
+      await antrenorGuncelle(antrenor.id, {
+        ad_soyad: ad.trim(),
+        telefon: apiyeCevir(telefon) ?? undefined,
+        ...(girisDegisti ? { giris: giris.trim() } : {}),
+      });
       onKaydedildi();
     } catch (err) {
       setHata(hataMesaji(err));
@@ -256,6 +263,14 @@ function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; 
           <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} autoFocus /></label>
         <label className="block"><span className="text-[13px] text-metin-soluk">Telefon</span>
           <TelefonGirdisi value={telefon} onChange={setTelefon} /></label>
+        {antrenor.giris !== null && (
+          <label className="block"><span className="text-[13px] text-metin-soluk">Giriş (e-posta veya telefon)</span>
+            <input className={girdi} value={giris} onChange={(e) => setGiris(e.target.value)} autoCapitalize="none" />
+            {girisDegisti && (
+              <span className="block mt-1 text-[12px] text-metin-soluk">Giriş değişince antrenörün açık oturumları kapanır; yeni girişle tekrar girmesi gerekir.</span>
+            )}
+          </label>
+        )}
         {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
         <button type="submit" disabled={gonderiliyor} className={birincilDugme}>
           {gonderiliyor ? "Kaydediliyor…" : "Kaydet"}

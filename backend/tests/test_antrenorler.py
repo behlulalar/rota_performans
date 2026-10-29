@@ -199,3 +199,37 @@ async def test_antrenor_gecersiz_telefon_422(istemci, yonetici):
     d = (await olustur(istemci, yonetici)).json()["antrenor"]
     y = await istemci.patch(f"/api/antrenorler/{d['id']}", json={"telefon": "123"}, headers=yonetici)
     assert y.status_code == 422
+
+
+async def test_giris_degistirme_oturumlari_kapatir(istemci, yonetici):
+    d = (await olustur(istemci, yonetici)).json()
+    aid = d["antrenor"]["id"]
+    await istemci.post("/api/auth/login", json={"giris": "ali@kulup.com", "sifre": d["gecici_sifre"]})
+    async with SessionLocal() as s:
+        k = (await s.execute(select(Kullanici).where(Kullanici.giris == "ali@kulup.com"))).scalar_one()
+        assert len((await s.execute(select(Oturum).where(Oturum.kullanici_id == k.id, Oturum.iptal.is_(False)))).scalars().all()) == 1
+
+    y = await istemci.patch(f"/api/antrenorler/{aid}", json={"giris": " ALI.Yeni@kulup.com"}, headers=yonetici)
+    assert y.status_code == 200, y.text
+    assert y.json()["giris"] == "ali.yeni@kulup.com"
+    async with SessionLocal() as s:
+        assert (await s.execute(select(Oturum).where(Oturum.kullanici_id == k.id, Oturum.iptal.is_(False)))).first() is None
+        kayitlar = (await s.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "antrenor_guncellendi"))).scalars().all()
+    assert "ali.yeni@kulup.com" not in json.dumps([x.detay for x in kayitlar])
+    assert (await istemci.post("/api/auth/login", json={"giris": "ali@kulup.com", "sifre": d["gecici_sifre"]})).status_code == 401
+    assert (await istemci.post("/api/auth/login", json={"giris": "ali.yeni@kulup.com", "sifre": d["gecici_sifre"]})).status_code == 200
+
+    # Telefon normalizasyonu
+    y = await istemci.patch(f"/api/antrenorler/{aid}", json={"giris": "0532 999 88 77"}, headers=yonetici)
+    assert y.status_code == 200 and y.json()["giris"] == "+905329998877"
+
+
+async def test_giris_degistirme_409_ve_422(istemci, yonetici):
+    await kullanici_olustur("veli@kulup.com", Rol.veli)
+    aid = (await olustur(istemci, yonetici)).json()["antrenor"]["id"]
+    for g in ["veli@kulup.com", "yonetici@kulup.com"]:
+        assert (await istemci.patch(f"/api/antrenorler/{aid}", json={"giris": g}, headers=yonetici)).status_code == 409
+    for g in ["abc", None]:
+        assert (await istemci.patch(f"/api/antrenorler/{aid}", json={"giris": g}, headers=yonetici)).status_code == 422
+    # Aynı giriş: sorun yok, oturum da kapanmaz
+    assert (await istemci.patch(f"/api/antrenorler/{aid}", json={"giris": "ali@kulup.com"}, headers=yonetici)).status_code == 200

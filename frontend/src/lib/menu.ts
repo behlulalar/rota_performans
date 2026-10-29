@@ -26,6 +26,7 @@ export const YONETICI_MENUSU: MenuBolumu[] = [
     ogeler: [
       { ad: "Öğrenciler", simge: "kayit", yol: "/ogrenciler" },
       { ad: "Antrenörler", simge: "antrenor", yol: "/antrenorler" },
+      { ad: "Yöneticiler", simge: "yonetici", yol: "/yoneticiler" },
       { ad: "Gruplar", simge: "grup", yol: "/gruplar" },
     ],
   },
