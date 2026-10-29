@@ -212,7 +212,7 @@ export default function OgrenciDetay() {
             {!fotoRizasi && <p className="mt-2 text-xs text-metin-soluk max-w-36">Fotoğraf rızası olmadığı için fotoğraf eklenemez.</p>}
           </div>
 
-          <dl className="flex-1 min-w-0 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm content-start">
+          <dl className="flex-1 min-w-0 grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2.5 text-sm content-start">
             <dt className="text-metin-soluk">Doğum tarihi</dt><dd className="num">{tarihBicimle(o.dogum_tarihi)} ({o.yas} yaş)</dd>
             <dt className="text-metin-soluk">Telefon</dt><dd className="num">{o.telefon ? bicimle(o.telefon) : "—"}</dd>
             <dt className="text-metin-soluk">Cinsiyet</dt><dd>{o.cinsiyet === "kadin" ? "Kadın" : o.cinsiyet === "erkek" ? "Erkek" : "—"}</dd>
@@ -222,7 +222,7 @@ export default function OgrenciDetay() {
             <dd className="flex flex-wrap items-center gap-3">
               <span className="num">{kimlik ?? o.kimlik_maskeli ?? "—"}</span>
               {o.kimlik_maskeli && !kimlik && (
-                <button className={dugme} disabled={mesgul} onClick={() => void kimlikGoster()}>Tam numarayı göster</button>
+                <button className={`${dugme} !min-h-9 !px-3`} disabled={mesgul} onClick={() => void kimlikGoster()}>Tam numarayı göster</button>
               )}
             </dd>
             <dt className="text-metin-soluk">Kayıt tarihi</dt><dd className="num">{tarihBicimle(o.kayit_tarihi)}</dd>
