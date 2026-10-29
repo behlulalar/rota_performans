@@ -76,11 +76,24 @@ class VeliHareket(BaseModel):
     tur: HareketTuru
 
 
+class DersOzeti(BaseModel):
+    """Tüm deftere bakarak hesaplanan, geri alınmış kayıtları saymayan özet."""
+
+    toplam: int  # paketlerle yüklenen ve kulübün eklediği/düzelttiği toplam ders hakkı
+    katildi: int
+    devamsiz: int
+    kalan: int
+    telafi_dogan: int
+    telafi_kullanilan: int
+    telafi_kalan: int
+
+
 class CocukDetay(CocukOzet):
     program: list[VeliProgramSatiri]
     yaklasan_dersler: list[VeliDers]
     gecmis_dersler: list[VeliDers]
     paketler: list[VeliPaket]
+    ders_ozeti: DersOzeti
     hareketler: list[VeliHareket]
 
 

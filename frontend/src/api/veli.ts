@@ -38,11 +38,22 @@ export type VeliPaket = {
   odemeler: { tarih: string; tutar: string; yontem: OdemeYontemi; iptal: boolean }[];
 };
 
+export type DersOzeti = {
+  toplam: number;
+  katildi: number;
+  devamsiz: number;
+  kalan: number;
+  telafi_dogan: number;
+  telafi_kullanilan: number;
+  telafi_kalan: number;
+};
+
 export type CocukDetay = CocukOzet & {
   program: { grup_ad: string; gun: number; baslangic: string; bitis: string }[];
   yaklasan_dersler: VeliDers[];
   gecmis_dersler: VeliDers[];
   paketler: VeliPaket[];
+  ders_ozeti: DersOzeti;
   hareketler: { zaman: string; sayac: Sayac; miktar: number; tur: HakTur }[];
 };
 

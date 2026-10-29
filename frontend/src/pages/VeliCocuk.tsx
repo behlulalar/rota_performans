@@ -27,9 +27,26 @@ const SEKMELER = [
   { anahtar: "program", ad: "Haftalık program" },
   { anahtar: "paket", ad: "Paket ve ödemeler" },
   { anahtar: "gecmis", ad: "Son dersler" },
-  { anahtar: "hareket", ad: "Ders hakkı hareketleri" },
+  { anahtar: "hareket", ad: "Ders hakkım" },
 ] as const;
 const SAYAC_ETIKET: Record<Sayac, string> = { normal: "Kalan ders", telafi: "Telafi" };
+
+const SAYI_TONU = {
+  basari: "text-basari",
+  uyari: "text-uyari",
+  hata: "text-hata",
+  vurgu: "text-altin-metin",
+} as const;
+
+function Sayi({ ad, deger, ton, alt }: { ad: string; deger: number; ton?: keyof typeof SAYI_TONU; alt?: string }) {
+  return (
+    <div className="rounded-[12px] border border-cizgi bg-zemin px-3 py-3 min-w-0">
+      <div className="text-[12px] text-metin-soluk leading-4">{ad}</div>
+      <div className={`num font-display text-[28px] leading-[1.15] mt-1 ${ton ? SAYI_TONU[ton] : ""}`}>{deger}</div>
+      {alt && <div className="num text-xs text-metin-soluk mt-0.5">{alt}</div>}
+    </div>
+  );
+}
 
 function DersSatiri({ d, yoklamaGoster = false }: { d: VeliDers; yoklamaGoster?: boolean }) {
   return (
@@ -88,6 +105,7 @@ export default function VeliCocuk() {
   const { id = "" } = useParams();
   const [c, setC] = useState<CocukDetay | null>(null);
   const [hata, setHata] = useState<string | null>(null);
+  const [hareketAcik, setHareketAcik] = useState(false);
   const [params, setParams] = useSearchParams();
   const sekme = SEKMELER.find((t) => t.anahtar === params.get("sekme"))?.anahtar ?? SEKMELER[0].anahtar;
 
@@ -125,6 +143,7 @@ export default function VeliCocuk() {
     );
 
   const h = c.ders_hakki;
+  const o = c.ders_ozeti;
   const bekleyenler = c.paketler.filter((p) => p.durum === "odeme_bekliyor");
   return (
     <>
@@ -261,28 +280,77 @@ export default function VeliCocuk() {
         )}
 
         {sekme === "hareket" && (
-          <Kart baslik="Ders hakkı hareketleri" bosluksuz>
-            {c.hareketler.length === 0 ? (
-              <p className="px-6 pb-6 text-sm text-metin-soluk">Henüz hareket yok.</p>
-            ) : (
-              <ul className="px-6 pb-3 divide-y divide-cizgi">
-                {c.hareketler.map((x, i) => (
-                  <li key={i} className="py-2.5 text-sm flex flex-wrap items-center justify-between gap-2">
-                    <span>
-                      <span className="font-medium">{TUR_ETIKET[x.tur] ?? x.tur}</span>{" "}
-                      <span className="text-metin-soluk">· {SAYAC_ETIKET[x.sayac]}</span>
-                    </span>
-                    <span className="num flex items-center gap-3">
-                      <span className="text-metin-soluk">{tarihBicimle(x.zaman)}</span>
-                      <span className={`font-medium ${x.miktar < 0 ? "text-hata" : "text-basari"}`}>
-                        {x.miktar > 0 ? `+${x.miktar}` : x.miktar}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Kart>
+          <div className="space-y-4">
+            <Kart baslik="Ders hakkım" aciklama="Paketle gelen derslerin durumu" bosluksuz>
+              <div className="px-6 pb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+                  <Sayi ad="Toplam ders" deger={o.toplam} />
+                  <Sayi ad="Katıldığı" deger={o.katildi} ton="basari" />
+                  <Sayi ad="Gelmediği" deger={o.devamsiz} ton={o.devamsiz > 0 ? "uyari" : undefined} />
+                  <Sayi ad="Kalan" deger={o.kalan} ton={o.kalan < 0 ? "hata" : "vurgu"} />
+                </div>
+                {o.toplam > 0 && (
+                  <div className="mt-4">
+                    <div
+                      role="img"
+                      aria-label={`${o.toplam} dersin ${o.katildi} tanesine katıldı, ${o.devamsiz} tanesine gelmedi`}
+                      className="h-2.5 rounded-full bg-yuzey-yuksek overflow-hidden flex"
+                    >
+                      <div className="bg-basari" style={{ width: `${Math.min(100, (o.katildi / o.toplam) * 100)}%` }} />
+                      <div className="bg-uyari" style={{ width: `${Math.min(100, (o.devamsiz / o.toplam) * 100)}%` }} />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-metin-soluk">
+                      <span><span className="inline-block size-2 rounded-full bg-basari mr-1.5" />Katıldı</span>
+                      <span><span className="inline-block size-2 rounded-full bg-uyari mr-1.5" />Gelmedi</span>
+                      <span><span className="inline-block size-2 rounded-full bg-yuzey-yuksek border border-cizgi-guclu mr-1.5" />Kalan</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Kart>
+
+            <Kart baslik="Telafi hakkım" aciklama="Gelinmeyen derslerden doğan telafi hakları" bosluksuz>
+              <div className="px-6 pb-6 grid grid-cols-3 gap-2 md:gap-3">
+                <Sayi ad="Doğan" deger={o.telafi_dogan} />
+                <Sayi ad="Kullanılan" deger={o.telafi_kullanilan} />
+                <Sayi ad="Kalan" deger={o.telafi_kalan} ton={o.telafi_kalan < 0 ? "hata" : "vurgu"} alt={`${h.kullanilabilir_telafi} planlanabilir`} />
+              </div>
+            </Kart>
+
+            <Kart bosluksuz>
+              <div className="px-6 py-4">
+                <button
+                  type="button"
+                  className="text-[13px] font-semibold hover:text-altin-metin min-h-11 md:min-h-0"
+                  aria-expanded={hareketAcik}
+                  onClick={() => setHareketAcik((a) => !a)}
+                >
+                  {hareketAcik ? "▾" : "▸"} Tüm hareketleri göster
+                </button>
+                {hareketAcik &&
+                  (c.hareketler.length === 0 ? (
+                    <p className="mt-2 text-sm text-metin-soluk">Henüz hareket yok.</p>
+                  ) : (
+                    <ul className="mt-2 divide-y divide-cizgi border-y border-cizgi">
+                      {c.hareketler.map((x, i) => (
+                        <li key={i} className="py-2.5 text-sm flex flex-wrap items-center justify-between gap-2">
+                          <span>
+                            <span className="font-medium">{TUR_ETIKET[x.tur] ?? x.tur}</span>{" "}
+                            <span className="text-metin-soluk">· {SAYAC_ETIKET[x.sayac]}</span>
+                          </span>
+                          <span className="num flex items-center gap-3">
+                            <span className="text-metin-soluk">{tarihBicimle(x.zaman)}</span>
+                            <span className={`font-medium ${x.miktar < 0 ? "text-hata" : "text-basari"}`}>
+                              {x.miktar > 0 ? `+${x.miktar}` : x.miktar}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ))}
+              </div>
+            </Kart>
+          </div>
         )}
       </div>
     </>

@@ -41,6 +41,14 @@ test.describe("Veli paneli", () => {
     await expect(page.getByRole("tab", { name: "Paket ve ödemeler" })).toHaveAttribute("aria-selected", "true"); // sekme yenilemede korunur
     await expect(page.getByText("Ödendi", { exact: true })).toBeVisible();
     await expect(page.getByText("Nakit")).toBeVisible();
+
+    // Ödeme sonrası paketin dersleri "Ders hakkım" sekmesinde sayı sayı görünür.
+    await page.getByRole("tab", { name: "Ders hakkım" }).click();
+    const panel = page.getByRole("tabpanel");
+    await expect(panel.getByText("Toplam ders")).toBeVisible();
+    await expect(panel.getByText("Katıldığı")).toBeVisible();
+    await expect(panel.getByText("Kalan", { exact: true }).first()).toBeVisible();
+    await expect(panel.getByText("Telafi hakkım")).toBeVisible();
   });
 
   test("veli profilini günceller ve şifresini değiştirir", async ({ page }) => {

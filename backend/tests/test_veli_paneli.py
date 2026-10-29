@@ -189,6 +189,25 @@ async def test_hareketler_neden_ve_kullanici_icermez(istemci):
     assert "gizli" not in (await istemci.get(f"/api/benim/cocuklar/{o.id}", headers=b)).text
 
 
+async def test_ders_ozeti_geri_alinan_kayitlari_saymaz(istemci):
+    k, o = await veli_ve_cocuk()
+    H = DersHakkiHareketi
+    await kaydet(H(ogrenci_id=o.id, sayac=Sayac.normal, miktar=8, tur=HareketTuru.paket_yuklemesi))
+    for _ in range(3):
+        await kaydet(H(ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.ders_kullanimi))
+    hatali = H(ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.ders_kullanimi)
+    await kaydet(hatali)
+    await kaydet(H(ogrenci_id=o.id, sayac=Sayac.normal, miktar=1, tur=HareketTuru.iptal, iptal_edilen_id=hatali.id))
+    await kaydet(H(ogrenci_id=o.id, sayac=Sayac.normal, miktar=-1, tur=HareketTuru.devamsizlik))
+    await kaydet(H(ogrenci_id=o.id, sayac=Sayac.telafi, miktar=1, tur=HareketTuru.devamsizlik))
+    b = await baslik(istemci)
+    d = (await istemci.get(f"/api/benim/cocuklar/{o.id}", headers=b)).json()
+    assert d["ders_ozeti"] == {
+        "toplam": 8, "katildi": 3, "devamsiz": 1, "kalan": 4,
+        "telafi_dogan": 1, "telafi_kullanilan": 0, "telafi_kalan": 1,
+    }
+
+
 async def test_foto_yok_404_ve_baskasinin_fotosu_404(istemci):
     k, o = await veli_ve_cocuk()
     k2, o2 = await veli_ve_cocuk("+905559998877", ad="Baska")

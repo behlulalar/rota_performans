@@ -18,11 +18,12 @@ from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import IletisimKisisi, Ogrenci
 from app.models.paket import Odeme, OgrenciPaketi, OgrenciPaketiDurum, Paket
 from app.models.program import DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
-from app.models.yoklama import DersHakkiHareketi, Yoklama
+from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, Yoklama
 from app.oturumlar import bugun
 from app.schemas.veli import (
     CocukDetay,
     CocukOzet,
+    DersOzeti,
     Profil,
     ProfilGuncelle,
     VeliDers,
@@ -200,6 +201,7 @@ async def cocuk_detay(ogrenci_id: uuid.UUID, kullanici: Kullanici = Veli, sessio
         yaklasan_dersler=yaklasan,
         gecmis_dersler=gecmis,
         paketler=await _paketler(session, ogrenci.id),
+        ders_ozeti=await _ders_ozeti(session, ozet),
         hareketler=await _hareketler(session, ogrenci.id),
     )
 
@@ -238,6 +240,36 @@ async def _paketler(session: AsyncSession, ogrenci_id: uuid.UUID) -> list[VeliPa
             )
         )
     return sonuc
+
+
+async def _ders_ozeti(session: AsyncSession, ozet: CocukOzet) -> DersOzeti:
+    # Geri alınan kayıtlar ve onları geri alan ters kayıtlar birlikte sayım dışı kalır.
+    geri_alinan = select(DersHakkiHareketi.iptal_edilen_id).where(DersHakkiHareketi.iptal_edilen_id.is_not(None))
+    toplamlar: dict[tuple[Sayac, HareketTuru], int] = {
+        (sayac, tur): int(miktar)
+        for sayac, tur, miktar in (
+            await session.execute(
+                select(DersHakkiHareketi.sayac, DersHakkiHareketi.tur, func.sum(DersHakkiHareketi.miktar))
+                .where(
+                    DersHakkiHareketi.ogrenci_id == ozet.id,
+                    DersHakkiHareketi.tur != HareketTuru.iptal,
+                    DersHakkiHareketi.id.not_in(geri_alinan),
+                )
+                .group_by(DersHakkiHareketi.sayac, DersHakkiHareketi.tur)
+            )
+        ).all()
+    }
+    normal = lambda t: toplamlar.get((Sayac.normal, t), 0)  # noqa: E731
+    telafi = lambda t: toplamlar.get((Sayac.telafi, t), 0)  # noqa: E731
+    return DersOzeti(
+        toplam=normal(HareketTuru.paket_yuklemesi) + normal(HareketTuru.manuel_duzeltme),
+        katildi=-normal(HareketTuru.ders_kullanimi),
+        devamsiz=-normal(HareketTuru.devamsizlik),
+        kalan=ozet.ders_hakki.normal,
+        telafi_dogan=telafi(HareketTuru.devamsizlik) + telafi(HareketTuru.manuel_duzeltme),
+        telafi_kullanilan=-telafi(HareketTuru.telafi_kullanimi),
+        telafi_kalan=ozet.ders_hakki.telafi,
+    )
 
 
 async def _hareketler(session: AsyncSession, ogrenci_id: uuid.UUID) -> list[VeliHareket]:
