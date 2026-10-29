@@ -8,6 +8,7 @@ import SayfaBasligi from "../components/SayfaBasligi";
 import { basariKutusu, birincilDugme, rozetBasari, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
 import { hataMesaji } from "../lib/dogrulama";
 import { saat } from "../lib/program";
+import { gosterilenDers } from "../lib/dersHakki";
 import { bugun, uzunTarih } from "../lib/tarih";
 
 type Secim = Record<string, YoklamaDurum | null>;
@@ -182,7 +183,7 @@ export default function Yoklama() {
                       <span className="font-medium">{x.ad} {x.soyad}</span>
                       {x.telafi_mi && <span className={rozetUyari}>Telafi</span>}
                     </div>
-                    <div className="num text-xs text-metin-soluk">Kalan: {x.bakiye.normal} · Telafi: {x.bakiye.telafi}</div>
+                    <div className="num text-xs text-metin-soluk">Kalan: {gosterilenDers(x.bakiye.normal)} · Telafi: {gosterilenDers(x.bakiye.telafi)}</div>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-3">

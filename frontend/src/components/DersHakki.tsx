@@ -8,6 +8,7 @@ import { hataMesaji } from "../lib/dogrulama";
 import { bugun, gunEkle, tarihCoz, yyyyAyGun } from "../lib/tarih";
 import { birincilDugme, dugme, girdi, rozetBasari, rozetHata, rozetNotr } from "../lib/stil";
 import Kart from "./Kart";
+import { gosterilenDers } from "../lib/dersHakki";
 import { useOnay } from "../components/OnayPenceresi";
 
 
@@ -202,12 +203,12 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
   const aktif = ogrenci.durum === "aktif";
   const planlanabilir = aktif && h.kullanilabilir_telafi > 0;
   const neden = !aktif ? "Öğrenci pasif olduğu için telafi planlanamaz." : h.kullanilabilir_telafi <= 0 ? "Planlanabilir telafi hakkı yok." : null;
-  const sayi = (n: number) => (n < 0 ? "text-hata" : "");
+  const fazla = Math.max(0, -h.normal);
 
   const hucre = (etiket: string, deger: number) => (
     <div className="bg-yuzey px-6 py-4">
       <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk">{etiket}</div>
-      <div className={`num font-display text-[28px] leading-[1.15] mt-1 ${sayi(deger)}`}>{deger}</div>
+      <div className="num font-display text-[28px] leading-[1.15] mt-1">{gosterilenDers(deger)}</div>
     </div>
   );
 
@@ -220,7 +221,11 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
       </div>
 
       <div className="px-6 py-4 border-b border-cizgi">
-        {(h.normal < 0 || h.telafi < 0) && <p className="mb-3 text-[13px] text-hata">Paket yüklemesi bekleniyor</p>}
+        {fazla > 0 && (
+          <p role="status" className="mb-3 text-[13px] text-hata">
+            Ders hakkı bitti: paketle yüklenenden {fazla} ders fazla işlendi. Yeni paket atanmalı.
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <button className={dugme} disabled={!planlanabilir || mesgul} onClick={() => { setHata(null); setPencere("telafi"); }}>Telafi planla</button>
           <button className={dugme} onClick={() => { setHata(null); setPencere("duzeltme"); }}>Elle düzeltme</button>

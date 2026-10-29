@@ -29,12 +29,12 @@ test.describe("Yoklama", () => {
     await page.getByRole("link", { name: "← Takvim" }).click();
     await expect(page.getByRole("link", { name: new RegExp(o.grupAdi) })).toContainText("Yoklama alındı");
 
-    // Yönetici: geldi olan öğrencinin kalan dersi -1'dir (paket henüz yüklenmedi).
+    // Yönetici: paket yüklenmeden geldi olan öğrencinin kalan dersi 0 görünür, fazla işlenen ders kırmızı notla bildirilir.
     await page.getByRole("button", { name: "Çıkış" }).click();
     await arayuzdenGiris(page, YONETICI_GIRIS, YONETICI_SIFRE);
     await expect(page).toHaveURL(/\/genel-bakis$/);
     await page.goto(`/ogrenciler/${o.geldi.id}`);
-    await expect(page.getByText("Kalan ders").locator("xpath=following-sibling::div")).toHaveText("-1");
-    await expect(page.getByText("Paket yüklemesi bekleniyor")).toBeVisible();
+    await expect(page.getByText("Kalan ders").locator("xpath=following-sibling::div")).toHaveText("0");
+    await expect(page.getByText("Ders hakkı bitti: paketle yüklenenden 1 ders fazla işlendi")).toBeVisible();
   });
 });

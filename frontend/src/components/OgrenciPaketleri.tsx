@@ -112,7 +112,7 @@ function GeriAlPenceresi({ odemeId, onKapat, onTamam }: { odemeId: string; onKap
       <form onSubmit={gonder} noValidate className="space-y-3">
         <p className={uyariKutusu}>
           Ödeme geri alınınca bu ödemeyle yüklenen ders hakkı da geri alınır ve paket yeniden "Ödeme bekliyor" olur.
-          Dersler bu arada kullanıldıysa ders bakiyesi eksiye düşebilir.
+          Dersler bu arada kullanıldıysa kalan ders 0'a iner ve fazla işlenen dersler için "Ders hakkı bitti" notu görünür.
         </p>
         <label className="block"><span className="text-sm text-metin-soluk">Geri alma nedeni</span>
           <input className={girdi} value={neden} onChange={(e) => setNeden(e.target.value)} maxLength={200} autoFocus /></label>
