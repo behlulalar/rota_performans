@@ -12,6 +12,7 @@ import GeciciSifreKutusu from "../components/GeciciSifreKutusu";
 import { hataMesaji } from "../lib/dogrulama";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { birincilDugme, dugme, girdi, rozetBasari, rozetNotr, satir, secimKutusu, td, th } from "../lib/stil";
+import { useOnay } from "../components/OnayPenceresi";
 
 
 function AktifRozeti({ aktif }: { aktif: boolean }) {
@@ -19,6 +20,7 @@ function AktifRozeti({ aktif }: { aktif: boolean }) {
 }
 
 export default function AntrenorListe() {
+  const onayla = useOnay();
   const [filtre, setFiltre] = useState("");
   const [liste, setListe] = useState<AntrenorOzet[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
@@ -53,14 +55,14 @@ export default function AntrenorListe() {
 
   const durumDegistir = (a: AntrenorOzet) =>
     islem(async () => {
-      if (!window.confirm(a.aktif ? `${a.ad_soyad} pasife alınsın mı?` : `${a.ad_soyad} tekrar aktif edilsin mi?`)) return;
+      if (!(await onayla({ baslik: a.aktif ? "Pasife al" : "Aktif et", mesaj: a.aktif ? `${a.ad_soyad} pasife alınsın mı?` : `${a.ad_soyad} tekrar aktif edilsin mi?`, onayYazisi: a.aktif ? "Pasife al" : "Aktif et" }))) return;
       await antrenorGuncelle(a.id, { aktif: !a.aktif });
       await yukle();
     });
 
   const sifirla = (a: AntrenorOzet) =>
     islem(async () => {
-      if (!window.confirm(`${a.ad_soyad} için şifre sıfırlansın mı? Eski şifre geçersiz olur.`)) return;
+      if (!(await onayla({ baslik: "Şifre sıfırla", mesaj: `${a.ad_soyad} için şifre sıfırlansın mı? Eski şifre geçersiz olur.`, onayYazisi: "Sıfırla" }))) return;
       const y = await sifreSifirla(a.id);
       setSifre({ baslik: `${a.ad_soyad} için yeni geçici şifre`, deger: y.gecici_sifre, giris: a.giris, telefon: telefonSec(a.giris, a.telefon) });
     });

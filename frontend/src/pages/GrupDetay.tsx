@@ -9,9 +9,11 @@ import { GUNLER, saat } from "../lib/program";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { dugme, girdi, rozetBasari, rozetNotr } from "../lib/stil";
+import { useOnay } from "../components/OnayPenceresi";
 
 
 export default function GrupDetay() {
+  const onayla = useOnay();
   const { id } = useParams();
   const git = useNavigate();
   const [g, setG] = useState<Detay | null>(null);
@@ -75,7 +77,7 @@ export default function GrupDetay() {
 
   const durumDegistir = () =>
     islem(async () => {
-      if (!window.confirm(g.aktif ? "Grup pasife alınsın mı?" : "Grup tekrar aktif edilsin mi?")) return;
+      if (!(await onayla({ baslik: g.aktif ? "Pasife al" : "Aktif et", mesaj: g.aktif ? "Grup pasife alınsın mı?" : "Grup tekrar aktif edilsin mi?", onayYazisi: g.aktif ? "Pasife al" : "Aktif et" }))) return;
       setG(await grupGuncelle(id, { aktif: !g.aktif }));
     });
 
@@ -87,7 +89,7 @@ export default function GrupDetay() {
 
   const cikar = (uyeId: string, ad: string) =>
     islem(async () => {
-      if (!window.confirm(`${ad} gruptan çıkarılsın mı?`)) return;
+      if (!(await onayla({ baslik: "Gruptan çıkar", mesaj: `${ad} gruptan çıkarılsın mı?`, onayYazisi: "Çıkar", tehlikeli: true }))) return;
       setG(await ogrenciCikar(id, uyeId));
     });
 

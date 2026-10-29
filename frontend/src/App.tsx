@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthProvider";
+import { OnayProvider } from "./components/OnayPenceresi";
 import { PANEL_YOLU } from "./lib/panel";
 import YoneticiYerlesim from "./components/YoneticiYerlesim";
 import AntrenorListe from "./pages/AntrenorListe";
@@ -66,6 +67,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <OnayProvider>
         <Routes>
           <Route path="/giris" element={<Giris panel="veli" />} />
           <Route path="/antrenor-giris" element={<Giris panel="antrenor" />} />
@@ -98,6 +100,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </OnayProvider>
       </AuthProvider>
     </BrowserRouter>
   );

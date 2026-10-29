@@ -8,6 +8,7 @@ import { hataMesaji } from "../lib/dogrulama";
 import { bugun, gunEkle, tarihCoz, yyyyAyGun } from "../lib/tarih";
 import { birincilDugme, dugme, girdi, rozetBasari, rozetHata, rozetNotr } from "../lib/stil";
 import Kart from "./Kart";
+import { useOnay } from "../components/OnayPenceresi";
 
 
 const TUR_ETIKET: Record<HakTur, string> = {
@@ -149,6 +150,7 @@ const YOKLAMA_ROZET = {
 } as const;
 
 export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay; onYenile: (o: OgrenciDetay) => void }) {
+  const onayla = useOnay();
   const { id } = ogrenci;
   const h = ogrenci.ders_hakki;
   const [gecmisAcik, setGecmisAcik] = useState(false);
@@ -178,7 +180,7 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
   }, [id]);
 
   async function geriAl(p: TelafiPlani) {
-    if (!window.confirm("Telafi planı geri alınsın mı? Telafi hakkı iade edilir.")) return;
+    if (!(await onayla({ baslik: "Telafi planını geri al", mesaj: "Telafi planı geri alınsın mı? Telafi hakkı iade edilir.", onayYazisi: "Geri al" }))) return;
     setMesgul(true);
     setHata(null);
     try {

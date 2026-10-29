@@ -4,6 +4,7 @@ import { hataMesaji } from "../lib/dogrulama";
 import TelefonGirdisi from "./TelefonGirdisi";
 import { apiyeCevir, gecerliMi, TELEFON_HATA } from "../lib/telefon";
 import { girdi, birincilDugme } from "../lib/stil";
+import { useOnay } from "../components/OnayPenceresi";
 
 
 export default function ResitGecisi({
@@ -15,6 +16,7 @@ export default function ResitGecisi({
   onKapat: () => void;
   onTamam: (detay: OgrenciDetay) => void;
 }) {
+  const onayla = useOnay();
   const [telefon, setTelefon] = useState("");
   const [adSoyad, setAdSoyad] = useState(`${ogrenci.ad} ${ogrenci.soyad}`);
   const [hata, setHata] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function ResitGecisi({
     e.preventDefault();
     if (!telefon) return setHata("Öğrencinin telefonu zorunludur.");
     if (!gecerliMi(telefon)) return setHata(TELEFON_HATA);
-    if (!window.confirm("Reşit geçişi yapılsın mı? Velinin bu öğrenciye panel erişimi kapanır.")) return;
+    if (!(await onayla({ baslik: "Reşit geçişi", mesaj: "Reşit geçişi yapılsın mı? Velinin bu öğrenciye panel erişimi kapanır.", onayYazisi: "Geçişi yap" }))) return;
     setGonderiliyor(true);
     setHata(null);
     try {

@@ -6,10 +6,12 @@ export { expect };
 export const YONETICI_GIRIS = process.env.E2E_ADMIN_GIRIS ?? "e2e.yonetici@example.com";
 export const YONETICI_SIFRE = process.env.E2E_ADMIN_SIFRE ?? "e2e-yonetici-sifresi-123";
 
-// window.confirm diyaloglarını her testte otomatik kabul eder.
+// Uygulamanın onay penceresini (OnayPenceresi) her testte otomatik onaylar.
 export const test = temel.extend({
   page: async ({ page }, kullan) => {
-    page.on("dialog", (d) => void d.accept());
+    await page.addLocatorHandler(page.locator("[data-onay-penceresi]"), async (pencere) => {
+      await pencere.getByRole("button").last().click();
+    });
     await kullan(page);
   },
 });

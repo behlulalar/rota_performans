@@ -14,6 +14,7 @@ import { fotoKucult } from "../lib/fotoKucult";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { bilgiKutusu, dugme, girdi, rozetBasari, rozetBirincil, rozetNotr, secimKutusu, tehlikeKutusu, uyariKutusu } from "../lib/stil";
+import { useOnay } from "../components/OnayPenceresi";
 
 const RIZA_ADI: Record<RizaTur, string> = {
   aydinlatma: "KVKK aydınlatma",
@@ -23,6 +24,7 @@ const RIZA_ADI: Record<RizaTur, string> = {
 
 
 export default function OgrenciDetay() {
+  const onayla = useOnay();
   const { id } = useParams();
   const konum = useLocation();
   const git = useNavigate();
@@ -72,7 +74,7 @@ export default function OgrenciDetay() {
   const durumDegistir = () =>
     islem(async () => {
       const aktif = o.durum === "aktif";
-      if (!window.confirm(aktif ? "Öğrenci pasife alınsın mı?" : "Öğrenci tekrar aktif edilsin mi?")) return;
+      if (!(await onayla({ baslik: aktif ? "Pasife al" : "Aktif et", mesaj: aktif ? "Öğrenci pasife alınsın mı?" : "Öğrenci tekrar aktif edilsin mi?", onayYazisi: aktif ? "Pasife al" : "Aktif et" }))) return;
       setO(await (aktif ? pasifeAl(id) : aktifEt(id)));
     });
 
@@ -92,7 +94,7 @@ export default function OgrenciDetay() {
 
   const kimlikGoster = () =>
     islem(async () => {
-      if (!window.confirm("Tam kimlik numarası görüntülenecek. Bu işlem kayıt altına alınır. Devam edilsin mi?")) return;
+      if (!(await onayla({ baslik: "Kimlik numarası", mesaj: "Tam kimlik numarası görüntülenecek. Bu işlem kayıt altına alınır. Devam edilsin mi?", onayYazisi: "Göster" }))) return;
       setKimlik((await kimlikGetir(id)).kimlik_no);
     });
 
@@ -112,14 +114,14 @@ export default function OgrenciDetay() {
 
   const hesapSifirla = () =>
     islem(async () => {
-      if (!window.confirm("Hesap şifresi sıfırlansın mı? Eski şifre geçersiz olur.")) return;
+      if (!(await onayla({ baslik: "Şifre sıfırla", mesaj: "Hesap şifresi sıfırlansın mı? Eski şifre geçersiz olur.", onayYazisi: "Sıfırla" }))) return;
       const y = await hesapSifreSifirla(id);
       setSifre({ baslik: `${o.hesap?.giris ?? "Hesap"} için yeni geçici şifre`, deger: y.gecici_sifre, giris: o.hesap?.giris, telefon: telefonSec(o.hesap?.giris, o?.birincil_iletisim?.telefon) });
     });
 
   const hesapSil = () =>
     islem(async () => {
-      if (!window.confirm("Hesap bu öğrenciden ayrılacak. Başka öğrenciye bağlı değilse giriş kapatılır. Devam edilsin mi?")) return;
+      if (!(await onayla({ baslik: "Hesabı ayır", mesaj: "Hesap bu öğrenciden ayrılacak. Başka öğrenciye bağlı değilse giriş kapatılır. Devam edilsin mi?", onayYazisi: "Ayır", tehlikeli: true }))) return;
       setHesapBilgi(null);
       setO(await hesapKaldir(id));
     });
@@ -134,7 +136,7 @@ export default function OgrenciDetay() {
 
   const fotoKaldir = () =>
     islem(async () => {
-      if (!window.confirm("Fotoğraf silinsin mi?")) return;
+      if (!(await onayla({ baslik: "Fotoğrafı sil", mesaj: "Fotoğraf silinsin mi?", onayYazisi: "Sil", tehlikeli: true }))) return;
       await fotoSil(id);
       setO(await ogrenciGetir(id));
       setSurum((s) => s + 1);

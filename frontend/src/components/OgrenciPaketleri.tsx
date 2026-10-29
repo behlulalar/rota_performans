@@ -11,6 +11,7 @@ import { birincilDugme, dugme, girdi, rozetBasari, rozetBirincil, rozetHata, roz
 import Kart from "./Kart";
 import Modal from "./Modal";
 import OdemeAlPenceresi from "./OdemeAlPenceresi";
+import { useOnay } from "../components/OnayPenceresi";
 
 const DURUM_ROZET: Record<PaketDurum, string> = {
   odeme_bekliyor: rozetUyari,
@@ -123,6 +124,7 @@ function GeriAlPenceresi({ odemeId, onKapat, onTamam }: { odemeId: string; onKap
 }
 
 export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: { ogrenciId: string; aktif: boolean; onOdemeDegisti?: () => void }) {
+  const onayla = useOnay();
   const [liste, setListe] = useState<OgrenciPaketi[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [surum, setSurum] = useState(0);
@@ -156,7 +158,7 @@ export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: {
   }
 
   async function iptalEt(p: OgrenciPaketi) {
-    if (!window.confirm(`"${p.paket_adi}" paketi iptal edilsin mi?`)) return;
+    if (!(await onayla({ baslik: "Paketi iptal et", mesaj: `"${p.paket_adi}" paketi iptal edilsin mi?`, onayYazisi: "İptal et", tehlikeli: true }))) return;
     setMesgul(true);
     setHata(null);
     try {
