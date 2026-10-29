@@ -1,14 +1,9 @@
+import amblem from "../assets/logo-amblem.png";
+
 /**
- * Marka işareti. Kulübün gerçek logosu gelince yalnızca bu dosya değişir:
- * `RP` yerine görsel konur, tüm ekranlar (giriş, üst çubuk, menü) kendiliğinden güncellenir.
+ * Kulüp amblemi (kanatlı R ve pusula). Şeffaf altın PNG olduğundan siyah marka çubuğu üzerinde kullanılır.
+ * `sinif` yüksekliği belirler, genişlik oranla uyar.
  */
-export default function Logo({ sinif = "size-9 text-xs" }: { sinif?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`${sinif} shrink-0 rounded-[8px] bg-serit border border-altin grid place-items-center text-altin font-semibold tracking-wider`}
-    >
-      RP
-    </span>
-  );
+export default function Logo({ sinif = "h-11" }: { sinif?: string }) {
+  return <img src={amblem} alt="" aria-hidden="true" className={`${sinif} w-auto shrink-0 select-none`} draggable={false} />;
 }
