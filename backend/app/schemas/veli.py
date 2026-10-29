@@ -47,6 +47,8 @@ class CocukOzet(BaseModel):
     ders_hakki: DersHakkiDetay
     siradaki_ders: VeliDers | None
     odeme_bekleyen: int
+    # Ödenmiş paket var ama kalan ders kalmadı: veliye "ders hakkınız bitti" uyarısı çıkar.
+    ders_hakki_bitti: bool = False
 
 
 class VeliOdeme(BaseModel):

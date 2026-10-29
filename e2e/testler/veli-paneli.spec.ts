@@ -38,6 +38,8 @@ test.describe("Veli paneli", () => {
     await odemeAlAPI(page, token, opId);
     await page.reload();
     await expect(page.getByRole("status").filter({ hasText: "Ödemesi bekleyen paket var" })).toHaveCount(0);
+    // Dersler yüklendi, hakkı bitmiş değil.
+    await expect(page.getByRole("status").filter({ hasText: "Ders hakkınız bitti" })).toHaveCount(0);
     await expect(page.getByRole("tab", { name: "Paket ve ödemeler" })).toHaveAttribute("aria-selected", "true"); // sekme yenilemede korunur
     await expect(page.getByText("Ödendi", { exact: true })).toBeVisible();
     await expect(page.getByText("Nakit")).toBeVisible();

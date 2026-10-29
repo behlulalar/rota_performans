@@ -208,6 +208,21 @@ async def test_ders_ozeti_geri_alinan_kayitlari_saymaz(istemci):
     }
 
 
+async def test_ders_hakki_bitti_uyarisi(istemci):
+    k, o = await veli_ve_cocuk()
+    b = await baslik(istemci)
+    liste = lambda: istemci.get("/api/benim/cocuklar", headers=b)  # noqa: E731
+    assert (await liste()).json()[0]["ders_hakki_bitti"] is False  # hiç paket yok
+    await paket_ata(o, OgrenciPaketiDurum.odeme_bekliyor, odeme=False)
+    assert (await liste()).json()[0]["ders_hakki_bitti"] is False  # yalnız ödeme bekleyen paket
+    await paket_ata(o)  # ödenmiş paket, hiç ders yüklenmemiş: kalan 0
+    assert (await liste()).json()[0]["ders_hakki_bitti"] is True
+    await kaydet(DersHakkiHareketi(ogrenci_id=o.id, sayac=Sayac.normal, miktar=4, tur=HareketTuru.paket_yuklemesi))
+    assert (await liste()).json()[0]["ders_hakki_bitti"] is False
+    await kaydet(DersHakkiHareketi(ogrenci_id=o.id, sayac=Sayac.normal, miktar=-4, tur=HareketTuru.ders_kullanimi))
+    assert (await liste()).json()[0]["ders_hakki_bitti"] is True
+
+
 async def test_foto_yok_404_ve_baskasinin_fotosu_404(istemci):
     k, o = await veli_ve_cocuk()
     k2, o2 = await veli_ve_cocuk("+905559998877", ad="Baska")

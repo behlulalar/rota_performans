@@ -34,6 +34,7 @@ function CocukKarti({ c }: { c: CocukOzet }) {
               </span>
             ))}
             {c.odeme_bekleyen > 0 && <span className={rozetUyari}>Ödeme bekliyor</span>}
+            {c.ders_hakki_bitti && <span className={rozetUyari}>Ders hakkı bitti</span>}
           </div>
         </div>
       </div>

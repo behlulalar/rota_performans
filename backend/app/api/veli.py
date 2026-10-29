@@ -143,6 +143,16 @@ async def _ozetler(session: AsyncSession, cocuklar: list[Ogrenci]) -> list[Cocuk
             )
         ).all()
     )
+    odenmis = {
+        i
+        for (i,) in (
+            await session.execute(
+                select(OgrenciPaketi.ogrenci_id)
+                .where(OgrenciPaketi.ogrenci_id.in_(idler), OgrenciPaketi.durum == OgrenciPaketiDurum.odendi)
+                .distinct()
+            )
+        ).all()
+    }
     bakiyeler = await ders_hakki.bakiyeler(session, idler)
     sonuc = []
     for c in cocuklar:
@@ -156,6 +166,7 @@ async def _ozetler(session: AsyncSession, cocuklar: list[Ogrenci]) -> list[Cocuk
                 ders_hakki={**bakiyeler[c.id], "kullanilabilir_telafi": await ders_hakki.kullanilabilir_telafi(session, c.id)},
                 siradaki_ders=siradaki[0] if siradaki else None,
                 odeme_bekleyen=bekleyen.get(c.id, 0),
+                ders_hakki_bitti=c.id in odenmis and bakiyeler[c.id]["normal"] <= 0,
             )
         )
     return sonuc

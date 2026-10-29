@@ -23,6 +23,7 @@ export type CocukOzet = {
   ders_hakki: { normal: number; telafi: number; kullanilabilir_telafi: number };
   siradaki_ders: VeliDers | null;
   odeme_bekleyen: number;
+  ders_hakki_bitti: boolean;
 };
 
 export type VeliPaket = {

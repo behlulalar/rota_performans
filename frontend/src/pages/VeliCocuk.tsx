@@ -165,6 +165,12 @@ export default function VeliCocuk() {
         </p>
       )}
 
+      {c.ders_hakki_bitti && (
+        <p role="status" className={`${uyariKutusu} mb-5`}>
+          <span className="font-semibold">Ders hakkınız bitti.</span> Derslere devam edebilmek için lütfen kulüple iletişime geçip yeni paket alın.
+        </p>
+      )}
+
       <div className="grid grid-cols-3 gap-2 md:gap-4">
         <div className="bg-yuzey border border-cizgi rounded-[14px] px-3 py-4 md:p-5 min-w-0">
           <div className="text-[12px] md:text-[11px] font-semibold md:uppercase md:tracking-[0.12em] text-metin-soluk leading-4">Kalan ders</div>
@@ -191,9 +197,6 @@ export default function VeliCocuk() {
           )}
         </div>
       </div>
-      {(h.normal < 0 || h.telafi < 0) && (
-        <p className="mt-3 text-[13px] text-metin-soluk">Negatif değer, paketle yüklenen dersten fazla ders işlendiğini gösterir (paket henüz yüklenmemiş ya da bitmiş olabilir). Ayrıntı için lütfen kulüple iletişime geçin.</p>
-      )}
 
       <div role="tablist" aria-label="Öğrenci bölümleri" className="mt-6 -mx-4 px-4 md:mx-0 md:px-0 flex gap-1 overflow-x-auto border-b border-cizgi">
         {SEKMELER.map((t) => {
