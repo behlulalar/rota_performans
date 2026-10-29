@@ -158,6 +158,7 @@ class ResitUyari(BaseModel):
     yas: int
     birincil_rol: IletisimRolu | None
     veli_hesabi_var: bool
+    telefon: str | None = None
 
 
 class ResitGecisiGirdi(BaseModel):

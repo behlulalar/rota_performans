@@ -425,7 +425,7 @@ async def resit_uyarilari(_: Kullanici = Yonetici, session: AsyncSession = Depen
     return [
         ResitUyari(
             id=o.id, ad=o.ad, soyad=o.soyad, yas=_yas(o.dogum_tarihi),
-            birincil_rol=b.rol if b else None, veli_hesabi_var=b is not None and b.kullanici_id is not None,
+            birincil_rol=b.rol if b else None, veli_hesabi_var=b is not None and b.kullanici_id is not None, telefon=o.telefon,
         )
         for o, b in satirlar.all()
         if _yas(o.dogum_tarihi) >= 18 and (b is None or b.rol != IletisimRolu.kendisi)
@@ -903,8 +903,8 @@ async def resit_gecisi(
         session.add(kendisi)
     kendisi.ad_soyad = ad_soyad
     kendisi.telefon = telefon
-    if not ogrenci.telefon:
-        ogrenci.telefon = telefon
+    # Öğrencinin kişisel bilgilerindeki telefon ile iletişim telefonu hep aynı kalır.
+    ogrenci.telefon = telefon
     kendisi.birincil = True
     kendisi.whatsapp_izni = whatsapp_riza
     await audit.kaydet(

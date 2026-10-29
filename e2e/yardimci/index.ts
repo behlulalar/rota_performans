@@ -11,7 +11,7 @@ export const test = temel.extend({
   page: async ({ page }, kullan) => {
     await page.addLocatorHandler(page.locator("[data-onay-penceresi]"), async (pencere) => {
       await pencere.getByRole("button").last().click();
-    });
+    }, { noWaitAfter: true }); // art arda iki onay penceresi çıkabilir
     await kullan(page);
   },
 });

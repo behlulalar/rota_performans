@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { resitGecisiYap, type OgrenciDetay } from "../api/ogrenci";
 import { hataMesaji } from "../lib/dogrulama";
 import TelefonGirdisi from "./TelefonGirdisi";
-import { apiyeCevir, gecerliMi, TELEFON_HATA } from "../lib/telefon";
+import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
 import { girdi, birincilDugme } from "../lib/stil";
 import { useOnay } from "../components/OnayPenceresi";
 
@@ -12,12 +12,12 @@ export default function ResitGecisi({
   onKapat,
   onTamam,
 }: {
-  ogrenci: { id: string; ad: string; soyad: string };
+  ogrenci: { id: string; ad: string; soyad: string; telefon: string | null };
   onKapat: () => void;
   onTamam: (detay: OgrenciDetay) => void;
 }) {
   const onayla = useOnay();
-  const [telefon, setTelefon] = useState("");
+  const [telefon, setTelefon] = useState(rakamlaraCevir(ogrenci.telefon));
   const [adSoyad, setAdSoyad] = useState(`${ogrenci.ad} ${ogrenci.soyad}`);
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
@@ -27,6 +27,15 @@ export default function ResitGecisi({
     if (!telefon) return setHata("Öğrencinin telefonu zorunludur.");
     if (!gecerliMi(telefon)) return setHata(TELEFON_HATA);
     if (!(await onayla({ baslik: "Reşit geçişi", mesaj: "Reşit geçişi yapılsın mı? Velinin bu öğrenciye panel erişimi kapanır.", onayYazisi: "Geçişi yap" }))) return;
+    if (ogrenci.telefon && apiyeCevir(telefon) !== ogrenci.telefon) {
+      const onay = await onayla({
+        baslik: "Telefon değişecek",
+        mesaj: `Girdiğiniz telefon kayıtlı telefondan (${bicimle(ogrenci.telefon)}) farklı. Devam ederseniz öğrencinin kişisel bilgilerindeki ve iletişim telefonu ${bicimle(apiyeCevir(telefon))} olarak değişir. Emin misiniz?`,
+        onayYazisi: "Telefonu değiştir",
+        tehlikeli: true,
+      });
+      if (!onay) return;
+    }
     setGonderiliyor(true);
     setHata(null);
     try {

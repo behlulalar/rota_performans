@@ -232,6 +232,7 @@ async def test_resit_gecisi(istemci, yonetici):
     assert kendisi["whatsapp_izni"] is True
     assert (await login(istemci, SADE, veli_sifre)).status_code == 401  # eski veli hesabı pasif
     assert not d["uyarilar"]
+    assert d["telefon"] == "+905329998877"  # kişisel bilgilerdeki telefon da iletişimle aynı
 
     h = await hesap_ac(istemci, yonetici, o["id"])
     assert h.status_code == 200 and h.json()["giris"] == "+905329998877"

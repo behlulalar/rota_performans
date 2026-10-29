@@ -99,6 +99,7 @@ export type ResitUyarisi = {
   yas: number;
   birincil_rol: string | null;
   veli_hesabi_var: boolean;
+  telefon: string | null;
 };
 
 export const hesapAc = (id: string, giris?: string) =>

@@ -118,4 +118,49 @@ test.describe("Öğrenci kaydı", () => {
     await telefon.pressSequentially("90 532 123 45 67 89");
     await expect(telefon).toHaveValue("9053212345");
   });
+
+  test("reşit geçişinde telefon kayıttan gelir; farklı numara girilirse kişisel bilgilerdeki telefon da değişir", async ({ page }) => {
+    const token = await yoneticiApiGirisi(page);
+    const k = benzersiz();
+    const kayitli = "+90" + telefonUret10();
+    const yeni10 = telefonUret10();
+    const yanit = await page.request.post("/api/ogrenciler", {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        ad: `Resit${k}`,
+        soyad: `Gecis${k}`,
+        dogum_tarihi: "2015-01-01",
+        kimlik_tur: "tc",
+        kimlik_no: tcUret(),
+        telefon: kayitli,
+        iletisim_kisileri: [{ rol: "diger", ad_soyad: `Veli ${k}`, telefon: "+90" + telefonUret10(), birincil: true }],
+        rizalar: { aydinlatma: true, foto: false, whatsapp: false },
+      },
+    });
+    expect(yanit.status(), await yanit.text()).toBe(201);
+    const { id } = (await yanit.json()) as { id: string };
+    // Çocuk 18'e girmiş gibi: birincil kişi veli kalır, reşit uyarısı çıkar.
+    const guncel = await page.request.patch(`/api/ogrenciler/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { dogum_tarihi: "2000-01-01" },
+    });
+    expect(guncel.status(), await guncel.text()).toBe(200);
+
+    await page.goto(`/ogrenciler/${id}`);
+    await page.getByRole("button", { name: "Reşit geçişi yap" }).click();
+    const pencere = page.getByRole("dialog", { name: "Reşit geçişi" });
+    const kutu = pencere.getByLabel("Öğrencinin telefonu");
+    await expect(kutu).toHaveValue(kayitli.slice(3));
+
+    await kutu.fill(yeni10);
+    await pencere.getByRole("button", { name: "Geçişi yap" }).click();
+    await expect(pencere).toBeHidden();
+
+    const detay = (await (await page.request.get(`/api/ogrenciler/${id}`, { headers: { Authorization: `Bearer ${token}` } })).json()) as {
+      telefon: string;
+      birincil_iletisim: { telefon: string };
+    };
+    expect(detay.telefon).toBe("+90" + yeni10);
+    expect(detay.birincil_iletisim.telefon).toBe("+90" + yeni10);
+  });
 });
