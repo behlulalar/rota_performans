@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import bildirim
 from app.models.program import DersOturumu, OturumDurum, TelafiPlani
 from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, Yoklama, YoklamaDurum
 
@@ -137,6 +138,7 @@ async def yoklama_olustur(
     await session.flush()
     _durumun_etkisi(session, yoklama, simdi)
     await session.flush()
+    await bildirim.yoklama_isaretlendi(session, yoklama, simdi)
     return yoklama
 
 
@@ -152,11 +154,15 @@ async def yoklama_uygula(
         return
     yoklama.isaretleyen_id = isaretleyen_id
     await _acik_hareketleri_iptal_et(session, yoklama)
+    # Eski durum gelmedi ise bekleyen devamsızlık bildirimi geri alınır (gönderilmiş olana dokunulmaz).
+    if yoklama.durum == YoklamaDurum.gelmedi:
+        await bildirim.gelmedi_iptal_et(session, yoklama.id)
     yoklama.surum += 1
     yoklama.durum = yeni_durum
     yoklama.zaman = simdi
     _durumun_etkisi(session, yoklama, simdi)
     await session.flush()
+    await bildirim.yoklama_isaretlendi(session, yoklama, simdi)
 
 
 async def bekleyen_devamsizliklari_isle(session: AsyncSession, simdi: datetime) -> int:
@@ -175,12 +181,16 @@ async def bekleyen_devamsizliklari_isle(session: AsyncSession, simdi: datetime) 
         )
     ).scalars().all()
     yazilan = 0
+    hakki_dusenler = []
     for y in bekleyenler:
         # Süre içinde düzeltildiyse (artık gelmedi değilse) hak doğmaz.
         if y.durum == YoklamaDurum.gelmedi and not y.telafi_mi:
             session.add(_hareket(y, Sayac.normal, -1, HareketTuru.devamsizlik))
             session.add(_hareket(y, Sayac.telafi, 1, HareketTuru.devamsizlik))
             yazilan += 1
+            hakki_dusenler.append(y)
         y.hareket_islendi = True
     await session.flush()
+    for y in hakki_dusenler:
+        await bildirim.bakiye_olaylari(session, y.ogrenci_id, y.id, simdi)
     return yazilan

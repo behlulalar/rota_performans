@@ -1,5 +1,5 @@
 from app.models.base import Base
-from app.models.bildirim import Bildirim, BildirimDurum, BildirimKanal, PushAbonelik
+from app.models.bildirim import Bildirim, BildirimDurum, BildirimKanal, BildirimTercihi, PushAbonelik
 from app.models.kullanici import DenetimKaydi, Kullanici, Oturum, Rol
 from app.models.ogrenci import (
     Cinsiyet,
@@ -21,6 +21,7 @@ __all__ = [
     "Bildirim",
     "BildirimDurum",
     "BildirimKanal",
+    "BildirimTercihi",
     "Cinsiyet",
     "DenetimKaydi",
     "DersHakkiHareketi",

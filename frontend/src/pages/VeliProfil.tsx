@@ -1,5 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { profilGetir, profilGuncelle, sifreDegistir, type Profil } from "../api/veli";
+import {
+  bildirimTercihleriGetir,
+  bildirimTercihleriKaydet,
+  profilGetir,
+  profilGuncelle,
+  sifreDegistir,
+  type BildirimTercihYaniti,
+  type BildirimTercihleri,
+  type Profil,
+} from "../api/veli";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import TelefonGirdisi from "../components/TelefonGirdisi";
@@ -59,6 +68,91 @@ function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil
         )}
         <button type="submit" disabled={mesgul} className={birincilDugme}>
           {mesgul ? "Kaydediliyor…" : "Bilgileri kaydet"}
+        </button>
+      </form>
+    </Kart>
+  );
+}
+
+const TERCIH_SATIRLARI: { anahtar: keyof BildirimTercihleri; etiket: string }[] = [
+  { anahtar: "ders_gelmedi", etiket: "Devamsızlık bildirimi" },
+  { anahtar: "ders_hakki", etiket: "Ders hakkı hatırlatmaları" },
+  { anahtar: "whatsapp", etiket: "WhatsApp ile" },
+  { anahtar: "push", etiket: "Uygulama bildirimi (push)" },
+];
+
+function BildirimFormu() {
+  const [tercih, setTercih] = useState<BildirimTercihYaniti | null>(null);
+  const [hata, setHata] = useState<string | null>(null);
+  const [tamam, setTamam] = useState(false);
+  const [mesgul, setMesgul] = useState(false);
+
+  useEffect(() => {
+    let iptal = false;
+    bildirimTercihleriGetir()
+      .then((t) => !iptal && setTercih(t))
+      .catch((e) => !iptal && setHata(hataMesaji(e)));
+    return () => {
+      iptal = true;
+    };
+  }, []);
+
+  async function gonder(e: FormEvent) {
+    e.preventDefault();
+    if (!tercih) return;
+    setTamam(false);
+    setMesgul(true);
+    setHata(null);
+    try {
+      const { ders_gelmedi, ders_hakki, whatsapp, push } = tercih;
+      setTercih(await bildirimTercihleriKaydet({ ders_gelmedi, ders_hakki, whatsapp, push }));
+      setTamam(true);
+    } catch (err) {
+      setHata(hataMesaji(err));
+    } finally {
+      setMesgul(false);
+    }
+  }
+
+  return (
+    <Kart baslik="Bildirimler" aciklama="Hangi bildirimleri, hangi yoldan almak istediğiniz">
+      <form onSubmit={gonder} className="space-y-3 max-w-md">
+        {tercih && (
+          <>
+            {TERCIH_SATIRLARI.map(({ anahtar, etiket }) => (
+              <label key={anahtar} className="flex items-center gap-3 min-h-11 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-4"
+                  checked={tercih[anahtar]}
+                  onChange={(e) => {
+                    setTamam(false);
+                    setTercih({ ...tercih, [anahtar]: e.target.checked });
+                  }}
+                />
+                {etiket}
+              </label>
+            ))}
+            {!tercih.whatsapp_izni_var && (
+              <p className="text-xs text-metin-soluk">
+                WhatsApp mesajları için kulübün iletişim izninizi kaydetmiş olması gerekir. İzin verilmediği sürece
+                WhatsApp mesajı gönderilmez.
+              </p>
+            )}
+          </>
+        )}
+        {hata && (
+          <p role="alert" className="text-[13px] text-hata">
+            {hata}
+          </p>
+        )}
+        {tamam && (
+          <p role="status" className={basariKutusu}>
+            Bildirim tercihleriniz kaydedildi.
+          </p>
+        )}
+        <button type="submit" disabled={mesgul || !tercih} className={birincilDugme}>
+          {mesgul ? "Kaydediliyor…" : "Tercihleri kaydet"}
         </button>
       </form>
     </Kart>
@@ -151,6 +245,7 @@ export default function VeliProfil() {
       {profil && (
         <div className="grid gap-4 lg:grid-cols-2 items-start">
           <BilgiFormu profil={profil} onKaydet={setProfil} />
+          <BildirimFormu />
           <SifreFormu />
         </div>
       )}

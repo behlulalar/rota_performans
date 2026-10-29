@@ -14,6 +14,7 @@ from app import telefon as telefon_modulu
 from app.db import get_session
 from app.depolama import depolama
 from app.deps import rol_gerekli
+from app.models.bildirim import BildirimTercihi
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import IletisimKisisi, Ogrenci
 from app.models.paket import Odeme, OgrenciPaketi, OgrenciPaketiDurum, Paket
@@ -21,6 +22,8 @@ from app.models.program import DersOturumu, Grup, GrupProgrami, OgrenciGrup, Otu
 from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, Yoklama
 from app.oturumlar import bugun
 from app.schemas.veli import (
+    BildirimTercihleri,
+    BildirimTercihYaniti,
     CocukDetay,
     CocukOzet,
     DersOzeti,
@@ -377,3 +380,52 @@ async def profil_guncelle(
     )
     await session.commit()
     return Profil(giris=kullanici.giris, rol=kullanici.rol, ad_soyad=govde.ad_soyad, telefon=telefon)
+
+
+# ---------- bildirim tercihleri ----------
+
+
+async def _tercih_yaniti(session: AsyncSession, kullanici: Kullanici, t: BildirimTercihi | None) -> BildirimTercihYaniti:
+    izin = (
+        await session.execute(
+            select(IletisimKisisi.id)
+            .where(IletisimKisisi.kullanici_id == kullanici.id, IletisimKisisi.whatsapp_izni.is_(True))
+            .limit(1)
+        )
+    ).first()
+    # Kayıt yoksa varsayılanlar (hepsi açık) döner.
+    return BildirimTercihYaniti(
+        ders_gelmedi=t.ders_gelmedi if t else True,
+        ders_hakki=t.ders_hakki if t else True,
+        whatsapp=t.whatsapp if t else True,
+        push=t.push if t else True,
+        whatsapp_izni_var=izin is not None,
+    )
+
+
+@router.get("/bildirim-tercihleri", response_model=BildirimTercihYaniti)
+async def bildirim_tercihleri(kullanici: Kullanici = Veli, session: AsyncSession = Depends(get_session)):
+    return await _tercih_yaniti(session, kullanici, await session.get(BildirimTercihi, kullanici.id))
+
+
+@router.put("/bildirim-tercihleri", response_model=BildirimTercihYaniti)
+async def bildirim_tercihleri_kaydet(
+    govde: BildirimTercihleri,
+    request: Request,
+    kullanici: Kullanici = Veli,
+    session: AsyncSession = Depends(get_session),
+):
+    t = await session.get(BildirimTercihi, kullanici.id)
+    if t is None:
+        t = BildirimTercihi(kullanici_id=kullanici.id)
+        session.add(t)
+    for alan, deger in govde.model_dump().items():
+        setattr(t, alan, deger)
+    t.guncelleme = func.now()
+    await audit.kaydet(
+        session, "bildirim_tercihi_guncellendi", kullanici_id=kullanici.id, hedef_tur="kullanici",
+        hedef_id=str(kullanici.id), ip=_ip(request), detay=govde.model_dump(),
+    )
+    await session.commit()
+    await session.refresh(t)
+    return await _tercih_yaniti(session, kullanici, t)

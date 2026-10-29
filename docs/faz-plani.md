@@ -116,7 +116,7 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 ### Faz 4: Bildirimler (24 – 28 Kas)
 - [ ] Web Push (VAPID), cihaz kaydı, bildirim ayarları
 - [ ] WhatsApp kuyruğu, ban korumaları, geri alma penceresi
-- [ ] Bildirimler yalnızca birincil iletişim kişisine
+- [x] Bildirimler yalnızca birincil iletişim kişisine
 - [x] PWA kurulumu (manifest, simge, ana ekrana ekleme yönlendirmesi)
 
 ### Faz 5: Test, güvenlik ve yayına alma (27 Kas – 30 Kas)

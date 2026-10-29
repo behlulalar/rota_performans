@@ -112,3 +112,17 @@ class ProfilGuncelle(BaseModel):
 
     ad_soyad: Baslik = Field(min_length=1, max_length=200)
     telefon: str = Field(min_length=1, max_length=40)
+
+
+class BildirimTercihleri(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ders_gelmedi: bool = True
+    ders_hakki: bool = True
+    whatsapp: bool = True
+    push: bool = True
+
+
+class BildirimTercihYaniti(BildirimTercihleri):
+    # Hesaba bağlı kişilerden en az birinde WhatsApp izni var mı (arayüz notu için).
+    whatsapp_izni_var: bool

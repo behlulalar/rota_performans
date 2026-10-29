@@ -89,6 +89,30 @@ test.describe("Veli paneli", () => {
     await expect(page).toHaveURL(/\/panel\/cocuk\//);
   });
 
+  test("veli bildirim tercihlerini kaydeder", async ({ page }) => {
+    const token = await yoneticiApiGirisi(page);
+    const ogr = await ogrenciOlusturAPI(page, token, "Tercih");
+    const gecici = await veliHesabiAc(page, token, ogr.id);
+    await page.context().clearCookies();
+    await arayuzdenGiris(page, telefonBosluklu(ogr.telefon), gecici);
+    await zorunluSifreyiBelirle(page, gecici);
+    await page.getByRole("link", { name: "Profil" }).first().click();
+
+    const devamsizlik = page.getByLabel("Devamsızlık bildirimi");
+    await expect(devamsizlik).toBeChecked();
+    await expect(page.getByText("kulübün iletişim izninizi kaydetmiş olması gerekir")).toBeVisible();
+    await devamsizlik.uncheck();
+    await page.getByLabel("Uygulama bildirimi (push)").uncheck();
+    await page.getByRole("button", { name: "Tercihleri kaydet" }).click();
+    await expect(page.getByText("Bildirim tercihleriniz kaydedildi.")).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByLabel("Devamsızlık bildirimi")).not.toBeChecked();
+    await expect(page.getByLabel("Uygulama bildirimi (push)")).not.toBeChecked();
+    await expect(page.getByLabel("Ders hakkı hatırlatmaları")).toBeChecked();
+    await expect(page.getByLabel("WhatsApp ile")).toBeChecked();
+  });
+
   test("veli yönetici sayfalarına giremez", async ({ page }) => {
     const token = await yoneticiApiGirisi(page);
     const ogr = await ogrenciOlusturAPI(page, token, "Yetki");

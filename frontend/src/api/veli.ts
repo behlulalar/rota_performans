@@ -70,3 +70,10 @@ export const sifreDegistir = (mevcut: string, yeni: string) =>
     method: "POST",
     body: JSON.stringify({ mevcut_sifre: mevcut, yeni_sifre: yeni }),
   });
+
+export type BildirimTercihleri = { ders_gelmedi: boolean; ders_hakki: boolean; whatsapp: boolean; push: boolean };
+export type BildirimTercihYaniti = BildirimTercihleri & { whatsapp_izni_var: boolean };
+
+export const bildirimTercihleriGetir = () => api<BildirimTercihYaniti>("/api/benim/bildirim-tercihleri");
+export const bildirimTercihleriKaydet = (g: BildirimTercihleri) =>
+  api<BildirimTercihYaniti>("/api/benim/bildirim-tercihleri", { method: "PUT", body: JSON.stringify(g) });

@@ -4,6 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -88,3 +89,19 @@ class PushAbonelik(Base):
     cihaz: Mapped[str | None] = mapped_column(String(255))
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     son_kullanim: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BildirimTercihi(Base):
+    """Veli/öğrenci hesabının bildirim tercihleri. Satır yoksa hepsi açıktır.
+    Tercih hesaba aittir: kardeşlerin hepsi için geçerlidir."""
+
+    __tablename__ = "bildirim_tercihi"
+
+    kullanici_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="CASCADE"), primary_key=True
+    )
+    whatsapp: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    push: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    ders_gelmedi: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    ders_hakki: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    guncelleme: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
