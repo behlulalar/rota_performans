@@ -43,6 +43,12 @@ test.describe("Öğrenci kaydı", () => {
     await page.getByLabel(/WhatsApp ile bilgilendirme/).check();
 
     await page.locator('input[type="file"]').setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: KUCUK_PNG });
+    // Seçilen fotoğraf önce kırpma penceresinde ayarlanır.
+    const kirpma = page.getByRole("dialog", { name: "Fotoğrafı ayarla" });
+    await expect(kirpma).toBeVisible();
+    await kirpma.getByRole("slider", { name: "Yakınlaştırma" }).fill("2");
+    await kirpma.getByRole("button", { name: "Kaydet" }).click();
+    await expect(kirpma).toBeHidden();
     await expect(page.getByAltText("Seçilen fotoğraf önizlemesi")).toBeVisible();
 
     await page.getByRole("button", { name: "Kaydet" }).click();
@@ -53,6 +59,18 @@ test.describe("Öğrenci kaydı", () => {
     // Fotoğraf yüklendiği için "Değiştir" düğmesi görünür; yükleme uyarısı yok.
     await expect(page.getByRole("button", { name: "Değiştir" })).toBeVisible();
     await expect(page.getByRole("status")).toHaveCount(0);
+
+    // Kayıtlı fotoğraf "Ayarla" ile yeniden kaydırılıp kırpılabilir.
+    await page.getByRole("button", { name: "Ayarla" }).click();
+    const ayar = page.getByRole("dialog", { name: "Fotoğrafı ayarla" });
+    await expect(ayar).toBeVisible();
+    const alan = ayar.getByRole("group", { name: /Fotoğraf kırpma alanı/ });
+    await ayar.getByRole("slider", { name: "Yakınlaştırma" }).fill("3");
+    await alan.focus();
+    await page.keyboard.press("ArrowLeft");
+    await ayar.getByRole("button", { name: "Kaydet" }).click();
+    await expect(ayar).toBeHidden();
+    await expect(page.getByRole("button", { name: "Değiştir" })).toBeVisible();
     await expect(page.getByText("Anne adı")).toBeVisible();
 
     // Maskeli kimlik; tam numara yok

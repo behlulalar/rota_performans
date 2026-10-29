@@ -10,7 +10,8 @@ import ResitGecisi from "../components/ResitGecisi";
 import DurumRozeti from "../components/DurumRozeti";
 import OgrenciFoto from "../components/OgrenciFoto";
 import { hataMesaji, ROL_ETIKET, tarihBicimle } from "../lib/dogrulama";
-import { fotoKucult } from "../lib/fotoKucult";
+import FotoKirpma from "../components/FotoKirpma";
+import { apiBlob } from "../lib/api";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { bilgiKutusu, dugme, girdi, rozetBasari, rozetBirincil, rozetNotr, secimKutusu, tehlikeKutusu, uyariKutusu } from "../lib/stil";
@@ -33,6 +34,7 @@ export default function OgrenciDetay() {
   const [hata, setHata] = useState<string | null>(null);
   const bilgi = (konum.state as { uyari?: string } | null)?.uyari ?? null;
   const [kimlik, setKimlik] = useState<string | null>(null);
+  const [kirpilacak, setKirpilacak] = useState<Blob | null>(null);
   const [surum, setSurum] = useState(0);
   const [hakSurum, setHakSurum] = useState(0);
   const [mesgul, setMesgul] = useState(false);
@@ -126,13 +128,25 @@ export default function OgrenciDetay() {
       setO(await hesapKaldir(id));
     });
 
-  const fotoDegistir = (dosya: File | undefined) =>
+  const fotoSec = (dosya: File | undefined) => {
+    if (!dosya) return;
+    if (!dosya.type.startsWith("image/")) return setHata("Lütfen bir görsel dosyası seçin.");
+    setHata(null);
+    setKirpilacak(dosya);
+  };
+
+  // Kayıtlı fotoğrafı (yüklenirken kare kırpılmamış olabilir) yeniden konumlandırmak için büyük boyutu açar.
+  const fotoAyarla = () =>
     islem(async () => {
-      if (!dosya) return;
-      await fotoYukle(id, await fotoKucult(dosya));
-      setO(await ogrenciGetir(id));
-      setSurum((s) => s + 1);
+      setKirpilacak(await apiBlob(`/api/ogrenciler/${id}/foto?boyut=buyuk&v=${surum}`));
     });
+
+  const fotoKaydet = async (blob: Blob) => {
+    await fotoYukle(id, blob);
+    setO(await ogrenciGetir(id));
+    setSurum((s) => s + 1);
+    setKirpilacak(null);
+  };
 
   const fotoKaldir = () =>
     islem(async () => {
@@ -187,11 +201,12 @@ export default function OgrenciDetay() {
         <div className="flex flex-col sm:flex-row gap-5">
           <div className="shrink-0">
             <OgrenciFoto id={o.id} fotoVar={o.foto_var} ad={o.ad} soyad={o.soyad} boyut="buyuk" sinif="size-32 rounded-[10px] text-3xl" surum={surum} />
-            <input ref={dosyaGirdisi} type="file" accept="image/*" hidden onChange={(e) => { void fotoDegistir(e.target.files?.[0]); e.target.value = ""; }} />
-            <div className="mt-3 flex gap-2">
+            <input ref={dosyaGirdisi} type="file" accept="image/*" hidden onChange={(e) => { fotoSec(e.target.files?.[0]); e.target.value = ""; }} />
+            <div className="mt-3 flex flex-wrap gap-2">
               <button className={dugme} disabled={mesgul || !fotoRizasi} onClick={() => dosyaGirdisi.current?.click()}>
                 {o.foto_var ? "Değiştir" : "Fotoğraf ekle"}
               </button>
+              {o.foto_var && <button className={dugme} disabled={mesgul || !fotoRizasi} onClick={() => void fotoAyarla()}>Ayarla</button>}
               {o.foto_var && <button className={dugme} disabled={mesgul} onClick={() => void fotoKaldir()}>Sil</button>}
             </div>
             {!fotoRizasi && <p className="mt-2 text-xs text-metin-soluk max-w-36">Fotoğraf rızası olmadığı için fotoğraf eklenemez.</p>}
@@ -345,6 +360,7 @@ export default function OgrenciDetay() {
           onKapat={() => setSifre(null)}
         />
       )}
+      {kirpilacak && <FotoKirpma kaynak={kirpilacak} onKapat={() => setKirpilacak(null)} onTamam={fotoKaydet} />}
       {resitAcik && (
         <ResitGecisi
           ogrenci={o}

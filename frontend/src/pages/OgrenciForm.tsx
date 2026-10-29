@@ -12,7 +12,7 @@ import {
 } from "../api/ogrenci";
 import { ApiHata } from "../lib/api";
 import { hataMesaji, ROL_ETIKET, tcGecerli, yasHesapla } from "../lib/dogrulama";
-import { fotoKucult } from "../lib/fotoKucult";
+import FotoKirpma from "../components/FotoKirpma";
 import Kart from "../components/Kart";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
@@ -53,6 +53,8 @@ export default function OgrenciForm() {
   const [kisiler, setKisiler] = useState<Kisi[]>(() => [yeniKisi("anne", true), yeniKisi("baba"), yeniKisi("diger")]);
   const [rizalar, setRizalar] = useState({ aydinlatma: false, foto: false, whatsapp: false });
   const [foto, setFoto] = useState<Blob | null>(null);
+  const [fotoHam, setFotoHam] = useState<File | null>(null); // seçilen özgün dosya (yeniden ayarlamak için)
+  const [kirpiliyor, setKirpiliyor] = useState(false);
   const [onizleme, setOnizleme] = useState<string | null>(null);
   const [hatalar, setHatalar] = useState<Hatalar>({});
   const [genelHata, setGenelHata] = useState<string | null>(null);
@@ -108,14 +110,15 @@ export default function OgrenciForm() {
     });
   }
 
-  async function fotoSec(dosya: File | undefined) {
+  function fotoSec(dosya: File | undefined) {
     if (!dosya) return;
-    try {
-      setFoto(await fotoKucult(dosya));
-      setHatalar((h) => ({ ...h, foto: "" }));
-    } catch {
+    if (!dosya.type.startsWith("image/")) {
       setHatalar((h) => ({ ...h, foto: "Seçilen dosya işlenemedi. Lütfen bir görsel seçin." }));
+      return;
     }
+    setHatalar((h) => ({ ...h, foto: "" }));
+    setFotoHam(dosya);
+    setKirpiliyor(true);
   }
 
   // Reşitte yalnızca dolu (kısmen dolu dahil) ek kişiler gönderilir; tamamen boş satırlar atlanır.
@@ -348,9 +351,12 @@ export default function OgrenciForm() {
                 {onizleme && <img src={onizleme} alt="Seçilen fotoğraf önizlemesi" className="size-full object-cover" />}
               </div>
               <div>
-                <input type="file" accept="image/*" onChange={(e) => void fotoSec(e.target.files?.[0])} className="text-sm text-metin-soluk file:mr-3 file:rounded-[10px] file:border file:border-cizgi file:bg-yuzey-yuksek file:px-3 file:py-1.5 file:text-metin" />
+                <input type="file" accept="image/*" onChange={(e) => { fotoSec(e.target.files?.[0]); e.target.value = ""; }} className="text-sm text-metin-soluk file:mr-3 file:rounded-[10px] file:border file:border-cizgi file:bg-yuzey-yuksek file:px-3 file:py-1.5 file:text-metin" />
                 {foto && (
-                  <button type="button" onClick={() => setFoto(null)} className="mt-2 block text-sm text-metin-soluk hover:text-hata">Fotoğrafı kaldır</button>
+                  <div className="mt-2 flex gap-4 text-sm">
+                    <button type="button" onClick={() => setKirpiliyor(true)} className="text-metin-soluk hover:text-metin">Konumu ayarla</button>
+                    <button type="button" onClick={() => { setFoto(null); setFotoHam(null); }} className="text-metin-soluk hover:text-hata">Fotoğrafı kaldır</button>
+                  </div>
                 )}
                 {hatalar.foto && <p className="mt-1 text-sm text-hata">{hatalar.foto}</p>}
               </div>
@@ -371,6 +377,13 @@ export default function OgrenciForm() {
           Vazgeç
         </Link>
       </div>
+    {kirpiliyor && fotoHam && (
+        <FotoKirpma
+          kaynak={fotoHam}
+          onKapat={() => { setKirpiliyor(false); if (!foto) setFotoHam(null); }}
+          onTamam={(b) => { setFoto(b); setKirpiliyor(false); }}
+        />
+      )}
     </form>
   );
 }
