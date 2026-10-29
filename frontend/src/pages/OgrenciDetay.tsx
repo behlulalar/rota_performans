@@ -334,7 +334,6 @@ export default function OgrenciDetay() {
             {o.hesap.bagli_ogrenci_sayisi > 1 && (
               <p className="text-metin-soluk">Bu hesap {o.hesap.bagli_ogrenci_sayisi} öğrenciye bağlı (kardeşler).</p>
             )}
-            <p className="text-metin-soluk">Hesap bu öğrenciden ayrılır. Başka öğrenciye bağlı değilse giriş kapatılır.</p>
             <div className="flex flex-wrap gap-2">
               <button className={dugme} disabled={mesgul} onClick={() => void hesapSifirla()}>Şifre sıfırla</button>
               <button className={dugme} disabled={mesgul} onClick={() => void hesapSil()}>Hesabı kaldır</button>
