@@ -14,12 +14,14 @@ function Sure({ p }: { p: Paket }) {
   return <>{p.sure_ay} ay</>;
 }
 
-function YeniPaket({ onKapat, onTamam }: { onKapat: () => void; onTamam: () => void }) {
-  const [ad, setAd] = useState("");
-  const [tur, setTur] = useState<PaketTur>("aylik");
-  const [ders, setDers] = useState("8");
-  const [ay, setAy] = useState("1");
-  const [fiyat, setFiyat] = useState("");
+/** Yeni paket ve paket düzenleme için ortak pencere. `paket` verilirse düzenleme olur. */
+function PaketPenceresi({ paket, onKapat, onTamam }: { paket?: Paket; onKapat: () => void; onTamam: () => void }) {
+  const [ad, setAd] = useState(paket?.ad ?? "");
+  const [tur, setTur] = useState<PaketTur>(paket?.tur ?? "aylik");
+  const [ders, setDers] = useState(String(paket?.ders_sayisi ?? 8));
+  const [ay, setAy] = useState(String(paket?.sure_ay ?? 1));
+  const [fiyat, setFiyat] = useState(paket ? String(Number(paket.varsayilan_fiyat)).replace(".", ",") : "");
+  const [aciklama, setAciklama] = useState(paket?.aciklama ?? "");
   const [hata, setHata] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
 
@@ -33,8 +35,10 @@ function YeniPaket({ onKapat, onTamam }: { onKapat: () => void; onTamam: () => v
     if (!FIYAT_DESENI.test(fiyatNormal(fiyat))) return setHata("Geçerli bir fiyat girin (ör. 3400 veya 3400,50).");
     setMesgul(true);
     setHata(null);
+    const govde = { ad: ad.trim(), tur, ders_sayisi: d, sure_ay: a, varsayilan_fiyat: fiyatNormal(fiyat), aciklama: aciklama.trim() };
     try {
-      await paketOlustur({ ad: ad.trim(), tur, ders_sayisi: d, sure_ay: a, varsayilan_fiyat: fiyatNormal(fiyat) });
+      if (paket) await paketGuncelle(paket.id, govde);
+      else await paketOlustur(govde);
       onTamam();
     } catch (err) {
       setHata(hataMesaji(err));
@@ -43,8 +47,13 @@ function YeniPaket({ onKapat, onTamam }: { onKapat: () => void; onTamam: () => v
   }
 
   return (
-    <Modal baslik="Yeni paket" onKapat={onKapat}>
+    <Modal baslik={paket ? "Paketi düzenle" : "Yeni paket"} onKapat={onKapat}>
       <form onSubmit={gonder} noValidate className="space-y-3">
+        {paket && (
+          <p className="text-sm text-metin-soluk">
+            Değişiklikler yalnız bundan sonraki atamalara uygulanır; öğrencilere daha önce atanmış paketler eski haliyle kalır.
+          </p>
+        )}
         <label className="block"><span className="text-sm text-metin-soluk">Paket adı</span>
           <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} autoFocus /></label>
         <label className="block"><span className="text-sm text-metin-soluk">Tür</span>
@@ -54,7 +63,7 @@ function YeniPaket({ onKapat, onTamam }: { onKapat: () => void; onTamam: () => v
             onChange={(e) => {
               const t = e.target.value as PaketTur;
               setTur(t);
-              setAy(String(VARSAYILAN_AY[t]));
+              if (!paket) setAy(String(VARSAYILAN_AY[t]));
             }}
           >
             {(Object.keys(TUR_ETIKET) as PaketTur[]).map((t) => <option key={t} value={t}>{TUR_ETIKET[t]}</option>)}
@@ -67,44 +76,19 @@ function YeniPaket({ onKapat, onTamam }: { onKapat: () => void; onTamam: () => v
         </div>
         <label className="block"><span className="text-sm text-metin-soluk">Varsayılan fiyat (₺)</span>
           <input className={girdi} inputMode="decimal" value={fiyat} onChange={(e) => setFiyat(e.target.value)} placeholder="3400" /></label>
+        <label className="block"><span className="text-sm text-metin-soluk">Açıklama (isteğe bağlı)</span>
+          <textarea
+            className={`${girdi} min-h-24 resize-y`}
+            rows={3}
+            maxLength={1000}
+            value={aciklama}
+            onChange={(e) => setAciklama(e.target.value)}
+            placeholder="Paketin kapsamı, kuralları ya da notlar"
+          /></label>
         {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
-        <button type="submit" disabled={mesgul} className={birincilDugme}>{mesgul ? "Kaydediliyor…" : "Paketi oluştur"}</button>
-      </form>
-    </Modal>
-  );
-}
-
-function PaketDuzenle({ paket, onKapat, onTamam }: { paket: Paket; onKapat: () => void; onTamam: () => void }) {
-  const [ad, setAd] = useState(paket.ad);
-  const [fiyat, setFiyat] = useState(String(Number(paket.varsayilan_fiyat)).replace(".", ","));
-  const [hata, setHata] = useState<string | null>(null);
-  const [mesgul, setMesgul] = useState(false);
-
-  async function gonder(e: FormEvent) {
-    e.preventDefault();
-    if (ad.trim().length < 2) return setHata("Paket adı en az 2 karakter olmalı.");
-    if (!FIYAT_DESENI.test(fiyatNormal(fiyat))) return setHata("Geçerli bir fiyat girin (ör. 3400 veya 3400,50).");
-    setMesgul(true);
-    setHata(null);
-    try {
-      await paketGuncelle(paket.id, { ad: ad.trim(), varsayilan_fiyat: fiyatNormal(fiyat) });
-      onTamam();
-    } catch (err) {
-      setHata(hataMesaji(err));
-      setMesgul(false);
-    }
-  }
-
-  return (
-    <Modal baslik="Paketi düzenle" onKapat={onKapat}>
-      <form onSubmit={gonder} noValidate className="space-y-3">
-        <p className="text-sm text-metin-soluk">Tür, ders sayısı ve süre sonradan değiştirilemez. Fiyat değişikliği yalnız yeni atamaları etkiler.</p>
-        <label className="block"><span className="text-sm text-metin-soluk">Paket adı</span>
-          <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} autoFocus /></label>
-        <label className="block"><span className="text-sm text-metin-soluk">Varsayılan fiyat (₺)</span>
-          <input className={girdi} inputMode="decimal" value={fiyat} onChange={(e) => setFiyat(e.target.value)} /></label>
-        {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
-        <button type="submit" disabled={mesgul} className={birincilDugme}>{mesgul ? "Kaydediliyor…" : "Kaydet"}</button>
+        <button type="submit" disabled={mesgul} className={birincilDugme}>
+          {mesgul ? "Kaydediliyor…" : paket ? "Kaydet" : "Paketi oluştur"}
+        </button>
       </form>
     </Modal>
   );
@@ -194,7 +178,10 @@ export default function PaketListe() {
               <tbody>
                 {gorunen.map((p) => (
                   <tr key={p.id} className={satir}>
-                    <td className={`${td} font-medium`}>{p.ad}</td>
+                    <td className={`${td} font-medium`}>
+                      {p.ad}
+                      {p.aciklama && <div className="mt-0.5 max-w-md truncate text-[12px] font-normal text-metin-soluk" title={p.aciklama}>{p.aciklama}</div>}
+                    </td>
                     <td className={`${td} text-metin-orta`}>{TUR_ETIKET[p.tur]}</td>
                     <td className={`${td} num`}>{p.ders_sayisi}</td>
                     <td className={`${td} num`}><Sure p={p} /></td>
@@ -215,14 +202,15 @@ export default function PaketListe() {
                 </div>
                 <div className="text-[13px] text-metin-soluk">{TUR_ETIKET[p.tur]} · {p.ders_sayisi} ders · <Sure p={p} /></div>
                 <div className="num font-medium">{paraBicimle(p.varsayilan_fiyat)}</div>
+                {p.aciklama && <p className="text-[13px] text-metin-orta whitespace-pre-line break-words">{p.aciklama}</p>}
                 {eylemler(p)}
               </li>
             ))}
           </ul>
         </>
       )}
-      {yeni && <YeniPaket onKapat={() => setYeni(false)} onTamam={() => { setYeni(false); yenile(); }} />}
-      {duzenlenen && <PaketDuzenle paket={duzenlenen} onKapat={() => setDuzenlenen(null)} onTamam={() => { setDuzenlenen(null); yenile(); }} />}
+      {yeni && <PaketPenceresi onKapat={() => setYeni(false)} onTamam={() => { setYeni(false); yenile(); }} />}
+      {duzenlenen && <PaketPenceresi paket={duzenlenen} onKapat={() => setDuzenlenen(null)} onTamam={() => { setDuzenlenen(null); yenile(); }} />}
     </div>
   );
 }

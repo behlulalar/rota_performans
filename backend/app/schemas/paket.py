@@ -19,14 +19,19 @@ class PaketOlustur(BaseModel):
     ders_sayisi: int = Field(gt=0, le=1000)
     sure_ay: int = Field(gt=0, le=120)
     varsayilan_fiyat: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
+    aciklama: str | None = Field(default=None, max_length=1000)
 
 
 class PaketGuncelle(BaseModel):
-    # ders_sayisi / sure_ay / tur gönderilirse extra=forbid ile 422 döner: geçmiş kayıtlar bozulmaz.
+    # Atanmış paketlere ders sayısı ve fiyat kopyalanır (OgrenciPaketi); bu yüzden tanım değişikliği yalnız yeni atamaları etkiler.
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     ad: str | None = Field(default=None, min_length=1, max_length=100)
+    tur: PaketTuru | None = None
+    ders_sayisi: int | None = Field(default=None, gt=0, le=1000)
+    sure_ay: int | None = Field(default=None, gt=0, le=120)
     varsayilan_fiyat: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
+    aciklama: str | None = Field(default=None, max_length=1000)
     aktif: bool | None = None
 
 
@@ -39,6 +44,7 @@ class PaketYanit(BaseModel):
     ders_sayisi: int
     sure_ay: int
     varsayilan_fiyat: Tutar
+    aciklama: str | None
     aktif: bool
     olusturma: datetime
 

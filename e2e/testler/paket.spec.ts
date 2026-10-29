@@ -70,4 +70,40 @@ test.describe("Paketler", () => {
     await expect(ozel).toContainText("3.000 ₺");
     await expect(ozel).toContainText("Ödeme bekliyor");
   });
+
+  test("paketin tüm alanları ve açıklaması düzenlenir; açıklama isteğe bağlıdır", async ({ page }) => {
+    await yoneticiApiGirisi(page);
+    const ad = `E2E Duzen ${benzersiz()}`;
+
+    // Açıklama boş bırakılarak oluşturulur.
+    await page.goto("/paketler");
+    await page.getByRole("button", { name: "Yeni paket" }).click();
+    const yeni = page.getByRole("dialog", { name: "Yeni paket" });
+    await yeni.getByLabel("Paket adı").fill(ad);
+    await yeni.getByLabel("Varsayılan fiyat").fill("3400");
+    await yeni.getByRole("button", { name: "Paketi oluştur" }).click();
+    const satir = page.getByRole("row").filter({ hasText: ad });
+    await expect(satir).toContainText("3.400 ₺");
+
+    // Ders sayısı, süre, tür, fiyat ve açıklama değişir.
+    await page.getByRole("button", { name: `${ad} düzenle` }).click();
+    const duzen = page.getByRole("dialog", { name: "Paketi düzenle" });
+    await duzen.getByLabel("Tür").selectOption({ label: "3 aylık" });
+    await duzen.getByLabel("Ders sayısı").fill("24");
+    await duzen.getByLabel("Süre (ay)").fill("3");
+    await duzen.getByLabel("Varsayılan fiyat").fill("9000,50");
+    await duzen.getByLabel("Açıklama").fill("Haftada 2 ders, havuz kullanımı dahil");
+    await duzen.getByRole("button", { name: "Kaydet" }).click();
+    await expect(duzen).toBeHidden();
+    await expect(satir).toContainText("24");
+    await expect(satir).toContainText("3 ay");
+    await expect(satir).toContainText("9.000,50 ₺");
+    await expect(satir).toContainText("Haftada 2 ders, havuz kullanımı dahil");
+
+    // Açıklama silinebilir.
+    await page.getByRole("button", { name: `${ad} düzenle` }).click();
+    await page.getByRole("dialog", { name: "Paketi düzenle" }).getByLabel("Açıklama").fill("");
+    await page.getByRole("dialog", { name: "Paketi düzenle" }).getByRole("button", { name: "Kaydet" }).click();
+    await expect(satir).not.toContainText("Haftada 2 ders");
+  });
 });

@@ -66,6 +66,7 @@ function AtamaPenceresi({ ogrenciId, paketler, onKapat, onTamam }: { ogrenciId: 
             {secili.ders_sayisi} ders · {secili.sure_ay} ay · Liste fiyatı <span className="num text-metin font-medium">{paraBicimle(secili.varsayilan_fiyat)}</span>
           </p>
         )}
+        {secili?.aciklama && <p className="rounded-[10px] bg-yuzey-yuksek px-3 py-2 text-[13px] text-metin-orta whitespace-pre-line break-words">{secili.aciklama}</p>}
         <label className="block"><span className="text-sm text-metin-soluk">Başlangıç tarihi</span>
           <input className={girdi} type="date" value={baslangic} onChange={(e) => setBaslangic(e.target.value)} /></label>
         <label className="flex items-center gap-2 min-h-11 text-sm">

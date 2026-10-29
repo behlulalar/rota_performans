@@ -10,6 +10,7 @@ export type Paket = {
   ders_sayisi: number;
   sure_ay: number;
   varsayilan_fiyat: string;
+  aciklama: string | null;
   aktif: boolean;
 };
 
@@ -19,7 +20,10 @@ export type PaketOlustur = {
   ders_sayisi: number;
   sure_ay: number;
   varsayilan_fiyat: string;
+  aciklama?: string | null;
 };
+
+export type PaketGuncelle = Partial<PaketOlustur> & { aktif?: boolean };
 
 export type OgrenciPaketi = {
   id: string;
@@ -73,7 +77,7 @@ const json = (govde: unknown) => JSON.stringify(govde);
 
 export const paketleriGetir = () => api<Paket[]>("/api/paketler");
 export const paketOlustur = (g: PaketOlustur) => api<Paket>("/api/paketler", { method: "POST", body: json(g) });
-export const paketGuncelle = (id: string, g: { ad?: string; varsayilan_fiyat?: string; aktif?: boolean }) =>
+export const paketGuncelle = (id: string, g: PaketGuncelle) =>
   api<Paket>(`/api/paketler/${id}`, { method: "PATCH", body: json(g) });
 
 export const ogrenciPaketleriniGetir = (ogrenciId: string) => api<OgrenciPaketi[]>(`/api/ogrenciler/${ogrenciId}/paketler`);

@@ -67,7 +67,7 @@ async def olustur(
 ):
     paket = Paket(
         ad=govde.ad, tur=govde.tur, ders_sayisi=govde.ders_sayisi, sure_ay=govde.sure_ay,
-        varsayilan_fiyat=govde.varsayilan_fiyat, aktif=True,
+        varsayilan_fiyat=govde.varsayilan_fiyat, aciklama=govde.aciklama or None, aktif=True,
     )
     session.add(paket)
     await session.flush()
@@ -94,11 +94,13 @@ async def guncelle(
     if paket is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Paket bulunamadı")
     verilen = govde.model_fields_set
-    for alan in ("ad", "varsayilan_fiyat", "aktif"):
+    for alan in ("ad", "tur", "ders_sayisi", "sure_ay", "varsayilan_fiyat", "aktif"):
         if alan in verilen and getattr(govde, alan) is None:
             raise HTTPException(422, f"{alan} boş olamaz")
         if alan in verilen:
             setattr(paket, alan, getattr(govde, alan))
+    if "aciklama" in verilen:
+        paket.aciklama = govde.aciklama or None  # boş metin açıklamayı siler
     await audit.kaydet(
         session, "paket_guncellendi", kullanici_id=yonetici.id, hedef_tur="paket", hedef_id=str(paket.id),
         ip=_ip(request), detay={"alanlar": sorted(verilen)},

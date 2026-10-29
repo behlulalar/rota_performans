@@ -51,6 +51,7 @@ class Paket(Base):
     ders_sayisi: Mapped[int] = mapped_column(Integer)
     sure_ay: Mapped[int] = mapped_column(Integer)
     varsayilan_fiyat: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    aciklama: Mapped[str | None] = mapped_column(Text)
     aktif: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

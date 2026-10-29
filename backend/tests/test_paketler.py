@@ -59,12 +59,12 @@ async def test_yetki(istemci, yonetici):
         assert (await getattr(istemci, yontem)(yol, **({"json": govde} if govde else {}))).status_code == 401
 
 
-async def test_paket_crud_ve_degismez_alanlar(istemci, yonetici):
+async def test_paket_crud(istemci, yonetici):
     p = await paket_olustur(istemci, yonetici)
-    assert p["varsayilan_fiyat"] == "3400.00" and p["aktif"] is True
-    for alan, deger in (("ders_sayisi", 12), ("sure_ay", 2), ("tur", "yillik")):
+    assert p["varsayilan_fiyat"] == "3400.00" and p["aktif"] is True and p["aciklama"] is None
+    for alan, deger in (("ders_sayisi", 0), ("sure_ay", 0), ("tur", "haftalik"), ("ders_sayisi", None), ("tur", None)):
         r = await istemci.patch(f"/api/paketler/{p['id']}", json={alan: deger}, headers=yonetici)
-        assert r.status_code == 422
+        assert r.status_code == 422, (alan, deger)
     r = await istemci.patch(
         f"/api/paketler/{p['id']}", json={"ad": "Yeni ad", "varsayilan_fiyat": "3500.5"}, headers=yonetici
     )
@@ -110,6 +110,38 @@ async def test_atama_kopyalama_ve_liste(istemci, yonetici):
     async with SessionLocal() as s:
         op = (await s.execute(select(OgrenciPaketi))).scalar_one()
         assert op.fiyat_degistiren_id is None and op.olusturan_id is not None
+
+
+async def test_paket_tum_alanlar_ve_aciklama_duzenlenir_atanmis_kopya_bozulmaz(istemci, yonetici):
+    p = await paket_olustur(istemci, yonetici, aciklama="  Haftada 2 ders  ")
+    assert p["aciklama"] == "Haftada 2 ders"
+    o = await ogrenci_olustur()
+    a = (await ata(istemci, yonetici, o, p["id"], baslangic="2026-01-15")).json()
+
+    r = await istemci.patch(
+        f"/api/paketler/{p['id']}",
+        json={"tur": "uc_aylik", "ders_sayisi": 24, "sure_ay": 3, "varsayilan_fiyat": "9000", "aciklama": "Yeni açıklama"},
+        headers=yonetici,
+    )
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert (d["tur"], d["ders_sayisi"], d["sure_ay"], d["varsayilan_fiyat"], d["aciklama"]) == (
+        "uc_aylik", 24, 3, "9000.00", "Yeni açıklama",
+    )
+    # Daha önce atanan paket eski haliyle kalır.
+    liste = (await istemci.get(f"/api/ogrenciler/{o}/paketler", headers=yonetici)).json()
+    assert liste[0]["id"] == a["id"] and liste[0]["ders_sayisi"] == 8 and liste[0]["liste_fiyati"] == "3400.00"
+    assert liste[0]["bitis"] == "2026-02-15"
+    # Yeni atama yeni değerleri alır.
+    o2 = await ogrenci_olustur()
+    b = (await ata(istemci, yonetici, o2, p["id"], baslangic="2026-01-15")).json()
+    assert b["ders_sayisi"] == 24 and b["liste_fiyati"] == "9000.00" and b["bitis"] == "2026-04-15"
+    # Açıklama boş gönderilince silinir; hiç gönderilmezse korunur.
+    r = await istemci.patch(f"/api/paketler/{p['id']}", json={"ad": "Başka"}, headers=yonetici)
+    assert r.json()["aciklama"] == "Yeni açıklama"
+    r = await istemci.patch(f"/api/paketler/{p['id']}", json={"aciklama": "  "}, headers=yonetici)
+    assert r.json()["aciklama"] is None
+    assert (await istemci.patch(f"/api/paketler/{p['id']}", json={"aciklama": "x" * 1001}, headers=yonetici)).status_code == 422
 
 
 async def test_baslangic_varsayilan_bugun(istemci, yonetici):
