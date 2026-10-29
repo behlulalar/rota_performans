@@ -42,11 +42,11 @@ function CocukKarti({ c }: { c: CocukOzet }) {
       <dl className="mt-5 grid grid-cols-2 gap-px bg-cizgi border border-cizgi rounded-[10px] overflow-hidden">
         <div className="bg-yuzey px-4 py-3">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk">Kalan ders</dt>
-          <dd className={`num font-display text-[26px] leading-[1.15] mt-1 ${h.normal < 0 ? "text-hata" : ""}`}>{h.normal}</dd>
+          <dd className="num font-display text-[26px] leading-[1.15] mt-1">{Math.max(0, h.normal)}</dd>
         </div>
         <div className="bg-yuzey px-4 py-3">
           <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk">Telafi hakkı</dt>
-          <dd className={`num font-display text-[26px] leading-[1.15] mt-1 ${h.kullanilabilir_telafi < 0 ? "text-hata" : ""}`}>{h.kullanilabilir_telafi}</dd>
+          <dd className="num font-display text-[26px] leading-[1.15] mt-1">{Math.max(0, h.kullanilabilir_telafi)}</dd>
         </div>
       </dl>
 

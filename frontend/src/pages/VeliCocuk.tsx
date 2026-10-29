@@ -174,12 +174,12 @@ export default function VeliCocuk() {
       <div className="grid grid-cols-3 gap-2 md:gap-4">
         <div className="bg-yuzey border border-cizgi rounded-[14px] px-3 py-4 md:p-5 min-w-0">
           <div className="text-[12px] md:text-[11px] font-semibold md:uppercase md:tracking-[0.12em] text-metin-soluk leading-4">Kalan ders</div>
-          <div className={`num font-display text-[32px] leading-[1.15] mt-1.5 ${h.normal < 0 ? "text-hata" : ""}`}>{h.normal}</div>
+          <div className="num font-display text-[32px] leading-[1.15] mt-1.5">{Math.max(0, h.normal)}</div>
         </div>
         <div className="bg-yuzey border border-cizgi rounded-[14px] px-3 py-4 md:p-5 min-w-0">
           <div className="text-[12px] md:text-[11px] font-semibold md:uppercase md:tracking-[0.12em] text-metin-soluk leading-4">Telafi hakkı</div>
-          <div className={`num font-display text-[32px] leading-[1.15] mt-1.5 ${h.telafi < 0 ? "text-hata" : ""}`}>{h.telafi}</div>
-          <div className="num text-xs text-metin-soluk mt-0.5">{h.kullanilabilir_telafi} planlanabilir</div>
+          <div className="num font-display text-[32px] leading-[1.15] mt-1.5">{Math.max(0, h.telafi)}</div>
+          <div className="num text-xs text-metin-soluk mt-0.5">{Math.max(0, h.kullanilabilir_telafi)} planlanabilir</div>
         </div>
         <div className="bg-birincil border border-birincil rounded-[14px] px-3 py-4 md:p-5 min-w-0 text-birincil-metin">
           <div className="text-[12px] md:text-[11px] font-semibold md:uppercase md:tracking-[0.12em] leading-4 opacity-75">Sıradaki ders</div>
@@ -290,7 +290,7 @@ export default function VeliCocuk() {
                   <Sayi ad="Toplam ders" deger={o.toplam} />
                   <Sayi ad="Katıldığı" deger={o.katildi} ton="basari" />
                   <Sayi ad="Gelmediği" deger={o.devamsiz} ton={o.devamsiz > 0 ? "uyari" : undefined} />
-                  <Sayi ad="Kalan" deger={o.kalan} ton={o.kalan < 0 ? "hata" : "vurgu"} />
+                  <Sayi ad="Kalan" deger={Math.max(0, o.kalan)} ton="vurgu" />
                 </div>
                 {o.toplam > 0 && (
                   <div className="mt-4">
@@ -316,7 +316,7 @@ export default function VeliCocuk() {
               <div className="px-6 pb-6 grid grid-cols-3 gap-2 md:gap-3">
                 <Sayi ad="Doğan" deger={o.telafi_dogan} />
                 <Sayi ad="Kullanılan" deger={o.telafi_kullanilan} />
-                <Sayi ad="Kalan" deger={o.telafi_kalan} ton={o.telafi_kalan < 0 ? "hata" : "vurgu"} alt={`${h.kullanilabilir_telafi} planlanabilir`} />
+                <Sayi ad="Kalan" deger={Math.max(0, o.telafi_kalan)} ton="vurgu" alt={`${Math.max(0, h.kullanilabilir_telafi)} planlanabilir`} />
               </div>
             </Kart>
 
