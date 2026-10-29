@@ -5,6 +5,7 @@ import { aktifBolum, aktifOge, ogeAktifMi, type MenuBolumu, type MenuOgesi } fro
 import Logo from "./Logo";
 import { BolumBaglami } from "./SayfaBasligi";
 import Simge from "./Simge";
+import YaziBoyutuDugmesi from "./YaziBoyutuDugmesi";
 import TemaDugmesi from "./TemaDugmesi";
 
 const MENU_ANAHTARI = "rota-menu-gizli";
@@ -108,7 +109,7 @@ export default function Kabuk({
 
   return (
     <BolumBaglami.Provider value={rotaBolumu.ad}>
-      <div className={`min-h-dvh flex flex-col ${sekmeler ? "sekmeli-kabuk" : ""}`}>
+      <div className={`min-h-[calc(100dvh/var(--olcek,1))] flex flex-col ${sekmeler ? "sekmeli-kabuk" : ""}`}>
         {/* Siyah marka çubuğu */}
         <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center gap-3 px-4 md:px-6 bg-serit text-white">
           {yerlesim === "yan" && (
@@ -147,6 +148,7 @@ export default function Kabuk({
           )}
 
           <div className="hidden md:flex items-center gap-3 ml-auto">
+            <YaziBoyutuDugmesi />
             <TemaDugmesi gorunum="serit" />
             <span className="max-w-[16rem] truncate text-[13px] text-serit-ikon" title={kullanici?.giris}>
               {kullanici?.ad_soyad || kullanici?.giris}
@@ -163,6 +165,7 @@ export default function Kabuk({
           </div>
 
           <div className="md:hidden flex items-center">
+            <YaziBoyutuDugmesi />
             <TemaDugmesi gorunum="serit" />
             <button
               type="button"
@@ -181,7 +184,7 @@ export default function Kabuk({
             <aside
               id="yan-menu"
               aria-label="Menü"
-              className="hidden md:block w-[232px] shrink-0 sticky top-14 h-[calc(100dvh-3.5rem)] overflow-y-auto bg-menu border-r border-cizgi p-3 space-y-5"
+              className="hidden md:block w-[232px] shrink-0 sticky top-14 h-[calc(100dvh/var(--olcek,1)-3.5rem)] overflow-y-auto bg-menu border-r border-cizgi p-3 space-y-5"
             >
               {menu.map((b) => (
                 <div key={b.anahtar}>
@@ -215,7 +218,7 @@ export default function Kabuk({
             <div
               role="dialog"
               aria-label="Menü"
-              className="absolute inset-y-0 right-0 w-[min(20rem,88vw)] bg-menu border-l border-cizgi overflow-y-auto flex flex-col"
+              className="absolute inset-y-0 right-0 w-[min(20rem,calc(88vw/var(--olcek,1)))] bg-menu border-l border-cizgi overflow-y-auto flex flex-col"
             >
               <div className="p-3 space-y-4 flex-1">
                 {menu.map((b) => (

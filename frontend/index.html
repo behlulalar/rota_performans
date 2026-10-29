@@ -32,6 +32,15 @@
           }
         }
         document.documentElement.dataset.theme = t;
+        // Yazı boyutu: kayıtlı ölçek (CSS zoom) ilk boyamadan önce uygulanır.
+        try {
+          var yb = localStorage.getItem("rota-yazi-boyutu");
+          var olc = { kucuk: 0.9, normal: 1, buyuk: 1.1, cokbuyuk: 1.25 }[yb];
+          if (olc) {
+            document.documentElement.dataset.yaziBoyutu = yb;
+            document.documentElement.style.setProperty("--olcek", String(olc));
+          }
+        } catch (e) {}
         var m = document.querySelector('meta[name="theme-color"]');
         if (m) m.setAttribute("content", t === "light" ? "#fbfaf6" : "#0e0e0f");
       })();

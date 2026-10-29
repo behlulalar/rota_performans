@@ -28,7 +28,7 @@ export default function SifreDegistir() {
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
 
-  if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
+  if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to="/giris" replace />;
   if (!kullanici.sifre_degistirmeli) return <Navigate to="/" replace />;
 

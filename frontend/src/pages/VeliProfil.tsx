@@ -12,6 +12,7 @@ import {
 import { pushAc, pushDurumuBul, pushKapat, type PushDurumu } from "../lib/push";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
+import YaziBoyutuSecici from "../components/YaziBoyutuSecici";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import { hataMesaji, yeniSifreHatasi } from "../lib/dogrulama";
 import { apiyeCevir, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
@@ -283,6 +284,15 @@ function SifreFormu() {
   );
 }
 
+function GorunumKarti() {
+  return (
+    <Kart baslik="Görünüm" aciklama="Yazı ve arayüz boyutu">
+      <YaziBoyutuSecici />
+      <p className="mt-3 text-sm text-metin-soluk">Bu ayar yalnızca bu cihazda geçerlidir.</p>
+    </Kart>
+  );
+}
+
 export default function VeliProfil() {
   const [profil, setProfil] = useState<Profil | null>(null);
   const [hata, setHata] = useState<string | null>(null);
@@ -310,6 +320,7 @@ export default function VeliProfil() {
           <BilgiFormu profil={profil} onKaydet={setProfil} />
           <BildirimFormu />
           <SifreFormu />
+          <GorunumKarti />
         </div>
       )}
     </>

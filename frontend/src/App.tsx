@@ -32,7 +32,7 @@ import Yoklama from "./pages/Yoklama";
 
 function KorumaliRota() {
   const { kullanici, yukleniyor } = useAuth();
-  if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
+  if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to={PANEL_YOLU.veli} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin") return <Navigate to="/genel-bakis" replace />;
@@ -42,7 +42,7 @@ function KorumaliRota() {
 
 function YoneticiRota() {
   const { kullanici, yukleniyor } = useAuth();
-  if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
+  if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to={PANEL_YOLU.yonetici} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "admin") return <Navigate to="/" replace />;
@@ -51,7 +51,7 @@ function YoneticiRota() {
 
 function VeliRota() {
   const { kullanici, yukleniyor } = useAuth();
-  if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
+  if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to={PANEL_YOLU.veli} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "veli" && kullanici.rol !== "ogrenci") return <Navigate to="/" replace />;
@@ -61,7 +61,7 @@ function VeliRota() {
 // Takvim ve yoklama ekranlarını yönetici ve antrenör kullanır; her biri kendi yerleşimini görür.
 function TakvimRota() {
   const { kullanici, yukleniyor } = useAuth();
-  if (yukleniyor) return <div className="min-h-dvh grid place-items-center text-metin-soluk">Yükleniyor…</div>;
+  if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) return <Navigate to={PANEL_YOLU.antrenor} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin") return <YoneticiYerlesim />;

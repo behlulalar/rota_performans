@@ -178,3 +178,8 @@ input[type="checkbox"],
 input[type="radio"] {
   accent-color: var(--color-altin);
 }
+
+/* Yazı boyutu: arayüz sabit px kullandığı için kök öğe CSS zoom ile ölçeklenir (bkz. lib/yaziBoyutu.ts). */
+html {
+  zoom: var(--olcek, 1);
+}

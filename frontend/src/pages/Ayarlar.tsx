@@ -4,6 +4,7 @@ import { sifreDegistir } from "../api/veli";
 import { useAuth } from "../auth/AuthProvider";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
+import YaziBoyutuSecici from "../components/YaziBoyutuSecici";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import { hataMesaji, yeniSifreHatasi } from "../lib/dogrulama";
 import { apiyeCevir, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
@@ -116,6 +117,15 @@ function BildirimKarti({ veri, onKaydet }: { veri: AyarVeri; onKaydet: (a: AyarV
   );
 }
 
+function GorunumKarti() {
+  return (
+    <Kart baslik="Görünüm" aciklama="Yazı ve arayüz boyutu">
+      <YaziBoyutuSecici />
+      <p className="mt-3 text-sm text-metin-soluk">Bu ayar yalnızca bu cihazda geçerlidir.</p>
+    </Kart>
+  );
+}
+
 function HesapKarti() {
   const { kullanici } = useAuth();
   const [mevcut, setMevcut] = useState("");
@@ -177,6 +187,7 @@ export default function Ayarlar() {
         {veri && <KulupKarti veri={veri} onKaydet={setVeri} />}
         {veri && <BildirimKarti veri={veri} onKaydet={setVeri} />}
         <HesapKarti />
+        <GorunumKarti />
       </div>
     </>
   );

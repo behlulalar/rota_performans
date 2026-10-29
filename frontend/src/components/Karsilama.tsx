@@ -13,7 +13,7 @@ export default function Karsilama({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className="min-h-[calc(100dvh/var(--olcek,1))] flex flex-col">
       <header className="h-14 shrink-0 flex items-center gap-3 px-4 md:px-6 bg-serit text-white">
         <Logo />
         <span className="flex-1 font-display text-[17px] leading-none">Rota Performans Akademi</span>

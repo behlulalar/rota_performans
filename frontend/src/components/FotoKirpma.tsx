@@ -13,6 +13,11 @@ const sinirla = (n: number, alt: number, ust: number) => Math.min(ust, Math.max(
  * Fotoğrafı kare olarak kırpar: sürükleyerek kaydırma, yakınlaştırma (kaydırıcı, tekerlek, +/- düğmeleri, klavye oku).
  * Yuvarlak kılavuz, yuvarlak gösterilen yerlerde yüzün çerçevede kalmasına yardım eder. Çıktı kare JPEG'dir.
  */
+/** Ekran pikselinin yerel piksele oranı (CSS zoom ile ölçeklenmiş kökte 1'den farklıdır). */
+function ekranOlcegi(el: HTMLElement) {
+  return el.offsetWidth > 0 ? el.getBoundingClientRect().width / el.offsetWidth : 1;
+}
+
 export default function FotoKirpma({
   kaynak,
   onKapat,
@@ -29,7 +34,7 @@ export default function FotoKirpma({
   const [hata, setHata] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
   const resim = useRef<HTMLImageElement | null>(null);
-  const surukle = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+  const surukle = useRef<{ x: number; y: number; ox: number; oy: number; olcek: number } | null>(null);
 
   useEffect(() => {
     const u = URL.createObjectURL(kaynak);
@@ -59,12 +64,13 @@ export default function FotoKirpma({
 
   function basla(e: PointerEvent<HTMLDivElement>) {
     e.currentTarget.setPointerCapture(e.pointerId);
-    surukle.current = { x: e.clientX, y: e.clientY, ox: ofset.x, oy: ofset.y };
+    surukle.current = { x: e.clientX, y: e.clientY, ox: ofset.x, oy: ofset.y, olcek: ekranOlcegi(e.currentTarget) };
   }
   function tasi(e: PointerEvent<HTMLDivElement>) {
     const s = surukle.current;
     if (!s) return;
-    setOfset(ofsetSinirla({ x: s.ox + e.clientX - s.x, y: s.oy + e.clientY - s.y }));
+    // clientX ekran pikselidir; yazı boyutu (CSS zoom) yüzünden yerel piksele çevrilir.
+    setOfset(ofsetSinirla({ x: s.ox + (e.clientX - s.x) / s.olcek, y: s.oy + (e.clientY - s.y) / s.olcek }));
   }
   function birak() {
     surukle.current = null;
