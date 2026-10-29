@@ -4,7 +4,6 @@ import {
   bildirimTercihleriKaydet,
   profilGetir,
   profilGuncelle,
-  sifreDegistir,
   type BildirimTercihYaniti,
   type BildirimTercihleri,
   type Profil,
@@ -14,7 +13,8 @@ import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import YaziBoyutuSecici from "../components/YaziBoyutuSecici";
 import TelefonGirdisi from "../components/TelefonGirdisi";
-import { hataMesaji, yeniSifreHatasi } from "../lib/dogrulama";
+import SifreKarti from "../components/SifreKarti";
+import { hataMesaji } from "../lib/dogrulama";
 import { apiyeCevir, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
 import { basariKutusu, birincilDugme, dugme, girdi } from "../lib/stil";
 
@@ -223,67 +223,6 @@ function CihazBildirimi() {
   );
 }
 
-function SifreFormu() {
-  const [mevcut, setMevcut] = useState("");
-  const [yeni, setYeni] = useState("");
-  const [tekrar, setTekrar] = useState("");
-  const [hata, setHata] = useState<string | null>(null);
-  const [tamam, setTamam] = useState(false);
-  const [mesgul, setMesgul] = useState(false);
-
-  async function gonder(e: FormEvent) {
-    e.preventDefault();
-    setTamam(false);
-    const h = !mevcut ? "Mevcut şifrenizi girin." : yeniSifreHatasi(mevcut, yeni) ?? (tekrar !== yeni ? "Şifreler eşleşmiyor." : null);
-    if (h) return setHata(h);
-    setMesgul(true);
-    setHata(null);
-    try {
-      await sifreDegistir(mevcut, yeni);
-      setMevcut("");
-      setYeni("");
-      setTekrar("");
-      setTamam(true);
-    } catch (err) {
-      setHata(hataMesaji(err));
-    } finally {
-      setMesgul(false);
-    }
-  }
-
-  return (
-    <Kart baslik="Şifre değiştir" aciklama="Başka cihazlardaki oturumlar kapatılır">
-      <form onSubmit={gonder} noValidate className="space-y-4 max-w-md">
-        <label className="block">
-          <span className="text-[13px] text-metin-soluk">Mevcut şifre</span>
-          <input className={girdi} type="password" value={mevcut} onChange={(e) => setMevcut(e.target.value)} autoComplete="current-password" />
-        </label>
-        <label className="block">
-          <span className="text-[13px] text-metin-soluk">Yeni şifre</span>
-          <input className={girdi} type="password" value={yeni} onChange={(e) => setYeni(e.target.value)} autoComplete="new-password" />
-        </label>
-        <label className="block">
-          <span className="text-[13px] text-metin-soluk">Yeni şifre (tekrar)</span>
-          <input className={girdi} type="password" value={tekrar} onChange={(e) => setTekrar(e.target.value)} autoComplete="new-password" />
-        </label>
-        {hata && (
-          <p role="alert" className="text-[13px] text-hata">
-            {hata}
-          </p>
-        )}
-        {tamam && (
-          <p role="status" className={basariKutusu}>
-            Şifreniz değiştirildi.
-          </p>
-        )}
-        <button type="submit" disabled={mesgul} className={birincilDugme}>
-          {mesgul ? "Kaydediliyor…" : "Şifreyi değiştir"}
-        </button>
-      </form>
-    </Kart>
-  );
-}
-
 function GorunumKarti() {
   return (
     <Kart baslik="Görünüm" aciklama="Yazı ve arayüz boyutu">
@@ -319,7 +258,7 @@ export default function VeliProfil() {
         <div className="grid gap-4 lg:grid-cols-2 items-start">
           <BilgiFormu profil={profil} onKaydet={setProfil} />
           <BildirimFormu />
-          <SifreFormu />
+          <SifreKarti />
           <GorunumKarti />
         </div>
       )}

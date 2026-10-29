@@ -73,17 +73,29 @@ test("mobilde alt sekme çubuğu: seçili sekme vurgulanır, Takvim sekmesi /tak
   await expect(page.getByRole("dialog", { name: "Menü" }).getByRole("button", { name: "Çıkış" })).toBeVisible();
 });
 
-test("mobilde antrenörde alt sekme çubuğu yoktur", async ({ page }) => {
+test("mobilde antrenörde alt sekmeler: Bugün, Takvim, Profilim, Menü", async ({ page }) => {
   const o = await yoklamaOrtamiKur(page);
   await arayuzdenGiris(page, o.antrenor.giris, o.antrenor.sifre);
-  await expect(page).toHaveURL(/\/takvim$/);
-  await expect(page.getByRole("navigation", { name: "Hızlı sekmeler" })).toHaveCount(0);
+  await expect(page).toHaveURL(/\/bugun$/);
+  const sekmeler = page.getByRole("navigation", { name: "Hızlı sekmeler" });
+  await expect(sekmeler).toBeVisible();
+  for (const ad of ["Bugün", "Takvim", "Profilim"]) {
+    await expect(sekmeler.getByRole("link", { name: ad })).toBeVisible();
+  }
+  await expect(sekmeler.getByRole("button", { name: "Menü" })).toBeVisible();
+  await expect(sekmeler.getByRole("link", { name: "Bugün" })).toHaveAttribute("aria-current", "page");
+  await sekmeler.getByRole("link", { name: "Profilim" }).click();
+  await expect(page).toHaveURL(/\/profilim$/);
+  await expect(page.getByRole("heading", { name: "Profilim" })).toBeVisible();
+  await expect(sekmeler.getByRole("link", { name: "Profilim" })).toHaveAttribute("aria-current", "page");
 });
 
 test("mobilde antrenör takvimi ve yoklama ekranı açılır", async ({ page }) => {
   const o = await yoklamaOrtamiKur(page);
 
   await arayuzdenGiris(page, o.antrenor.giris, o.antrenor.sifre);
+  await expect(page).toHaveURL(/\/bugun$/);
+  await page.getByRole("navigation", { name: "Hızlı sekmeler" }).getByRole("link", { name: "Takvim" }).click();
   await expect(page).toHaveURL(/\/takvim$/);
   // Bugün açık gelir: oturum kartı görünür.
   const kart = page.getByRole("link", { name: new RegExp(o.grupAdi) });

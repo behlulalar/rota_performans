@@ -6,6 +6,7 @@ from app.api import (
     bildirim_yonetimi,
     denetim,
     duyurular,
+    antrenor_paneli,
     antrenorler,
     auth,
     genel_bakis,
@@ -61,6 +62,7 @@ app.include_router(odemeler.router)
 app.include_router(genel_bakis.router)
 app.include_router(raporlar.router)
 app.include_router(oturumlar.router)
+app.include_router(antrenor_paneli.router)
 app.include_router(veli.router)
 app.include_router(bildirim_yonetimi.router)
 app.include_router(duyurular.router)

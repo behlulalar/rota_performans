@@ -51,6 +51,14 @@ def _etkin_antrenor():
     return func.coalesce(DersOturumu.antrenor_id, Grup.antrenor_id)
 
 
+def _antrenor_kosulu(antrenor_id: uuid.UUID):
+    """Antrenörün oturumları: yerine bakan o ise ya da yerine bakan yok ve grubu onunsa."""
+    return or_(
+        DersOturumu.antrenor_id == antrenor_id,
+        and_(DersOturumu.antrenor_id.is_(None), Grup.antrenor_id == antrenor_id),
+    )
+
+
 async def _kendi_antrenor_kaydi(session: AsyncSession, kullanici: Kullanici) -> Antrenor:
     antrenor = (
         await session.execute(select(Antrenor).where(Antrenor.kullanici_id == kullanici.id))
@@ -220,9 +228,7 @@ async def takvim(
         # Antrenör yalnızca kendi oturumlarını görür, antrenor_id parametresi yok sayılır.
         antrenor_id = (await _kendi_antrenor_kaydi(session, kullanici)).id
     if antrenor_id is not None:
-        kosullar.append(
-            or_(DersOturumu.antrenor_id == antrenor_id, and_(DersOturumu.antrenor_id.is_(None), Grup.antrenor_id == antrenor_id))
-        )
+        kosullar.append(_antrenor_kosulu(antrenor_id))
     return await _ozetler(session, kosullar)
 
 

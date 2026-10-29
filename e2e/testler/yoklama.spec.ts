@@ -7,8 +7,10 @@ test.describe("Yoklama", () => {
     const o = await yoklamaOrtamiKur(page);
 
     await arayuzdenGiris(page, o.antrenor.giris, o.antrenor.sifre);
-    await expect(page).toHaveURL(/\/takvim$/);
+    await expect(page).toHaveURL(/\/bugun$/);
     await expect(page.getByRole("link", { name: "Öğrenciler" })).toHaveCount(0);
+    await page.getByRole("navigation", { name: "Ana menü" }).getByRole("link", { name: "Takvim" }).click();
+    await expect(page).toHaveURL(/\/takvim$/);
 
     const kart = page.getByRole("link", { name: new RegExp(o.grupAdi) });
     await expect(kart).toBeVisible();

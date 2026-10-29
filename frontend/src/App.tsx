@@ -22,6 +22,8 @@ import OgrenciListe from "./pages/OgrenciListe";
 import SifreDegistir from "./pages/SifreDegistir";
 import OdemeListe from "./pages/OdemeListe";
 import PaketListe from "./pages/PaketListe";
+import AntrenorBugun from "./pages/AntrenorBugun";
+import AntrenorProfil from "./pages/AntrenorProfil";
 import AntrenorYerlesim from "./components/AntrenorYerlesim";
 import Takvim from "./pages/Takvim";
 import VeliAna from "./pages/VeliAna";
@@ -36,7 +38,7 @@ function KorumaliRota() {
   if (!kullanici) return <Navigate to={PANEL_YOLU.veli} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin") return <Navigate to="/genel-bakis" replace />;
-  if (kullanici.rol === "antrenor") return <Navigate to="/takvim" replace />;
+  if (kullanici.rol === "antrenor") return <Navigate to="/bugun" replace />;
   return <Navigate to="/panel" replace />;
 }
 
@@ -56,6 +58,16 @@ function VeliRota() {
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "veli" && kullanici.rol !== "ogrenci") return <Navigate to="/" replace />;
   return <VeliYerlesim />;
+}
+
+// Bugün ve Profilim yalnız antrenöre aittir; yönetici kendi ekranlarına döner.
+function AntrenorRota() {
+  const { kullanici, yukleniyor } = useAuth();
+  if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
+  if (!kullanici) return <Navigate to={PANEL_YOLU.antrenor} replace />;
+  if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
+  if (kullanici.rol !== "antrenor") return <Navigate to="/" replace />;
+  return <AntrenorYerlesim />;
 }
 
 // Takvim ve yoklama ekranlarını yönetici ve antrenör kullanır; her biri kendi yerleşimini görür.
@@ -80,6 +92,10 @@ export default function App() {
           <Route path="/yonetici-giris" element={<Giris panel="yonetici" />} />
           <Route path="/sifre-degistir" element={<SifreDegistir />} />
           <Route path="/" element={<KorumaliRota />} />
+          <Route element={<AntrenorRota />}>
+            <Route path="/bugun" element={<AntrenorBugun />} />
+            <Route path="/profilim" element={<AntrenorProfil />} />
+          </Route>
           <Route element={<TakvimRota />}>
             <Route path="/takvim" element={<Takvim />} />
             <Route path="/oturum/:id" element={<Yoklama />} />

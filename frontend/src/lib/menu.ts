@@ -61,7 +61,16 @@ export const YONETICI_SEKMELERI: MenuOgesi[] = [
 ];
 
 export const ANTRENOR_MENUSU: MenuBolumu[] = [
-  { anahtar: "genel", ad: "Genel", simge: "genel", ogeler: [TAKVIM] },
+  {
+    anahtar: "genel",
+    ad: "Genel",
+    simge: "genel",
+    ogeler: [
+      { ad: "Bugün", simge: "bugun", yol: "/bugun" },
+      TAKVIM,
+      { ad: "Profilim", simge: "kayit", yol: "/profilim" },
+    ],
+  },
 ];
 
 export function ogeAktifMi(o: MenuOgesi, yol: string): boolean {
