@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { aktifBolum, aktifOge, ogeAktifMi, type MenuBolumu, type MenuOgesi } from "../lib/menu";
@@ -63,10 +63,13 @@ export default function Kabuk({
   menu,
   sekmeler,
   yerlesim = "yan",
+  ustIcerik,
 }: {
   menu: MenuBolumu[];
   sekmeler?: MenuOgesi[];
   yerlesim?: "yan" | "ust";
+  /** İçeriğin (Outlet) üstünde gösterilecek isteğe bağlı bölüm. */
+  ustIcerik?: ReactNode;
 }) {
   const { kullanici, cikisYap } = useAuth();
   const { pathname } = useLocation();
@@ -194,6 +197,7 @@ export default function Kabuk({
               sekmeler ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8" : "pb-8"
             }`}
           >
+            {ustIcerik}
             <Outlet />
           </main>
         </div>

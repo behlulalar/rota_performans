@@ -117,7 +117,7 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [ ] Web Push (VAPID), cihaz kaydı, bildirim ayarları
 - [ ] WhatsApp kuyruğu, ban korumaları, geri alma penceresi
 - [ ] Bildirimler yalnızca birincil iletişim kişisine
-- [ ] PWA kurulumu (manifest, simge, ana ekrana ekleme yönlendirmesi)
+- [x] PWA kurulumu (manifest, simge, ana ekrana ekleme yönlendirmesi)
 
 ### Faz 5: Test, güvenlik ve yayına alma (27 Kas – 30 Kas)
 - [ ] Yetki testleri, yük denemesi (ör. 300 eşzamanlı kullanıcı)
