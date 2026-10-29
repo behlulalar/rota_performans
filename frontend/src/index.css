@@ -172,3 +172,9 @@ table.sr-only {
   display: block;
   overflow: hidden;
 }
+
+/* Onay kutusu ve seçim düğmeleri marka rengiyle. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--color-altin);
+}

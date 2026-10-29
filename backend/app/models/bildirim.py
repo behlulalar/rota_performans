@@ -53,6 +53,10 @@ class Bildirim(Base):
     yoklama_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("yoklama.id", ondelete="SET NULL")
     )
+    # Elle yazılan duyuru bildirimleri: metin `duyuru` kaydından okunur.
+    duyuru_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("duyuru.id", ondelete="CASCADE"), index=True
+    )
     durum: Mapped[BildirimDurum] = mapped_column(enum_kolon(BildirimDurum), default=BildirimDurum.bekliyor)
     # Geri alma penceresi: bu zamandan önce gönderilmez, yoklama düzeltilirse iptal edilir.
     planli_zaman: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -72,6 +76,15 @@ class Bildirim(Base):
             "sablon",
             unique=True,
             postgresql_where=text("yoklama_id IS NOT NULL"),
+        ),
+        # Aynı duyuru aynı kişiye aynı kanaldan bir kez gider.
+        Index(
+            "uq_bildirim_duyuru_alici_kanal",
+            "duyuru_id",
+            "alici_iletisim_id",
+            "kanal",
+            unique=True,
+            postgresql_where=text("duyuru_id IS NOT NULL"),
         ),
     )
 

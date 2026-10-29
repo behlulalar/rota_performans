@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   bildirimIptalEt, bildirimleriGetir, bildirimOzetiGetir, bildirimYenidenDene,
-  DURUM_ETIKET, KANAL_ETIKET, SABLON_ETIKET,
-  type BildirimDurumu, type BildirimKaydi, type BildirimListesi, type BildirimOzeti,
+  DURUM_ETIKET, SABLON_ETIKET,
+  type BildirimDurumu, type BildirimKanali, type BildirimKaydi, type BildirimListesi, type BildirimOzeti,
 } from "../api/bildirimYonetimi";
 import { useOnay } from "../components/OnayPenceresi";
 import OzetKarti from "../components/OzetKarti";
@@ -23,7 +23,7 @@ export default function BildirimYonetimi() {
   const onayla = useOnay();
   const [ozet, setOzet] = useState<BildirimOzeti | null>(null);
   const [durum, setDurum] = useState("");
-  const [kanal, setKanal] = useState("");
+  const [kanal, setKanal] = useState<BildirimKanali>("push");
   const [sablon, setSablon] = useState("");
   const [arama, setArama] = useState("");
   const [q, setQ] = useState("");
@@ -41,9 +41,9 @@ export default function BildirimYonetimi() {
 
   useEffect(() => {
     let iptal = false;
-    bildirimOzetiGetir().then((v) => !iptal && setOzet(v)).catch(() => undefined);
+    bildirimOzetiGetir(kanal).then((v) => !iptal && setOzet(v)).catch(() => undefined);
     return () => { iptal = true; };
-  }, [surum]);
+  }, [surum, kanal]);
 
   useEffect(() => {
     let iptal = false;
@@ -96,6 +96,20 @@ export default function BildirimYonetimi() {
     <div className="space-y-6">
       <SayfaBasligi baslik="Bildirimler" aciklama="Velilere giden bildirimlerin kuyruğu ve gönderim durumu" />
 
+      <div role="tablist" aria-label="Kanal" className="flex gap-1 border-b border-cizgi">
+        {([["push", "Uygulama bildirimleri"], ["whatsapp", "WhatsApp"]] as [BildirimKanali, string][]).map(([k, e]) => (
+          <button
+            key={k} role="tab" aria-selected={kanal === k} type="button"
+            onClick={() => { setKanal(k); setSayfa(1); setOzet(null); }}
+            className={`px-4 min-h-11 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
+              kanal === k ? "border-altin text-altin-metin" : "border-transparent text-metin-soluk hover:text-metin"
+            }`}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-testid="bildirim-ozet">
         <OzetKarti etiket="Bekliyor" deger={s7 ? s7.bekliyor : "—"} ton="uyari" ipucu={ozet && ozet.geciken_bekleyen > 0 ? `${ozet.geciken_bekleyen} tanesi gecikmiş` : "Son 7 gün"} />
         <OzetKarti etiket="Gönderildi" deger={s7 ? s7.gonderildi : "—"} ipucu="Son 7 gün" />
@@ -104,24 +118,22 @@ export default function BildirimYonetimi() {
       </div>
 
       <div className="text-[13px] space-y-1">
-        {ozet && (
+        {kanal === "push" && ozet && (
           <p data-testid="push-durumu">
             Uygulama bildirimleri: <span className={ozet.push_etkin ? "text-basari font-medium" : "text-uyari font-medium"}>{ozet.push_etkin ? "etkin" : "kapalı (VAPID anahtarı girilmemiş)"}</span>
             {" · "}<span className="num">{ozet.push_cihaz_sayisi}</span> cihaz kayıtlı
             {ozet.push_cihaz_sayisi > 0 && <> (<span className="num">{ozet.push_kullanici_sayisi}</span> kullanıcı)</>}
           </p>
         )}
-        <p className="text-metin-soluk">WhatsApp gönderimi Evolution API bağlandığında etkinleşecek.</p>
+        {kanal === "whatsapp" && (
+          <p className="text-metin-soluk">WhatsApp gönderimi Evolution API bağlandığında etkinleşecek.</p>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3">
         <select value={durum} onChange={(e) => { setDurum(e.target.value); setSayfa(1); }} aria-label="Durum filtresi" className={secimKutusu}>
           <option value="">Tüm durumlar</option>
           {Object.entries(DURUM_ETIKET).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <select value={kanal} onChange={(e) => { setKanal(e.target.value); setSayfa(1); }} aria-label="Kanal filtresi" className={secimKutusu}>
-          <option value="">Tüm kanallar</option>
-          {Object.entries(KANAL_ETIKET).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <select value={sablon} onChange={(e) => { setSablon(e.target.value); setSayfa(1); }} aria-label="Tür filtresi" className={secimKutusu}>
           <option value="">Tüm türler</option>
@@ -141,7 +153,7 @@ export default function BildirimYonetimi() {
           <div className="hidden md:block bg-yuzey border border-cizgi rounded-[14px] overflow-hidden">
             <table className="w-full text-[13px]" aria-label="Bildirimler">
               <thead><tr>
-                <th className={th}>Zaman</th><th className={th}>Öğrenci</th><th className={th}>Tür</th><th className={th}>Kanal</th><th className={th}>Mesaj</th><th className={th}>Durum</th><th className={th}></th>
+                <th className={th}>Zaman</th><th className={th}>Öğrenci</th><th className={th}>Tür</th><th className={th}>Mesaj</th><th className={th}>Durum</th><th className={th}></th>
               </tr></thead>
               <tbody>
                 {veri.kayitlar.map((b) => (
@@ -149,7 +161,7 @@ export default function BildirimYonetimi() {
                     <td className={`${td} num py-2 whitespace-nowrap`}>{zaman(b.olusturma)}</td>
                     <td className={`${td} py-2`}>{ogrenciBaglantisi(b)}<div className="text-xs text-metin-soluk">{b.alici.ad_soyad}</div></td>
                     <td className={`${td} py-2`}>{SABLON_ETIKET[b.sablon] ?? b.sablon_etiket}</td>
-                    <td className={`${td} py-2`}><span className={rozetNotr}>{KANAL_ETIKET[b.kanal]}</span></td>
+                    
                     <td className={`${td} py-2 max-w-md text-metin-orta`}>{b.metin}</td>
                     <td className={`${td} py-2`}>{rozet(b)}{hataNotu(b)}</td>
                     <td className={`${td} py-2 text-right`}>{eylem(b)}</td>
@@ -162,7 +174,7 @@ export default function BildirimYonetimi() {
             {veri.kayitlar.map((b) => (
               <li key={b.id} className="bg-yuzey border border-cizgi rounded-[14px] p-4 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">{ogrenciBaglantisi(b)}{rozet(b)}</div>
-                <div className="text-xs text-metin-soluk num">{zaman(b.olusturma)} · {KANAL_ETIKET[b.kanal]} · {SABLON_ETIKET[b.sablon] ?? b.sablon_etiket}</div>
+                <div className="text-xs text-metin-soluk num">{zaman(b.olusturma)} · {SABLON_ETIKET[b.sablon] ?? b.sablon_etiket}</div>
                 <p className="text-[13px] text-metin-orta">{b.metin}</p>
                 {hataNotu(b)}
                 <div>{eylem(b)}</div>

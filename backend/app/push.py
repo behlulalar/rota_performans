@@ -82,7 +82,8 @@ async def push_gonder(session: AsyncSession, simdi: datetime, limit: int = 50) -
             {
                 "baslik": BASLIK,
                 "govde": await bsvc.metin_olustur(session, b),
-                "url": f"/panel/cocuk/{b.ogrenci_id}",
+                # Duyuru çocuğa özel değildir (kardeşler tek bildirim alır): ana panele gider.
+                "url": "/panel" if b.sablon == bsvc.DUYURU else f"/panel/cocuk/{b.ogrenci_id}",
                 "etiket": f"bildirim-{b.id}",
             },
             ensure_ascii=False,

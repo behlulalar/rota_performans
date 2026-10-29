@@ -2,7 +2,7 @@ import { api } from "../lib/api";
 
 export type BildirimDurumu = "bekliyor" | "gonderildi" | "hata" | "iptal";
 export type BildirimKanali = "push" | "whatsapp";
-export type BildirimSablonu = "ders_gelmedi" | "ders_hakki_azaldi" | "ders_hakki_bitti";
+export type BildirimSablonu = "ders_gelmedi" | "ders_hakki_azaldi" | "ders_hakki_bitti" | "duyuru";
 
 export const DURUM_ETIKET: Record<BildirimDurumu, string> = {
   bekliyor: "Bekliyor",
@@ -15,6 +15,7 @@ export const SABLON_ETIKET: Record<BildirimSablonu, string> = {
   ders_gelmedi: "Derse gelmedi",
   ders_hakki_azaldi: "Ders hakkı azaldı",
   ders_hakki_bitti: "Ders hakkı bitti",
+  duyuru: "Duyuru",
 };
 
 export type DurumSayilari = Record<BildirimDurumu, number>;
@@ -50,7 +51,8 @@ export type BildirimFiltre = { durum?: string; kanal?: string; sablon?: string; 
 
 const U = "/api/bildirim-yonetimi";
 
-export const bildirimOzetiGetir = () => api<BildirimOzeti>(`${U}/ozet`);
+export const bildirimOzetiGetir = (kanal?: BildirimKanali) =>
+  api<BildirimOzeti>(`${U}/ozet${kanal ? `?kanal=${kanal}` : ""}`);
 export const bildirimleriGetir = (f: BildirimFiltre) => {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== "") p.set(k, String(v));

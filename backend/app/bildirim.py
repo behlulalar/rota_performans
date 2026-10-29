@@ -14,6 +14,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ayarlar import KulupAyari
+from app.models.duyuru import Duyuru
 from app.models.bildirim import Bildirim, BildirimDurum, BildirimKanal, BildirimTercihi
 from app.models.ogrenci import IletisimKisisi, Ogrenci
 from app.models.paket import OgrenciPaketi, OgrenciPaketiDurum
@@ -35,15 +36,20 @@ async def ayarlari_oku(session: AsyncSession) -> tuple[timedelta, int]:
 DERS_GELMEDI = "ders_gelmedi"
 DERS_HAKKI_AZALDI = "ders_hakki_azaldi"
 DERS_HAKKI_BITTI = "ders_hakki_bitti"
+DUYURU = "duyuru"
 
 # Şablon -> mesaj metni. {ad} ve {tarih} gibi alanlar gönderim anında doldurulur.
 SABLONLAR: dict[str, str] = {
     DERS_GELMEDI: "Rota Performans Akademi: {ad}, {tarih} {saat} dersine katılmadı. Telafi hakkı tanımlanacaktır.",
     DERS_HAKKI_AZALDI: "Rota Performans Akademi: {ad} için {bakiye} ders hakkı kaldı. Yeni paket için kulüple iletişime geçebilirsiniz.",
     DERS_HAKKI_BITTI: "Rota Performans Akademi: {ad} için ders hakkı bitti. Derslere devam için yeni paket almanız gerekir.",
+    # Metin yöneticinin yazdığı duyurudur (`duyuru.metin`), `metin_olustur` doğrudan onu döndürür.
+    DUYURU: "{metin}",
 }
 
 # Şablon -> kullanıcı tercihindeki tür anahtarı.
+# `duyuru` burada YOKTUR: duyurular tür tercihlerine (ders_gelmedi / ders_hakki) tabi değildir,
+# yalnızca kanal tercihlerine (push / whatsapp açık-kapalı) uyar. Bkz. app/duyuru.py.
 TERCIH_TURU = {DERS_GELMEDI: "ders_gelmedi", DERS_HAKKI_AZALDI: "ders_hakki", DERS_HAKKI_BITTI: "ders_hakki"}
 
 
@@ -218,6 +224,9 @@ async def gonderilecekleri_al(
 async def metin_olustur(session: AsyncSession, bildirim: Bildirim) -> str:
     """Bildirimin mesaj metnini kayıttan üretir (öğrencinin adı gönderim anında okunur)."""
     sablon = SABLONLAR[bildirim.sablon]
+    if bildirim.sablon == DUYURU:
+        duyuru = await session.get(Duyuru, bildirim.duyuru_id) if bildirim.duyuru_id else None
+        return duyuru.metin if duyuru is not None else ""
     ogrenci = await session.get(Ogrenci, bildirim.ogrenci_id)
     p = bildirim.parametreler or {}
     tarih = ""

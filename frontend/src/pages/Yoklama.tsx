@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { ApiHata } from "../lib/api";
-import { oturumGetir, yoklamaKaydet, type OturumDetay, type YoklamaDurum } from "../api/takvim";
+import { oturumGetir, oturumIptalEt, oturumIptalGeriAl, yoklamaKaydet, type OturumDetay, type YoklamaDurum } from "../api/takvim";
 import OgrenciFoto from "../components/OgrenciFoto";
+import { useOnay } from "../components/OnayPenceresi";
 import SayfaBasligi from "../components/SayfaBasligi";
-import { basariKutusu, birincilDugme, rozetBasari, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
+import { basariKutusu, bilgiKutusu, birincilDugme, dugme, rozetBasari, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
 import { hataMesaji } from "../lib/dogrulama";
 import { saat } from "../lib/program";
 import { gosterilenDers } from "../lib/dersHakki";
@@ -34,6 +35,8 @@ function hataYaz(e: unknown): string {
 export default function Yoklama() {
   const { id } = useParams();
   const { kullanici } = useAuth();
+  const onayla = useOnay();
+  const [bildirimTeklifi, setBildirimTeklifi] = useState(false);
   const [anlik, setAnlik] = useState(() => Date.now());
   const [o, setO] = useState<OturumDetay | null>(null);
   const [secim, setSecim] = useState<Secim>({});
@@ -116,6 +119,59 @@ export default function Yoklama() {
     }
   };
 
+  // Yalnız yönetici iptal edebilir; yoklaması alınmış ya da zaten iptal/yapıldı olan ders iptal edilemez.
+  const yonetici = kullanici?.rol === "admin";
+  const iptalEdilebilir = yonetici && o.durum === "planli" && !o.yoklama_alindi;
+  const geriAlinabilir = yonetici && iptal && o.tarih >= bugun();
+  const telafiSayisi = o.ogrenciler.filter((x) => x.telafi_mi).length;
+
+  const dersiIptalEt = async () => {
+    const tamam = await onayla({
+      baslik: "Dersi iptal et",
+      mesaj: `${o.grup.ad} grubunun ${uzunTarih(o.tarih)} ${saat(o.baslangic)} dersi iptal edilecek.${
+        telafiSayisi > 0 ? ` Bu derse eklenen ${telafiSayisi} telafi planı silinir; öğrencilerin telafi hakkı yeniden planlanabilir olur.` : ""
+      }`,
+      onayYazisi: "Dersi iptal et",
+      tehlikeli: true,
+    });
+    if (!tamam) return;
+    setMesgul(true);
+    setHata(null);
+    setBilgi(null);
+    try {
+      const y = await oturumIptalEt(o.id);
+      setO(y);
+      setSecim(secimler(y));
+      setBildirimTeklifi(true);
+    } catch (e) {
+      setHata(hataYaz(e));
+    } finally {
+      setMesgul(false);
+    }
+  };
+
+  const iptaliGeriAl = async () => {
+    const tamam = await onayla({
+      baslik: "İptali geri al",
+      mesaj: "Ders yeniden planlı olacak. Silinen telafi planları geri gelmez. Daha önce gönderilen duyurular geri alınmaz.",
+      onayYazisi: "Geri al",
+    });
+    if (!tamam) return;
+    setMesgul(true);
+    setHata(null);
+    try {
+      const y = await oturumIptalGeriAl(o.id);
+      setO(y);
+      setSecim(secimler(y));
+      setBildirimTeklifi(false);
+      setBilgi("Dersin iptali geri alındı");
+    } catch (e) {
+      setHata(hataYaz(e));
+    } finally {
+      setMesgul(false);
+    }
+  };
+
   const butonSinif = (aktif: boolean, renk: "basari" | "hata") =>
     `min-h-12 rounded-[10px] border-2 px-2 text-base font-semibold transition-colors disabled:opacity-40 ${
       aktif
@@ -139,7 +195,23 @@ export default function Yoklama() {
           </>
         }
         aciklama={`${uzunTarih(o.tarih)} · ${saat(o.baslangic)}–${saat(o.bitis)}`}
+        eylemler={
+          iptalEdilebilir ? (
+            <button className={`${dugme} !border-hata/60 !text-hata`} disabled={mesgul} onClick={() => void dersiIptalEt()}>
+              Dersi iptal et
+            </button>
+          ) : undefined
+        }
       />
+      {bildirimTeklifi && iptal && (
+        <div role="status" className={`mb-3 ${bilgiKutusu} flex flex-wrap items-center justify-between gap-3`} data-testid="bildirim-teklifi">
+          <span>Ders iptal edildi. Velilere bildirilsin mi?</span>
+          <span className="flex gap-2">
+            <Link to={`/duyurular/yeni?oturum=${o.id}&sablon=ders_iptali`} className={dugme}>Velilere bildir</Link>
+            <button className={dugme} onClick={() => setBildirimTeklifi(false)}>Şimdi değil</button>
+          </span>
+        </div>
+      )}
 
       {gelecek && (
         <p className={`mb-3 ${uyariKutusu}`}>
@@ -154,6 +226,12 @@ export default function Yoklama() {
       {iptal && (
         <p className="mb-3 rounded-[10px] border border-cizgi-guclu text-metin-soluk text-[13px] px-3 py-2">
           Bu ders iptal edildiği için yoklama alınamaz.
+          {yonetici && (
+            <span className="mt-2 flex flex-wrap gap-2">
+              <Link to={`/duyurular/yeni?oturum=${o.id}&sablon=ders_iptali`} className={dugme}>Velilere duyuru gönder</Link>
+              {geriAlinabilir && <button className={dugme} disabled={mesgul} onClick={() => void iptaliGeriAl()}>İptali geri al</button>}
+            </span>
+          )}
         </p>
       )}
       <p className="mb-3 text-xs text-metin-soluk">

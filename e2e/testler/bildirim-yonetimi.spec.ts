@@ -11,10 +11,17 @@ test.describe("Bildirimler (yönetici)", () => {
     for (const e of ["Bekliyor", "Gönderildi", "Hatalı", "İptal"]) await expect(ozet).toContainText(e);
     await expect(page.getByTestId("push-durumu")).toContainText("Uygulama bildirimleri:");
     await expect(page.getByTestId("push-durumu")).toContainText("cihaz kayıtlı");
-    await expect(page.getByText("WhatsApp gönderimi Evolution API bağlandığında etkinleşecek.")).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Uygulama bildirimleri" })).toHaveAttribute("aria-selected", "true");
 
     // Liste ya boş mesajı ya da tablo/kart sayfalaması gösterir.
     await expect(page.getByText(/Bu filtrede bildirim yok\.|\d+ kayıt · Sayfa/)).toBeVisible();
+    // WhatsApp sekmesi: kanal bazlı özet ve açıklama.
+    await page.getByRole("tab", { name: "WhatsApp" }).click();
+    await expect(page.getByText("WhatsApp gönderimi Evolution API bağlandığında etkinleşecek.")).toBeVisible();
+    await expect(page.getByTestId("push-durumu")).toHaveCount(0);
+    await page.getByRole("tab", { name: "Uygulama bildirimleri" }).click();
+    await expect(page.getByTestId("push-durumu")).toBeVisible();
+
     await page.getByLabel("Durum filtresi").selectOption("hata");
     await page.getByLabel("Öğrenci ara").fill("yokboyleisim");
     await expect(page.getByText("Bu filtrede bildirim yok.")).toBeVisible();

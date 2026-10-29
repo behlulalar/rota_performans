@@ -10,6 +10,9 @@ import GrupListe from "./pages/GrupListe";
 import Giris from "./pages/Giris";
 import GelirRaporu from "./pages/GelirRaporu";
 import BildirimYonetimi from "./pages/BildirimYonetimi";
+import DuyuruDetay from "./pages/DuyuruDetay";
+import DuyuruForm from "./pages/DuyuruForm";
+import Duyurular from "./pages/Duyurular";
 import DenetimKaydi from "./pages/DenetimKaydi";
 import Ayarlar from "./pages/Ayarlar";
 import GenelBakis from "./pages/GenelBakis";
@@ -95,6 +98,9 @@ export default function App() {
             <Route path="/antrenorler" element={<AntrenorListe />} />
             <Route path="/odemeler" element={<OdemeListe />} />
             <Route path="/gelir-raporu" element={<GelirRaporu />} />
+            <Route path="/duyurular" element={<Duyurular />} />
+            <Route path="/duyurular/yeni" element={<DuyuruForm />} />
+            <Route path="/duyurular/:id" element={<DuyuruDetay />} />
             <Route path="/bildirimler" element={<BildirimYonetimi />} />
             <Route path="/denetim-kaydi" element={<DenetimKaydi />} />
             <Route path="/ayarlar" element={<Ayarlar />} />

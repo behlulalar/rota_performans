@@ -63,6 +63,10 @@ class OturumDetay(OturumOzet):
     ogrenciler: list[OturumOgrenci]
 
 
+class IptalGirdi(BaseModel):
+    neden: str | None = Field(default=None, max_length=200)
+
+
 class YoklamaGirdi(BaseModel):
     ogrenci_id: uuid.UUID
     durum: YoklamaDurum

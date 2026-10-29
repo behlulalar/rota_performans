@@ -49,3 +49,7 @@ export const telafiPlanla = (oturumId: string, ogrenciId: string) =>
   api<OturumDetay>(`/api/oturumlar/${oturumId}/telafi`, { method: "POST", body: json({ ogrenci_id: ogrenciId }) });
 export const telafiGeriAl = (oturumId: string, ogrenciId: string) =>
   api<OturumDetay>(`/api/oturumlar/${oturumId}/telafi/${ogrenciId}`, { method: "DELETE" });
+
+export const oturumIptalEt = (id: string, neden?: string) =>
+  api<OturumDetay>(`/api/oturumlar/${id}/iptal`, { method: "POST", body: json({ neden: neden || null }) });
+export const oturumIptalGeriAl = (id: string) => api<OturumDetay>(`/api/oturumlar/${id}/geri-al`, { method: "POST" });

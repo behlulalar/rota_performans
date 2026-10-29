@@ -37,6 +37,21 @@ async def test_yetki(istemci):
     assert (await istemci.post(f"{U}/1/yeniden-dene", headers=baslik)).status_code == 403
 
 
+async def test_ozet_kanala_gore(istemci, yonetici):
+    o, kul, kisi = await ortam()
+    simdi = datetime.now(timezone.utc)
+    await ekle(o, kisi, kanal=BildirimKanal.push, durum=BildirimDurum.gonderildi)
+    await ekle(o, kisi, kanal=BildirimKanal.push, durum=BildirimDurum.bekliyor, planli=simdi - timedelta(minutes=5))
+    await ekle(o, kisi, kanal=BildirimKanal.whatsapp, durum=BildirimDurum.hata)
+    push = (await istemci.get(f"{U}/ozet?kanal=push", headers=yonetici)).json()
+    assert push["son_7_gun"] == {"bekliyor": 1, "gonderildi": 1, "hata": 0, "iptal": 0} and push["geciken_bekleyen"] == 1
+    wa = (await istemci.get(f"{U}/ozet?kanal=whatsapp", headers=yonetici)).json()
+    assert wa["son_7_gun"] == {"bekliyor": 0, "gonderildi": 0, "hata": 1, "iptal": 0} and wa["geciken_bekleyen"] == 0
+    tum = (await istemci.get(f"{U}/ozet", headers=yonetici)).json()
+    assert tum["son_7_gun"] == {"bekliyor": 1, "gonderildi": 1, "hata": 1, "iptal": 0}
+    assert (await istemci.get(f"{U}/ozet?kanal=sms", headers=yonetici)).status_code == 422
+
+
 async def test_ozet(istemci, yonetici, monkeypatch):
     monkeypatch.setattr(settings, "vapid_public_key", "")
     o, kul, kisi = await ortam()

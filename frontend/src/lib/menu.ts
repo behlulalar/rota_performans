@@ -44,6 +44,7 @@ export const YONETICI_MENUSU: MenuBolumu[] = [
     ad: "Sistem",
     simge: "sistem",
     ogeler: [
+      { ad: "Duyurular", simge: "duyuru", yol: "/duyurular" },
       { ad: "Bildirimler", simge: "bildirim", yol: "/bildirimler" },
       { ad: "Denetim kaydı", simge: "denetim", yol: "/denetim-kaydi" },
       { ad: "Ayarlar", simge: "sistem", yol: "/ayarlar" },

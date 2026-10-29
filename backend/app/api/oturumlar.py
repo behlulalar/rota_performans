@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import and_, exists, func, or_, select, union_all
+from sqlalchemy import and_, delete, exists, func, or_, select, union_all
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -20,6 +20,7 @@ from app.models.yoklama import Yoklama
 from app.oturumlar import bugun, oturumlari_uret, simdi, yoklama_acilis_zamani
 from app.schemas.oturum import (
     EN_COK_GUN,
+    IptalGirdi,
     OturumAntrenor,
     OturumDetay,
     OturumGrup,
@@ -249,7 +250,11 @@ async def yoklama_al(
         if simdi() < acilis:
             yerel = acilis.astimezone(ZoneInfo(settings.saat_dilimi))
             raise HTTPException(422, f"Yoklama {yerel:%H:%M}'te açılır (ders başlamadan 15 dakika önce)")
-    if ozet.durum == OturumDurum.iptal:
+    # Oturum satırı kilitlenir: aynı anda çalışan "dersi iptal et" ile yoklama birbirini atlamasın.
+    durum = (
+        await session.execute(select(DersOturumu.durum).where(DersOturumu.id == oturum_id).with_for_update())
+    ).scalar_one()
+    if durum == OturumDurum.iptal:
         raise HTTPException(422, "İptal edilmiş derse yoklama alınamaz")
     idler = [g.ogrenci_id for g in govde]
     if len(idler) != len(set(idler)):
@@ -299,6 +304,76 @@ async def yoklama_al(
     except IntegrityError:
         await session.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Yoklama aynı anda başka biri tarafından değiştirildi, tekrar deneyin")
+    ozet = (await _ozetler(session, [DersOturumu.id == oturum_id]))[0]
+    return await _detay(session, ozet)
+
+
+# ---------- ders iptali ----------
+
+
+async def _oturumu_kilitle(session: AsyncSession, oturum_id: uuid.UUID) -> DersOturumu:
+    oturum = (
+        await session.execute(select(DersOturumu).where(DersOturumu.id == oturum_id).with_for_update())
+    ).scalar_one_or_none()
+    if oturum is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, BULUNAMADI)
+    return oturum
+
+
+@router.post("/oturumlar/{oturum_id}/iptal", response_model=OturumDetay)
+async def oturum_iptal(
+    oturum_id: uuid.UUID,
+    request: Request,
+    govde: IptalGirdi | None = None,
+    yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    """Dersi iptal eder. Yalnız planlı ve yoklaması hiç alınmamış ders iptal edilebilir.
+    Derse eklenmiş telafi planları silinir: öğrencilerin telafi hakkı yeniden planlanabilir olur
+    (kullanılabilir telafi, iptal edilmemiş ve yoklaması alınmamış planları sayar). Yoklama yazılmadığı için
+    ders hakkı defterine dokunulmaz. Oturum üretimi (ON CONFLICT DO NOTHING) iptal edilmiş oturumu yeniden açmaz."""
+    oturum = await _oturumu_kilitle(session, oturum_id)
+    if oturum.durum == OturumDurum.iptal:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bu ders zaten iptal edilmiş")
+    if oturum.durum != OturumDurum.planli:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Yalnız planlı ders iptal edilebilir")
+    yoklama_var = (await session.execute(select(Yoklama.id).where(Yoklama.oturum_id == oturum_id).limit(1))).first()
+    if yoklama_var is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Yoklaması alınmış ders iptal edilemez")
+    silinen = (
+        await session.execute(delete(TelafiPlani).where(TelafiPlani.oturum_id == oturum_id))
+    ).rowcount
+    oturum.durum = OturumDurum.iptal
+    neden = (govde.neden.strip() if govde and govde.neden else None) or None
+    await audit.kaydet(
+        session, "oturum_iptal_edildi", kullanici_id=yonetici.id, hedef_tur="ders_oturumu", hedef_id=str(oturum_id),
+        ip=_ip(request), detay={"neden": neden, "silinen_telafi": silinen},
+    )
+    await session.commit()
+    ozet = (await _ozetler(session, [DersOturumu.id == oturum_id]))[0]
+    return await _detay(session, ozet)
+
+
+@router.post("/oturumlar/{oturum_id}/geri-al", response_model=OturumDetay)
+async def oturum_iptal_geri_al(
+    oturum_id: uuid.UUID,
+    request: Request,
+    yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    """İptal edilmiş dersi planlıya döndürür (geçmiş tarihli ders döndürülemez).
+    Silinen telafi planları geri gelmez; gerekirse yeniden planlanır."""
+    oturum = await _oturumu_kilitle(session, oturum_id)
+    if oturum.durum != OturumDurum.iptal:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bu ders iptal edilmiş değil")
+    if oturum.tarih < bugun():
+        raise HTTPException(422, "Geçmiş tarihli ders yeniden açılamaz")
+    oturum.durum = OturumDurum.planli
+    await audit.kaydet(
+        session, "oturum_iptali_geri_alindi", kullanici_id=yonetici.id, hedef_tur="ders_oturumu",
+        hedef_id=str(oturum_id), ip=_ip(request),
+    )
+    await session.commit()
     ozet = (await _ozetler(session, [DersOturumu.id == oturum_id]))[0]
     return await _detay(session, ozet)
 

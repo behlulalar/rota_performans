@@ -33,6 +33,7 @@ SABLON_ETIKETLERI = {
     "ders_gelmedi": "Derse gelmedi",
     "ders_hakki_azaldi": "Ders hakkı azaldı",
     "ders_hakki_bitti": "Ders hakkı bitti",
+    "duyuru": "Duyuru",
 }
 
 
@@ -44,28 +45,33 @@ def _gun_basi(gun: date) -> datetime:
     return datetime.combine(gun, time.min, tzinfo=ZoneInfo(settings.saat_dilimi))
 
 
-async def _sayilar(session: AsyncSession, baslangic: datetime) -> DurumSayilari:
-    satirlar = await session.execute(
-        select(Bildirim.durum, func.count()).where(Bildirim.olusturma >= baslangic).group_by(Bildirim.durum)
-    )
+async def _sayilar(session: AsyncSession, baslangic: datetime, kanal: BildirimKanal | None) -> DurumSayilari:
+    sorgu = select(Bildirim.durum, func.count()).where(Bildirim.olusturma >= baslangic)
+    if kanal is not None:
+        sorgu = sorgu.where(Bildirim.kanal == kanal)
+    satirlar = await session.execute(sorgu.group_by(Bildirim.durum))
     return DurumSayilari(**{d.value: n for d, n in satirlar.all()})
 
 
 @router.get("/ozet", response_model=BildirimOzeti)
-async def ozet(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
+async def ozet(
+    kanal: BildirimKanal | None = Query(default=None),
+    _: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    """`kanal` verilirse durum sayıları ve geciken bekleyenler yalnız o kanaldan sayılır."""
     t = bugun()
-    son7 = await _sayilar(session, _gun_basi(t - timedelta(days=6)))
-    bugunku = await _sayilar(session, _gun_basi(t))
+    son7 = await _sayilar(session, _gun_basi(t - timedelta(days=6)), kanal)
+    bugunku = await _sayilar(session, _gun_basi(t), kanal)
     cihaz, kullanici = (
         await session.execute(select(func.count(), func.count(func.distinct(PushAbonelik.kullanici_id))))
     ).one()
-    geciken = (
-        await session.execute(
-            select(func.count()).where(
-                Bildirim.durum == BildirimDurum.bekliyor, Bildirim.planli_zaman < datetime.now(timezone.utc)
-            )
-        )
-    ).scalar_one()
+    geciken_sorgu = select(func.count()).where(
+        Bildirim.durum == BildirimDurum.bekliyor, Bildirim.planli_zaman < datetime.now(timezone.utc)
+    )
+    if kanal is not None:
+        geciken_sorgu = geciken_sorgu.where(Bildirim.kanal == kanal)
+    geciken = (await session.execute(geciken_sorgu)).scalar_one()
     return BildirimOzeti(
         son_7_gun=son7, bugun=bugunku, push_etkin=settings.push_etkin, push_cihaz_sayisi=cihaz,
         push_kullanici_sayisi=kullanici, geciken_bekleyen=geciken,
