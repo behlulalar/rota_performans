@@ -69,7 +69,7 @@ async def test_paket_crud(istemci, yonetici):
         f"/api/paketler/{p['id']}", json={"ad": "Yeni ad", "varsayilan_fiyat": "3500.5"}, headers=yonetici
     )
     assert r.status_code == 200
-    assert r.json()["ad"] == "Yeni ad" and r.json()["varsayilan_fiyat"] == "3500.50"
+    assert r.json()["ad"] == "Yeni Ad" and r.json()["varsayilan_fiyat"] == "3500.50"
     assert r.json()["ders_sayisi"] == 8
     assert (await istemci.patch(f"/api/paketler/{p['id']}", json={"ad": None}, headers=yonetici)).status_code == 422
     assert (await istemci.delete(f"/api/paketler/{p['id']}", headers=yonetici)).status_code == 405

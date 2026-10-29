@@ -148,7 +148,7 @@ async def test_ogrenci_detayinda_gruplar(istemci, yonetici):
         await istemci.post(f"/api/gruplar/{g['id']}/ogrenciler", json={"ogrenci_id": o}, headers=yonetici)
     await istemci.delete(f"/api/gruplar/{g1['id']}/ogrenciler/{o}", headers=yonetici)
     d = (await istemci.get(f"/api/ogrenciler/{o}", headers=yonetici)).json()
-    assert d["gruplar"] == [{"id": g2["id"], "ad": "B grubu"}]
+    assert d["gruplar"] == [{"id": g2["id"], "ad": "B Grubu"}]
 
 
 async def test_kontenjan_dolu_ve_tekrar(istemci, yonetici):

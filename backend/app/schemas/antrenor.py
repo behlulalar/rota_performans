@@ -1,13 +1,14 @@
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.metin import Baslik
 
 
 class AntrenorOlustur(BaseModel):
     # Yalnızca boşluktan oluşan değerler boş sayılır ve min_length ile reddedilir.
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    ad_soyad: str = Field(min_length=1, max_length=200)
+    ad_soyad: Baslik = Field(min_length=1, max_length=200)
     telefon: str | None = Field(default=None, max_length=40)
     # E-posta veya telefon.
     giris: str = Field(min_length=1, max_length=255)
@@ -16,7 +17,7 @@ class AntrenorOlustur(BaseModel):
 class AntrenorGuncelle(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    ad_soyad: str | None = Field(default=None, min_length=1, max_length=200)
+    ad_soyad: Baslik | None = Field(default=None, min_length=1, max_length=200)
     telefon: str | None = Field(default=None, max_length=40)
     aktif: bool | None = None
 

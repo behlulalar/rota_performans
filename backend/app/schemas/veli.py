@@ -2,6 +2,7 @@ import uuid
 from datetime import date, datetime, time
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.metin import Baslik
 
 from app.models.kullanici import Rol
 from app.models.ogrenci import OgrenciDurum
@@ -109,5 +110,5 @@ class Profil(BaseModel):
 class ProfilGuncelle(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    ad_soyad: str = Field(min_length=1, max_length=200)
+    ad_soyad: Baslik = Field(min_length=1, max_length=200)
     telefon: str = Field(min_length=1, max_length=40)

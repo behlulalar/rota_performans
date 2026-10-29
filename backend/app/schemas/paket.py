@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
+from app.metin import Baslik
 
 from app.models.paket import OdemeYontemi, OgrenciPaketiDurum, PaketTuru
 
@@ -14,7 +15,7 @@ Tutar = Annotated[Decimal, PlainSerializer(lambda d: f"{d:.2f}", return_type=str
 class PaketOlustur(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    ad: str = Field(min_length=1, max_length=100)
+    ad: Baslik = Field(min_length=1, max_length=100)
     tur: PaketTuru
     ders_sayisi: int = Field(gt=0, le=1000)
     sure_ay: int = Field(gt=0, le=120)
@@ -26,7 +27,7 @@ class PaketGuncelle(BaseModel):
     # Atanmış paketlere ders sayısı ve fiyat kopyalanır (OgrenciPaketi); bu yüzden tanım değişikliği yalnız yeni atamaları etkiler.
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
-    ad: str | None = Field(default=None, min_length=1, max_length=100)
+    ad: Baslik | None = Field(default=None, min_length=1, max_length=100)
     tur: PaketTuru | None = None
     ders_sayisi: int | None = Field(default=None, gt=0, le=1000)
     sure_ay: int | None = Field(default=None, gt=0, le=120)

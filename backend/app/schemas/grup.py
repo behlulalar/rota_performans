@@ -3,6 +3,7 @@ import uuid
 from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from app.metin import Baslik
 
 _SAAT = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
@@ -33,7 +34,7 @@ class ProgramSlot(BaseModel):
 class GrupOlustur(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    ad: str = Field(min_length=1, max_length=100)
+    ad: Baslik = Field(min_length=1, max_length=100)
     antrenor_id: uuid.UUID | None = None
     kontenjan: int = Field(ge=1, le=1000)
     program: list[ProgramSlot] = []
@@ -42,7 +43,7 @@ class GrupOlustur(BaseModel):
 class GrupGuncelle(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    ad: str | None = Field(default=None, min_length=1, max_length=100)
+    ad: Baslik | None = Field(default=None, min_length=1, max_length=100)
     antrenor_id: uuid.UUID | None = None
     kontenjan: int | None = Field(default=None, ge=1, le=1000)
     aktif: bool | None = None

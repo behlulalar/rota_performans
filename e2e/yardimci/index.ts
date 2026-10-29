@@ -20,7 +20,8 @@ let sayac = 0;
 /** Testler arasında çakışmayan, zaman damgalı kısa kimlik (yalnız harf ve rakam). */
 export function benzersiz(): string {
   sayac += 1;
-  return `${Date.now().toString(36)}${sayac}${Math.floor(Math.random() * 1296).toString(36)}`;
+  // Rakamla başlar: sunucu adları "Başlık Yazımı"na çevirir, rakam içeren sözcükte ilk harf zaten değişmez.
+  return `1${Date.now().toString(36)}${sayac}${Math.floor(Math.random() * 1296).toString(36)}`;
 }
 
 /** 11 haneli T.C. kimlik algoritmasına uyan, rastgele ve benzersiz sahte numara. */

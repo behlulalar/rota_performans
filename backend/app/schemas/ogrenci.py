@@ -3,6 +3,7 @@ from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.metin import Baslik
 
 from app.schemas.grup import OgrenciGrupOzet
 from app.models.kullanici import Rol
@@ -16,7 +17,7 @@ class IletisimKisisiGirdi(BaseModel):
     # Doluysa mevcut kişi yerinde güncellenir (hesap bağı korunur).
     id: uuid.UUID | None = None
     rol: IletisimRolu
-    ad_soyad: str = Field(min_length=1, max_length=200)
+    ad_soyad: Baslik = Field(min_length=1, max_length=200)
     telefon: str = Field(min_length=1, max_length=40)
     birincil: bool
 
@@ -31,10 +32,10 @@ class OgrenciOlustur(BaseModel):
     # Yalnızca boşluktan oluşan değerler boş sayılır ve min_length ile reddedilir.
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    ad: str = Field(min_length=1, max_length=100)
-    soyad: str = Field(min_length=1, max_length=100)
-    anne_adi: str | None = Field(default=None, max_length=100)
-    baba_adi: str | None = Field(default=None, max_length=100)
+    ad: Baslik = Field(min_length=1, max_length=100)
+    soyad: Baslik = Field(min_length=1, max_length=100)
+    anne_adi: Baslik | None = Field(default=None, max_length=100)
+    baba_adi: Baslik | None = Field(default=None, max_length=100)
     dogum_tarihi: date
     cinsiyet: Cinsiyet | None = None
     kimlik_tur: KimlikTur
@@ -48,10 +49,10 @@ class OgrenciGuncelle(BaseModel):
     # Yalnızca boşluktan oluşan değerler boş sayılır ve min_length ile reddedilir.
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    ad: str | None = Field(default=None, min_length=1, max_length=100)
-    soyad: str | None = Field(default=None, min_length=1, max_length=100)
-    anne_adi: str | None = Field(default=None, max_length=100)
-    baba_adi: str | None = Field(default=None, max_length=100)
+    ad: Baslik | None = Field(default=None, min_length=1, max_length=100)
+    soyad: Baslik | None = Field(default=None, min_length=1, max_length=100)
+    anne_adi: Baslik | None = Field(default=None, max_length=100)
+    baba_adi: Baslik | None = Field(default=None, max_length=100)
     dogum_tarihi: date | None = None
     cinsiyet: Cinsiyet | None = None
     kimlik_tur: KimlikTur | None = None
@@ -165,4 +166,4 @@ class ResitGecisiGirdi(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     telefon: str = Field(min_length=1, max_length=40)
-    ad_soyad: str | None = Field(default=None, max_length=200)
+    ad_soyad: Baslik | None = Field(default=None, max_length=200)
