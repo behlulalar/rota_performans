@@ -60,6 +60,8 @@ export const ISLEM_ETIKET: Record<string, string> = {
   push_abonelik_silindi: "Bildirim cihazı silindi",
   rapor_disa_aktarildi: "Rapor dışa aktarıldı",
   resit_gecisi: "Reşit geçişi",
+  telefon_degisti: "Telefon değişti",
+  telefon_degistirme_basarisiz: "Telefon değiştirme başarısız",
   telafi_iptal_edildi: "Telafi iptal edildi",
   telafi_planlandi: "Telafi planlandı",
   yenileme_yeniden_kullanim: "Yenileme yeniden kullanıldı",

@@ -22,7 +22,7 @@ const BASLIK: Record<Panel, { baslik: string; karsilama: ReactNode; ipucu: strin
     yer: "05xx xxx xx xx",
   },
   antrenor: { baslik: "Antrenör girişi", karsilama: "İyi dersler.", ipucu: "Kulübün size verdiği giriş bilgileriyle giriş yapın.", yer: "e-posta veya telefon" },
-  yonetici: { baslik: "Yönetici girişi", karsilama: "Yönetim paneli.", ipucu: "Yönetici hesabınızla giriş yapın.", yer: "e-posta veya telefon" },
+  yonetici: { baslik: "Yönetici girişi", karsilama: "Yönetim paneli.", ipucu: "Yönetici hesabınızla e-posta veya telefon numaranızla giriş yapın.", yer: "E-posta veya telefon" },
 };
 const DIGER: Record<Panel, Panel | null> = { veli: null, antrenor: "yonetici", yonetici: "antrenor" };
 

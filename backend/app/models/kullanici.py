@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Integer, String, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,6 +23,9 @@ class Kullanici(Base):
     rol: Mapped[Rol] = mapped_column(Enum(Rol, native_enum=False, length=16))
     # Telefon veya e-posta. Küçük harfe çevrilmiş ve kırpılmış saklanır.
     giris: Mapped[str] = mapped_column(String(255), unique=True)
+    # Yalnız yöneticiler için isteğe bağlı ikinci giriş yolu (normalize: +90XXXXXXXXXX). Boş değilse tektir.
+    # Başka bir hesabın giris veya telefon değeriyle çakışamaz (uygulama katmanında denetlenir).
+    telefon: Mapped[str | None] = mapped_column(String(32))
     sifre_ozeti: Mapped[str] = mapped_column(String(255))
     # Görünen ad (yönetici işlemlerinde ve denetim ekranında). Veli ve öğrencinin adı kendi kayıtlarında.
     ad_soyad: Mapped[str | None] = mapped_column(String(200))
@@ -33,6 +36,10 @@ class Kullanici(Base):
     sifre_degistirmeli: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     son_giris: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("uq_kullanici_telefon", "telefon", unique=True, postgresql_where=text("telefon IS NOT NULL")),
+    )
 
 
 class Oturum(Base):

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ayarlariGetir, ayarlariGuncelle, type Ayarlar as AyarVeri } from "../api/ayarlar";
-import { girisDegistir } from "../api/yonetici";
+import { girisDegistir, telefonDegistir } from "../api/yonetici";
 import { sifreDegistir } from "../api/veli";
 import { hatirlananiKaydet, hatirlananiOku } from "../lib/hatirla";
 import { useAuth } from "../auth/AuthProvider";
@@ -166,6 +166,39 @@ function GirisFormu() {
   );
 }
 
+function TelefonFormu() {
+  const { kullanici, sifreDegistirildi: kullaniciyiYenile } = useAuth();
+  const [telefon, setTelefon] = useState(rakamlaraCevir(kullanici?.telefon));
+  const [sifre, setSifre] = useState("");
+  const k = useKayit();
+
+  function gonder(e: FormEvent) {
+    e.preventDefault();
+    if (telefon && !gecerliMi(telefon)) return k.setHata(TELEFON_HATA + ".");
+    if ((apiyeCevir(telefon) ?? null) === (kullanici?.telefon ?? null)) return k.setHata("Telefon bilgisi değişmedi.");
+    if (!sifre) return k.setHata("Onay için şifrenizi girin.");
+    k.calistir(async () => {
+      await telefonDegistir(apiyeCevir(telefon), sifre);
+      setSifre("");
+      await kullaniciyiYenile();
+    });
+  }
+
+  return (
+    <form onSubmit={gonder} noValidate className="space-y-4 max-w-md pb-5 mb-5 border-b border-cizgi">
+      <label className="block"><span className={etiket}>Telefon numaram (isteğe bağlı)</span>
+        <TelefonGirdisi value={telefon} onChange={setTelefon} /></label>
+      <label className="block"><span className={etiket}>Şifreniz (telefon onayı için)</span>
+        <input className={girdi} type="password" value={sifre} onChange={(e) => setSifre(e.target.value)} autoComplete="current-password" /></label>
+      <p className="-mt-2 text-[12px] text-metin-soluk">Telefonunuzla da giriş yapabilirsiniz. Boş bırakıp kaydederseniz kaldırılır; diğer cihazlardaki oturumlar kapatılır.</p>
+      <Sonuc hata={k.hata} tamam={k.tamam} mesaj="Telefon bilginiz kaydedildi." />
+      <button type="submit" disabled={k.mesgul} className={birincilDugme}>
+        {k.mesgul ? "Kaydediliyor…" : "Telefonu kaydet"}
+      </button>
+    </form>
+  );
+}
+
 function HesapKarti() {
   const [mevcut, setMevcut] = useState("");
   const [yeni, setYeni] = useState("");
@@ -187,6 +220,7 @@ function HesapKarti() {
   return (
     <Kart baslik="Hesabım" aciklama="Giriş bilgisi ve şifre; değişince diğer cihazlardaki oturumlar kapatılır">
       <GirisFormu />
+      <TelefonFormu />
       <form onSubmit={gonder} noValidate className="space-y-4 max-w-md">
         <label className="block"><span className={etiket}>Mevcut şifre</span>
           <input className={girdi} type="password" value={mevcut} onChange={(e) => setMevcut(e.target.value)} autoComplete="current-password" /></label>

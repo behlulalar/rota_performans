@@ -9,8 +9,10 @@ import {
 import GeciciSifreKutusu from "../components/GeciciSifreKutusu";
 import { useOnay } from "../components/OnayPenceresi";
 import SayfaBasligi from "../components/SayfaBasligi";
+import TelefonGirdisi from "../components/TelefonGirdisi";
 import { hataMesaji } from "../lib/dogrulama";
 import { girisiBicimle } from "../lib/hatirla";
+import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
 import { birincilDugme, dugme, girdi, rozetBasari, rozetNotr, satir, td, th } from "../lib/stil";
 
 const KENDI_NOTU = "Kendi hesabınız için Ayarlar > Hesabım bölümünü kullanın";
@@ -30,7 +32,7 @@ export default function YoneticiListe() {
   const [liste, setListe] = useState<YoneticiOzet[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
-  const [sifre, setSifre] = useState<{ baslik: string; deger: string; giris: string } | null>(null);
+  const [sifre, setSifre] = useState<{ baslik: string; deger: string; giris: string; telefon: string | null } | null>(null);
   const [yeniAcik, setYeniAcik] = useState(false);
   const [duzenlenen, setDuzenlenen] = useState<YoneticiOzet | null>(null);
 
@@ -76,7 +78,7 @@ export default function YoneticiListe() {
     islem(async () => {
       if (!(await onayla({ baslik: "Şifre sıfırla", mesaj: `${adi(y)} için şifre sıfırlansın mı? Eski şifre geçersiz olur, açık oturumları kapanır.`, onayYazisi: "Sıfırla" }))) return;
       const r = await yoneticiSifreSifirla(y.id);
-      setSifre({ baslik: `${adi(y)} için yeni geçici şifre`, deger: r.gecici_sifre, giris: y.giris });
+      setSifre({ baslik: `${adi(y)} için yeni geçici şifre`, deger: r.gecici_sifre, giris: y.giris, telefon: y.telefon });
     });
 
   const eylemler = (y: YoneticiOzet) => (
@@ -109,6 +111,7 @@ export default function YoneticiListe() {
                 <tr>
                   <th className={th}>Ad soyad</th>
                   <th className={th}>Giriş bilgisi</th>
+                  <th className={th}>Telefon</th>
                   <th className={th}>Son giriş</th>
                   <th className={th}>Durum</th>
                   <th className={th}></th>
@@ -119,6 +122,7 @@ export default function YoneticiListe() {
                   <tr key={y.id} className={satir}>
                     <td className={`${td} font-medium`}>{y.ad_soyad ?? "—"}{siz(y)}</td>
                     <td className={`${td} text-metin-soluk`}>{girisiBicimle(y.giris)}</td>
+                    <td className={`${td} text-metin-soluk`}>{y.telefon ? bicimle(y.telefon) : "—"}</td>
                     <td className={`${td} text-metin-soluk`}>{sonGiris(y.son_giris)}</td>
                     <td className={td}><AktifRozeti aktif={y.aktif} /></td>
                     <td className="px-4 py-1.5">
@@ -138,6 +142,7 @@ export default function YoneticiListe() {
                   <AktifRozeti aktif={y.aktif} />
                 </div>
                 <div className="text-metin-soluk mt-1 break-all">{girisiBicimle(y.giris)}</div>
+                {y.telefon && <div className="text-metin-soluk">Telefon: {bicimle(y.telefon)}</div>}
                 <div className="text-metin-soluk">Son giriş: {sonGiris(y.son_giris)}</div>
                 {y.ben && <div className="mt-1 text-[12px] text-metin-soluk">{KENDI_NOTU}.</div>}
                 <div className="flex gap-2 flex-wrap mt-3">{eylemler(y)}</div>
@@ -152,7 +157,7 @@ export default function YoneticiListe() {
           onKapat={() => setYeniAcik(false)}
           onOlustu={(deger, y) => {
             setYeniAcik(false);
-            setSifre({ baslik: `${adi(y)} için geçici şifre`, deger, giris: y.giris });
+            setSifre({ baslik: `${adi(y)} için geçici şifre`, deger, giris: y.giris, telefon: y.telefon });
             void yukle();
           }}
         />
@@ -172,7 +177,7 @@ export default function YoneticiListe() {
           sifre={sifre.deger}
           baslik={sifre.baslik}
           giris={sifre.giris}
-          telefon={sifre.giris.includes("@") ? null : sifre.giris}
+          telefon={sifre.giris.includes("@") ? sifre.telefon : sifre.giris}
           uyari="Bu şifre yalnızca şimdi görünür. Yöneticiye güvenli bir yoldan iletin; ilk girişte yeni şifre belirleyecek."
           onKapat={() => setSifre(null)}
         />
@@ -198,16 +203,18 @@ function Modal({ baslik, children, onKapat }: { baslik: string; children: React.
 function YeniYonetici({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (sifre: string, y: YoneticiOzet) => void }) {
   const [ad, setAd] = useState("");
   const [giris, setGiris] = useState("");
+  const [telefon, setTelefon] = useState("");
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
 
   async function gonder(e: FormEvent) {
     e.preventDefault();
     if (!ad.trim() || !giris.trim()) return setHata("Ad soyad ve giriş bilgisi zorunludur.");
+    if (telefon && !gecerliMi(telefon)) return setHata(TELEFON_HATA + ".");
     setGonderiliyor(true);
     setHata(null);
     try {
-      const y = await yoneticiOlustur({ ad_soyad: ad.trim(), giris: giris.trim() });
+      const y = await yoneticiOlustur({ ad_soyad: ad.trim(), giris: giris.trim(), ...(telefon ? { telefon: apiyeCevir(telefon)! } : {}) });
       onOlustu(y.gecici_sifre, y.yonetici);
     } catch (err) {
       setHata(hataMesaji(err));
@@ -222,7 +229,9 @@ function YeniYonetici({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
           <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} autoFocus /></label>
         <label className="block"><span className="text-[13px] text-metin-soluk">Giriş (e-posta veya telefon)</span>
           <input className={girdi} value={giris} onChange={(e) => setGiris(e.target.value)} autoCapitalize="none" /></label>
-        <p className="text-[12px] text-metin-soluk">Geçici şifre oluşturulur ve bir kez gösterilir. Yeni yönetici ilk girişte kendi şifresini belirler.</p>
+        <label className="block"><span className="text-[13px] text-metin-soluk">Telefon (isteğe bağlı)</span>
+          <TelefonGirdisi value={telefon} onChange={setTelefon} /></label>
+        <p className="text-[12px] text-metin-soluk">Yönetici e-posta veya telefonla girebilir. Geçici şifre oluşturulur ve bir kez gösterilir. Yeni yönetici ilk girişte kendi şifresini belirler.</p>
         {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
         <button type="submit" disabled={gonderiliyor} className={birincilDugme}>
           {gonderiliyor ? "Oluşturuluyor…" : "Oluştur"}
@@ -235,18 +244,21 @@ function YeniYonetici({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
 function Duzenle({ yonetici, onKapat, onKaydedildi }: { yonetici: YoneticiOzet; onKapat: () => void; onKaydedildi: () => void }) {
   const [ad, setAd] = useState(yonetici.ad_soyad ?? "");
   const [giris, setGiris] = useState(yonetici.giris);
+  const [telefon, setTelefon] = useState(rakamlaraCevir(yonetici.telefon));
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
   const girisDegisti = !yonetici.ben && giris.trim().toLowerCase() !== yonetici.giris;
+  const telefonDegisti = !yonetici.ben && (apiyeCevir(telefon) ?? null) !== yonetici.telefon;
 
   async function gonder(e: FormEvent) {
     e.preventDefault();
     if (!ad.trim()) return setHata("Ad soyad zorunludur.");
     if (!giris.trim()) return setHata("Giriş bilgisi boş olamaz.");
+    if (telefon && !gecerliMi(telefon)) return setHata(TELEFON_HATA + ".");
     setGonderiliyor(true);
     setHata(null);
     try {
-      await yoneticiGuncelle(yonetici.id, { ad_soyad: ad.trim(), ...(girisDegisti ? { giris: giris.trim() } : {}) });
+      await yoneticiGuncelle(yonetici.id, { ad_soyad: ad.trim(), ...(girisDegisti ? { giris: giris.trim() } : {}), ...(telefonDegisti ? { telefon: apiyeCevir(telefon) ?? "" } : {}) });
       onKaydedildi();
     } catch (err) {
       setHata(hataMesaji(err));
@@ -266,6 +278,16 @@ function Duzenle({ yonetici, onKapat, onKaydedildi }: { yonetici: YoneticiOzet; 
           ) : girisDegisti ? (
             <span className="block mt-1 text-[12px] text-metin-soluk">Giriş değişince yöneticinin açık oturumları kapanır.</span>
           ) : null}
+        </label>
+        <label className="block"><span className="text-[13px] text-metin-soluk">Telefon (isteğe bağlı)</span>
+          {yonetici.ben ? (
+            <>
+              <input className={`${girdi} opacity-70`} value={bicimle(yonetici.telefon)} readOnly />
+              <span className="block mt-1 text-[12px] text-metin-soluk">Kendi telefonunuzu Ayarlar &gt; Hesabım bölümünden değiştirebilirsiniz.</span>
+            </>
+          ) : (
+            <TelefonGirdisi value={telefon} onChange={setTelefon} />
+          )}
         </label>
         {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
         <button type="submit" disabled={gonderiliyor} className={birincilDugme}>

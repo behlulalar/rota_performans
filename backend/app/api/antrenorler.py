@@ -25,6 +25,7 @@ from app.security import normalize_giris, sifre_ozeti
 router = APIRouter(prefix="/api/antrenorler", tags=["antrenorler"])
 
 GIRIS_TEKRAR = "Bu giriş bilgisi başka bir hesapta kayıtlı"
+TELEFON_TEKRAR = "Bu telefon/giriş bilgisi başka bir hesapta kayıtlı"
 BULUNAMADI = "Antrenör bulunamadı"
 
 # Karıştırılabilen 0/O/l/1/I karakterleri yok.
@@ -58,6 +59,18 @@ def _giris_hazirla(giris: str) -> str:
             raise _hata422("Geçersiz e-posta adresi")
         return normalize_giris(sonuc.normalized)
     return normalize_giris(_telefon_normalize(giris))
+
+
+async def cakisma_denetle(session: AsyncSession, deger: str, haric_id: uuid.UUID | None = None) -> None:
+    """Giriş veya telefon olarak kullanılacak değer, başka bir hesabın giris ya da telefon alanında varsa 409.
+
+    Giriş (giris) ile yönetici telefonu (telefon) aynı kimlik alanını paylaşır: biri diğerinin değeriyle çakışamaz.
+    """
+    sorgu = select(Kullanici.id).where((Kullanici.giris == deger) | (Kullanici.telefon == deger))
+    if haric_id is not None:
+        sorgu = sorgu.where(Kullanici.id != haric_id)
+    if (await session.execute(sorgu.limit(1))).first() is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, TELEFON_TEKRAR)
 
 
 def gecici_sifre_uret() -> str:
@@ -122,6 +135,7 @@ async def olustur(
     telefon = _telefon_normalize(govde.telefon) if govde.telefon else None
     if (await session.execute(select(Kullanici.id).where(Kullanici.giris == giris))).first() is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+    await cakisma_denetle(session, giris)
 
     sifre = gecici_sifre_uret()
     kullanici = Kullanici(
@@ -177,6 +191,7 @@ async def guncelle(
         if giris != kullanici.giris:
             if (await session.execute(select(Kullanici.id).where(Kullanici.giris == giris))).first() is not None:
                 raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+            await cakisma_denetle(session, giris, kullanici.id)
             kullanici.giris = giris
             await _oturumlari_iptal_et(session, kullanici.id)
     if "telefon" in verilen:

@@ -10,7 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
-from app.api.antrenorler import GIRIS_TEKRAR, _giris_hazirla
+from app import telefon as telefon_modulu
+from app.api.antrenorler import GIRIS_TEKRAR, TELEFON_TEKRAR, _giris_hazirla, cakisma_denetle
 from app.config import settings
 from app.db import get_session
 from app.deps import aktif_kullanici_serbest
@@ -71,6 +72,14 @@ class GirisDegistirIstegi(BaseModel):
     sifre: str = Field(min_length=1, max_length=256)
 
 
+class TelefonDegistirIstegi(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    # Boş/None: telefonu kaldırır.
+    telefon: str | None = Field(default=None, max_length=32)
+    sifre: str = Field(min_length=1, max_length=256)
+
+
 class BelirtecYaniti(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -83,6 +92,7 @@ class KullaniciYaniti(BaseModel):
     giris: str
     ad_soyad: str | None = None
     sifre_degistirmeli: bool = False
+    telefon: str | None = None
 
 
 def _istemci_ip(request: Request) -> str:
@@ -144,6 +154,13 @@ async def login(
 
     giris = normalize_giris(govde.giris)
     kullanici = (await session.execute(select(Kullanici).where(Kullanici.giris == giris))).scalar_one_or_none()
+    if kullanici is None and "@" not in giris and telefon_modulu.giris_icin(giris) is not None:
+        # İkinci giriş yolu: yalnız yöneticilerin telefon alanı. Antrenör/veli yalnız kendi girişiyle girer.
+        kullanici = (
+            await session.execute(
+                select(Kullanici).where(Kullanici.telefon == giris, Kullanici.rol == Rol.admin)
+            )
+        ).scalar_one_or_none()
     simdi_ = simdi()
 
     kilitli = kullanici is not None and kullanici.kilit_bitis is not None and kullanici.kilit_bitis > simdi_
@@ -259,7 +276,7 @@ async def ben(kullanici: Kullanici = Depends(aktif_kullanici_serbest), session: 
         ).scalar_one_or_none()
     return KullaniciYaniti(
         id=kullanici.id, rol=kullanici.rol, giris=kullanici.giris, ad_soyad=ad or None,
-        sifre_degistirmeli=kullanici.sifre_degistirmeli,
+        sifre_degistirmeli=kullanici.sifre_degistirmeli, telefon=kullanici.telefon,
     )
 
 
@@ -348,8 +365,11 @@ async def giris_degistir(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Yeni giriş bilgisi mevcut olanla aynı")
     if (await session.execute(select(Kullanici.id).where(Kullanici.giris == yeni))).first() is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+    await cakisma_denetle(session, yeni, kullanici.id)
 
     kullanici.giris = yeni
+    if kullanici.telefon == yeni:
+        kullanici.telefon = None  # giriş zaten bu telefon; ikinci kayda gerek yok
     kullanici.basarisiz_deneme = 0
     sorgu = update(Oturum).where(Oturum.kullanici_id == kullanici.id)
     if yenileme:
@@ -361,4 +381,58 @@ async def giris_degistir(
     except IntegrityError:
         await session.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+    return await ben(kullanici, session)
+
+
+@router.patch("/telefon", response_model=KullaniciYaniti)
+async def telefon_degistir(
+    govde: TelefonDegistirIstegi,
+    request: Request,
+    kullanici: Kullanici = Depends(aktif_kullanici_serbest),
+    session: AsyncSession = Depends(get_session),
+    yenileme: str | None = Cookie(default=None, alias=COOKIE_ADI),
+):
+    """Yöneticinin kendi telefonunu (ikinci giriş yolu), şifresini doğrulayarak değiştirmesi veya kaldırması."""
+    if kullanici.rol != Rol.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Bu işlem için yetkiniz yok")
+    ip = _istemci_ip(request)
+    simdi_ = simdi()
+    if kullanici.kilit_bitis is not None and kullanici.kilit_bitis > simdi_:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Hesap geçici olarak kilitli. Lütfen daha sonra deneyin.")
+
+    if not sifre_dogru_mu(kullanici.sifre_ozeti, govde.sifre):
+        kullanici.basarisiz_deneme += 1
+        detay = {"neden": "hatali_sifre"}
+        if kullanici.basarisiz_deneme >= HESAP_DENEME_LIMITI:
+            kullanici.kilit_bitis = simdi_ + timedelta(minutes=HESAP_KILIT_DAKIKA)
+            kullanici.basarisiz_deneme = 0
+            detay["kilitlendi"] = True
+        await audit.kaydet(session, "telefon_degistirme_basarisiz", kullanici_id=kullanici.id, ip=ip, detay=detay)
+        await session.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Şifre hatalı")
+
+    yeni = None
+    if govde.telefon:
+        yeni = _giris_hazirla(govde.telefon)
+        if "@" in yeni:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Geçerli bir telefon numarası girin")
+        if yeni == kullanici.giris:
+            yeni = None  # giriş zaten bu telefon
+        elif yeni != kullanici.telefon:
+            await cakisma_denetle(session, yeni, kullanici.id)
+    if yeni == kullanici.telefon:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Telefon bilgisi değişmedi")
+
+    kullanici.telefon = yeni
+    kullanici.basarisiz_deneme = 0
+    sorgu = update(Oturum).where(Oturum.kullanici_id == kullanici.id)
+    if yenileme:
+        sorgu = sorgu.where(Oturum.token_ozeti != belirtec_ozeti(yenileme))
+    await session.execute(sorgu.values(iptal=True))
+    await audit.kaydet(session, "telefon_degisti", kullanici_id=kullanici.id, ip=ip)
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, TELEFON_TEKRAR)
     return await ben(kullanici, session)

@@ -6,7 +6,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
-from app.api.antrenorler import GIRIS_TEKRAR, gecici_sifre_uret, _giris_hazirla, _oturumlari_iptal_et
+from app.api.antrenorler import (
+    GIRIS_TEKRAR,
+    _giris_hazirla,
+    _oturumlari_iptal_et,
+    _telefon_normalize,
+    cakisma_denetle,
+    gecici_sifre_uret,
+)
 from app.db import get_session
 from app.deps import rol_gerekli
 from app.models.kullanici import Kullanici, Rol
@@ -20,6 +27,7 @@ BULUNAMADI = "Yönetici bulunamadı"
 SON_YONETICI = "Son aktif yönetici pasife alınamaz"
 KENDINI_PASIFE_ALMA = "Kendi hesabınızı pasife alamazsınız"
 KENDI_GIRISI = "Kendi giriş bilginizi Ayarlar > Hesabım bölümünden değiştirin"
+KENDI_TELEFONU = "Kendi telefonunuzu Ayarlar > Hesabım bölümünden değiştirin"
 KENDI_SIFRESI = "Kendi şifrenizi Ayarlar > Hesabım bölümünden değiştirin"
 
 Yonetici = Depends(rol_gerekli(Rol.admin))
@@ -31,7 +39,7 @@ def _ip(request: Request) -> str:
 
 def _ozet(k: Kullanici, ben_id: uuid.UUID) -> YoneticiOzet:
     return YoneticiOzet(
-        id=k.id, ad_soyad=k.ad_soyad, giris=k.giris, aktif=k.aktif, son_giris=k.son_giris,
+        id=k.id, ad_soyad=k.ad_soyad, giris=k.giris, telefon=k.telefon, aktif=k.aktif, son_giris=k.son_giris,
         olusturma=k.olusturma, ben=k.id == ben_id,
     )
 
@@ -61,9 +69,15 @@ async def olustur(
     giris = _giris_hazirla(govde.giris)
     if (await session.execute(select(Kullanici.id).where(Kullanici.giris == giris))).first() is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+    await cakisma_denetle(session, giris)
+    telefon = _telefon_normalize(govde.telefon) if govde.telefon else None
+    if telefon == giris:
+        telefon = None  # giriş zaten bu telefon
+    if telefon is not None:
+        await cakisma_denetle(session, telefon)
     sifre = gecici_sifre_uret()
     kullanici = Kullanici(
-        rol=Rol.admin, giris=giris, sifre_ozeti=sifre_ozeti(sifre), ad_soyad=govde.ad_soyad, aktif=True,
+        rol=Rol.admin, giris=giris, telefon=telefon, sifre_ozeti=sifre_ozeti(sifre), ad_soyad=govde.ad_soyad, aktif=True,
         sifre_degistirmeli=True,
     )
     session.add(kullanici)
@@ -115,7 +129,21 @@ async def guncelle(
                 raise HTTPException(422, KENDI_GIRISI)
             if (await session.execute(select(Kullanici.id).where(Kullanici.giris == giris))).first() is not None:
                 raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+            await cakisma_denetle(session, giris, hedef.id)
             hedef.giris = giris
+            if hedef.telefon == giris:
+                hedef.telefon = None
+            oturumlar_kapansin = True
+    if "telefon" in verilen:
+        telefon = _telefon_normalize(govde.telefon) if govde.telefon else None
+        if telefon == hedef.giris:
+            telefon = None
+        if telefon != hedef.telefon:
+            if kendisi:
+                raise HTTPException(422, KENDI_TELEFONU)
+            if telefon is not None:
+                await cakisma_denetle(session, telefon, hedef.id)
+            hedef.telefon = telefon
             oturumlar_kapansin = True
     if "ad_soyad" in verilen:
         hedef.ad_soyad = govde.ad_soyad

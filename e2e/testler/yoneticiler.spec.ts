@@ -1,4 +1,4 @@
-import { arayuzdenGiris, benzersiz, expect, test, YENI_SIFRE, yoneticiApiGirisi, zorunluSifreyiBelirle } from "../yardimci";
+import { arayuzdenGiris, benzersiz, expect, telefonBosluklu, telefonGorunen, telefonUret10, test, YENI_SIFRE, yoneticiApiGirisi, zorunluSifreyiBelirle } from "../yardimci";
 
 test.describe("Yöneticiler", () => {
   test("yeni yönetici oluşturulur, girer, kendi girişini değiştirir ve yeni girişle girer", async ({ page }) => {
@@ -68,6 +68,56 @@ test.describe("Yöneticiler", () => {
     await expect(page.getByRole("heading", { name: "Genel bakış", level: 1 })).toBeVisible();
     await page.goto("/yoneticiler");
     await expect(page.getByRole("row", { name: new RegExp(`${adSoyad}.*\\(siz\\)`) })).toBeVisible();
+  });
+
+  test("e-posta girişli yönetici telefonla da girer ve kendi telefonunu değiştirir", async ({ page }) => {
+    await yoneticiApiGirisi(page);
+    const k = benzersiz();
+    const adSoyad = `Telefonlu ${k}`;
+    const giris = `telefonlu.${k}@example.com`;
+    const on = telefonUret10();
+    const tel = `+90${on}`;
+
+    await page.goto("/yoneticiler");
+    await page.getByRole("button", { name: "Yeni yönetici" }).click();
+    const form = page.getByRole("dialog", { name: "Yeni yönetici" });
+    await form.getByLabel("Ad soyad").fill(adSoyad);
+    await form.getByLabel(/Giriş \(e-posta/).fill(giris);
+    await form.getByLabel(/^Telefon/).fill(on);
+    await form.getByRole("button", { name: "Oluştur" }).click();
+    const sifreKutusu = page.getByRole("dialog", { name: `${adSoyad} için geçici şifre` });
+    const gecici = (await sifreKutusu.locator("code").innerText()).trim();
+    // Giriş e-posta olduğu için WhatsApp mesajı telefon alanındaki numaraya gider
+    await expect(sifreKutusu.getByRole("link", { name: /WhatsApp/ })).toHaveAttribute("href", new RegExp(`wa\\.me/90${on}`));
+    await sifreKutusu.getByRole("button", { name: "Kapat" }).click();
+    await expect(page.getByRole("row", { name: new RegExp(adSoyad) })).toContainText(telefonGorunen(tel));
+
+    // Çıkış; telefonla (boşluklu biçim) yönetici girişi
+    await page.getByRole("button", { name: "Çıkış" }).click();
+    const bosluklu = telefonBosluklu(tel);
+    await arayuzdenGiris(page, bosluklu, gecici, "yonetici");
+    await zorunluSifreyiBelirle(page, gecici);
+    await expect(page.getByRole("heading", { name: "Genel bakış", level: 1 })).toBeVisible();
+
+    // Ayarlar > Hesabım: kendi telefonunu değiştirir
+    await page.goto("/ayarlar");
+    const yeniOn = telefonUret10();
+    const telKutusu = page.getByLabel("Telefon numaram");
+    await expect(telKutusu).toHaveValue(on);
+    await telKutusu.fill(yeniOn);
+    await page.getByLabel("Şifreniz (telefon onayı için)").fill("yanlis-sifre-999");
+    await page.getByRole("button", { name: "Telefonu kaydet" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "Şifre hatalı" })).toBeVisible();
+    await page.getByLabel("Şifreniz (telefon onayı için)").fill(YENI_SIFRE);
+    await page.getByRole("button", { name: "Telefonu kaydet" }).click();
+    await expect(page.getByRole("status")).toContainText("Telefon bilginiz kaydedildi");
+
+    // Eski telefonla girilemez, yenisiyle girilir
+    await page.getByRole("button", { name: "Çıkış" }).click();
+    await arayuzdenGiris(page, bosluklu, YENI_SIFRE, "yonetici");
+    await expect(page.getByRole("alert")).toBeVisible();
+    await arayuzdenGiris(page, telefonBosluklu(`+90${yeniOn}`), YENI_SIFRE, "yonetici");
+    await expect(page.getByRole("heading", { name: "Genel bakış", level: 1 })).toBeVisible();
   });
 
   test("yönetici, antrenörün girişini değiştirir", async ({ page }) => {

@@ -4,7 +4,7 @@ import type { Panel } from "../lib/panel";
 import { cikisIsaretle, cikisYapildiMi, hatirlananiKaydet, hatirlananiOku, hatirlananiSil } from "../lib/hatirla";
 
 export type Rol = "admin" | "antrenor" | "veli" | "ogrenci";
-export type Kullanici = { id: string; rol: Rol; giris: string; ad_soyad: string | null; sifre_degistirmeli: boolean };
+export type Kullanici = { id: string; rol: Rol; giris: string; ad_soyad: string | null; sifre_degistirmeli: boolean; telefon?: string | null };
 
 type AuthDegeri = {
   kullanici: Kullanici | null;

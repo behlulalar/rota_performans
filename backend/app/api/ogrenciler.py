@@ -16,7 +16,7 @@ from app import telefon as telefon_modulu
 from app.db import get_session
 from app.depolama import depolama
 from app.deps import rol_gerekli
-from app.api.antrenorler import _giris_hazirla, _oturumlari_iptal_et, gecici_sifre_uret
+from app.api.antrenorler import _giris_hazirla, _oturumlari_iptal_et, cakisma_denetle, gecici_sifre_uret
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import (
     IletisimKisisi,
@@ -802,6 +802,7 @@ async def hesap_ac(
                 raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_BASKA_TUR)
         kullanici.aktif = True
     else:
+        await cakisma_denetle(session, giris)
         sifre = gecici_sifre_uret()
         kullanici = Kullanici(rol=rol, giris=giris, sifre_ozeti=sifre_ozeti(sifre), ad_soyad=birincil.ad_soyad, aktif=True,
                             sifre_degistirmeli=True)
