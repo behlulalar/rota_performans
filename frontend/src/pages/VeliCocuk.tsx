@@ -192,7 +192,7 @@ export default function VeliCocuk() {
         </div>
       </div>
       {(h.normal < 0 || h.telafi < 0) && (
-        <p className="mt-3 text-[13px] text-metin-soluk">Negatif değer, paket yüklemesinin henüz yapılmadığını gösterir.</p>
+        <p className="mt-3 text-[13px] text-metin-soluk">Negatif değer, paketle yüklenen dersten fazla ders işlendiğini gösterir (paket henüz yüklenmemiş ya da bitmiş olabilir). Ayrıntı için lütfen kulüple iletişime geçin.</p>
       )}
 
       <div role="tablist" aria-label="Öğrenci bölümleri" className="mt-6 -mx-4 px-4 md:mx-0 md:px-0 flex gap-1 overflow-x-auto border-b border-cizgi">

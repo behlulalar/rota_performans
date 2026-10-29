@@ -207,6 +207,11 @@ jobs:
       - name: main'e ileri sar
         run: |
           git fetch origin main
+          # Aynı anda gelen başka bir dal bu commit'i zaten main'e taşımış olabilir.
+          if git merge-base --is-ancestor HEAD origin/main; then
+            echo "### Production: \`${GITHUB_SHA::7}\` zaten main'de" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           if ! git merge-base --is-ancestor origin/main HEAD; then
             echo "::error::main bu daldan sonra ilerlemiş. Dalı güncelleyip tekrar gönder: git rebase origin/main && git push --force-with-lease"
             exit 1
