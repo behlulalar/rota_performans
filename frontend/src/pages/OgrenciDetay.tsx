@@ -202,7 +202,7 @@ export default function OgrenciDetay() {
           <div className="shrink-0">
             <OgrenciFoto id={o.id} fotoVar={o.foto_var} ad={o.ad} soyad={o.soyad} boyut="buyuk" sinif="size-32 rounded-[10px] text-3xl" surum={surum} />
             <input ref={dosyaGirdisi} type="file" accept="image/*" hidden onChange={(e) => { fotoSec(e.target.files?.[0]); e.target.value = ""; }} />
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-6 flex flex-wrap gap-2">
               <button className={dugme} disabled={mesgul || !fotoRizasi} onClick={() => dosyaGirdisi.current?.click()}>
                 {o.foto_var ? "Değiştir" : "Fotoğraf ekle"}
               </button>
