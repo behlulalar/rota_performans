@@ -18,6 +18,8 @@ const DURUM_ROZET: Record<PaketDurum, string> = {
   odendi: rozetBasari,
   iptal: rozetNotr,
 };
+// Öğrenci sayfasında varsayılan olarak en yeni paketler görünür.
+const ILK_GORUNEN = 3;
 const FIYAT_DESENI = /^\d+([.,]\d{1,2})?$/;
 
 function AtamaPenceresi({ ogrenciId, paketler, onKapat, onTamam }: { ogrenciId: string; paketler: Paket[]; onKapat: () => void; onTamam: () => void }) {
@@ -124,6 +126,93 @@ function GeriAlPenceresi({ odemeId, onKapat, onTamam }: { odemeId: string; onKap
   );
 }
 
+function Satir({ ad, children }: { ad: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-2 border-t border-cizgi first:border-t-0 text-sm">
+      <dt className="text-metin-soluk shrink-0">{ad}</dt>
+      <dd className="num text-right min-w-0">{children}</dd>
+    </div>
+  );
+}
+
+/** Tek paketin ayrıntıları liste olarak: dönem, fiyatlar, ödemeler ve işlemler. */
+function PaketDetayPenceresi({
+  p, mesgul, onKapat, onOdemeAl, onIptal, onGeriAl,
+}: {
+  p: OgrenciPaketi;
+  mesgul: boolean;
+  onKapat: () => void;
+  onOdemeAl: () => void;
+  onIptal: () => void;
+  onGeriAl: (odemeId: string) => void;
+}) {
+  const odemeler = p.odemeler ?? [];
+  const kalan = Math.max(0, Number(p.uygulanan_fiyat) - Number(p.toplam_odenen));
+  const iptalEdilebilir = p.durum === "odeme_bekliyor" && Number(p.toplam_odenen) === 0;
+  return (
+    <Modal baslik="Paket detayı" onKapat={onKapat}>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="font-display text-[20px] leading-6">{p.paket_adi}</h3>
+          <span className={DURUM_ROZET[p.durum]}>{DURUM_ETIKET[p.durum]}</span>
+          {p.fiyat_ozel_mi && <span className={rozetBirincil}>Özel fiyat</span>}
+        </div>
+
+        <dl>
+          <Satir ad="Ders sayısı">{p.ders_sayisi}</Satir>
+          <Satir ad="Dönem">{p.baslangic && p.bitis ? `${tarihBicimle(p.baslangic)} – ${tarihBicimle(p.bitis)}` : "Belirsiz"}</Satir>
+          <Satir ad="Liste fiyatı">{paraBicimle(p.liste_fiyati)}</Satir>
+          {p.fiyat_ozel_mi && <Satir ad="Uygulanan fiyat">{paraBicimle(p.uygulanan_fiyat)}</Satir>}
+          <Satir ad="Ödenen">{paraBicimle(p.toplam_odenen)}</Satir>
+          {p.durum !== "iptal" && kalan > 0 && <Satir ad="Kalan">{paraBicimle(String(kalan))}</Satir>}
+        </dl>
+
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk mb-1">Ödemeler</h4>
+          {odemeler.length === 0 ? (
+            <p className="text-sm text-metin-soluk">Henüz ödeme alınmadı.</p>
+          ) : (
+            <ul aria-label={`${p.paket_adi} ödemeleri`} className="divide-y divide-cizgi border-y border-cizgi">
+              {odemeler.map((o) => (
+                <li key={o.id} className={`py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm ${o.iptal ? "text-metin-soluk" : ""}`}>
+                  <div className="min-w-0">
+                    <div className={`num ${o.iptal ? "line-through" : "font-medium"}`}>
+                      {paraBicimle(o.tutar)} · {YONTEM_ETIKET[o.yontem]}
+                    </div>
+                    <div className="num text-[12px] text-metin-soluk">
+                      {tarihBicimle(o.tarih)}{o.alan_ad ? ` · Alan: ${o.alan_ad}` : ""}
+                      {o.iptal && o.iptal_nedeni ? ` · ${o.iptal_nedeni}` : ""}
+                    </div>
+                  </div>
+                  {o.iptal ? (
+                    <span className={rozetHata}>Geri alındı</span>
+                  ) : (
+                    p.durum === "odendi" && (
+                      <button className={dugme} disabled={mesgul} onClick={() => onGeriAl(o.id)} aria-label={`${paraBicimle(o.tutar)} ödemeyi geri al`}>Geri al</button>
+                    )
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="flex flex-wrap justify-between gap-2">
+          <div className="flex flex-wrap gap-2">
+            {p.durum === "odeme_bekliyor" && (
+              <button className={birincilDugme} disabled={mesgul} onClick={onOdemeAl} aria-label={`${p.paket_adi} için ödeme al`}>Ödeme al</button>
+            )}
+            {iptalEdilebilir && (
+              <button className={`${dugme} text-metin-soluk hover:border-hata hover:text-hata`} disabled={mesgul} onClick={onIptal} aria-label={`${p.paket_adi} paketini iptal et`}>Paketi iptal et</button>
+            )}
+          </div>
+          <button className={dugme} onClick={onKapat}>Kapat</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: { ogrenciId: string; aktif: boolean; onOdemeDegisti?: () => void }) {
   const onayla = useOnay();
   const [liste, setListe] = useState<OgrenciPaketi[] | null>(null);
@@ -133,6 +222,8 @@ export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: {
   const [atama, setAtama] = useState<Paket[] | null>(null);
   const [odemeAlinan, setOdemeAlinan] = useState<OgrenciPaketi | null>(null);
   const [geriAlinan, setGeriAlinan] = useState<string | null>(null);
+  const [detaydaki, setDetaydaki] = useState<string | null>(null);
+  const [tumu, setTumu] = useState(false);
 
   useEffect(() => {
     let iptal = false;
@@ -143,6 +234,9 @@ export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: {
       iptal = true;
     };
   }, [ogrenciId, surum]);
+
+  const detay = liste?.find((x) => x.id === detaydaki) ?? null;
+  const gorunen = liste ? (tumu ? liste : liste.slice(0, ILK_GORUNEN)) : [];
 
   async function atamaAc() {
     setMesgul(true);
@@ -184,54 +278,46 @@ export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: {
       ) : liste.length === 0 ? (
         <p className="text-sm text-metin-soluk">Öğrenciye henüz paket atanmamış.</p>
       ) : (
-        <ul className="-mx-6 border-t border-cizgi">
-          {liste.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-3 min-h-[52px] border-t border-cizgi first:border-t-0 text-sm">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{p.paket_adi}</span>
-                  <span className={DURUM_ROZET[p.durum]}>{DURUM_ETIKET[p.durum]}</span>
-                  {p.fiyat_ozel_mi && <span className={rozetBirincil}>Özel fiyat</span>}
+        <>
+          <ul className="-mx-6 border-t border-cizgi">
+            {gorunen.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-3 min-h-[60px] border-t border-cizgi first:border-t-0 text-sm">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{p.paket_adi}</span>
+                    <span className={DURUM_ROZET[p.durum]}>{DURUM_ETIKET[p.durum]}</span>
+                    {p.fiyat_ozel_mi && <span className={rozetBirincil}>Özel fiyat</span>}
+                  </div>
+                  <div className="num text-[13px] text-metin-soluk">
+                    {p.baslangic && p.bitis ? `${tarihBicimle(p.baslangic)} – ${tarihBicimle(p.bitis)}` : "Tarih belirsiz"} · {p.ders_sayisi} ders
+                  </div>
                 </div>
-                <div className="num text-metin-soluk">
-                  {p.ders_sayisi} ders · {p.baslangic && p.bitis ? `${tarihBicimle(p.baslangic)} – ${tarihBicimle(p.bitis)}` : "Tarih belirsiz"}
+                <div className="flex items-center gap-3">
+                  <span className="num font-medium">{paraBicimle(p.uygulanan_fiyat)}</span>
+                  {p.durum === "odeme_bekliyor" && (
+                    <button className={birincilDugme} disabled={mesgul} onClick={() => setOdemeAlinan(p)} aria-label={`${p.paket_adi} için ödeme al`}>Ödeme al</button>
+                  )}
+                  <button className={dugme} onClick={() => setDetaydaki(p.id)} aria-label={`${p.paket_adi} detayı`}>Detay</button>
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="num text-right">
-                  <div className="font-medium">{paraBicimle(p.uygulanan_fiyat)}</div>
-                  {p.fiyat_ozel_mi && <div className="text-xs text-metin-soluk line-through">{paraBicimle(p.liste_fiyati)}</div>}
-                  <div className="text-xs text-metin-soluk">Ödenen {paraBicimle(p.toplam_odenen)} / {paraBicimle(p.uygulanan_fiyat)}</div>
-                </div>
-                {p.durum === "odeme_bekliyor" && (
-                  <button className={birincilDugme} disabled={mesgul} onClick={() => setOdemeAlinan(p)} aria-label={`${p.paket_adi} için ödeme al`}>Ödeme al</button>
-                )}
-                {p.durum === "odeme_bekliyor" && Number(p.toplam_odenen) === 0 && (
-                  <button className={dugme} disabled={mesgul} onClick={() => void iptalEt(p)} aria-label={`${p.paket_adi} paketini iptal et`}>İptal et</button>
-                )}
-              </div>
-              {(p.odemeler ?? []).length > 0 && (
-                <ul className="basis-full border-t border-cizgi pt-2 space-y-1" aria-label={`${p.paket_adi} ödemeleri`}>
-                  {(p.odemeler ?? []).map((o) => (
-                    <li key={o.id} className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[13px] ${o.iptal ? "text-metin-soluk" : ""}`}>
-                      <div className="min-w-0">
-                        <span className={`num ${o.iptal ? "line-through" : ""}`}>
-                          {tarihBicimle(o.tarih)} · {YONTEM_ETIKET[o.yontem]} · {paraBicimle(o.tutar)}
-                        </span>
-                        <span className="text-metin-soluk"> · {o.alan_ad ? `Alan: ${o.alan_ad}` : "Alan: —"}</span>
-                        {o.iptal && <span className={`${rozetHata} ml-2`}>Geri alındı</span>}
-                        {o.iptal && o.iptal_nedeni && <span className="text-metin-soluk"> · {o.iptal_nedeni}</span>}
-                      </div>
-                      {!o.iptal && p.durum === "odendi" && (
-                        <button className={dugme} disabled={mesgul} onClick={() => setGeriAlinan(o.id)} aria-label={`${paraBicimle(o.tutar)} ödemeyi geri al`}>Ödemeyi geri al</button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+          {liste.length > ILK_GORUNEN && (
+            <button type="button" className="mt-3 text-[13px] font-semibold hover:text-altin-metin min-h-11 md:min-h-0" aria-expanded={tumu} onClick={() => setTumu((t) => !t)}>
+              {tumu ? "▾ Önceki paketleri gizle" : `▸ Önceki paketleri göster (${liste.length - ILK_GORUNEN})`}
+            </button>
+          )}
+        </>
+      )}
+      {detay && (
+        <PaketDetayPenceresi
+          p={detay}
+          mesgul={mesgul}
+          onKapat={() => setDetaydaki(null)}
+          onOdemeAl={() => { setDetaydaki(null); setOdemeAlinan(detay); }}
+          onIptal={() => { setDetaydaki(null); void iptalEt(detay); }}
+          onGeriAl={(odemeId) => { setDetaydaki(null); setGeriAlinan(odemeId); }}
+        />
       )}
       {odemeAlinan && (
         <OdemeAlPenceresi

@@ -35,9 +35,16 @@ test.describe("Ödemeler", () => {
     await expect(pencere).toHaveCount(0);
 
     await expect(satirPaket).toContainText("Ödendi");
-    await expect(satirPaket).toContainText("Nakit");
     await expect(satirPaket).toContainText("3.400 ₺");
     await expect(kalan).toContainText("8");
+    // Ödeme ayrıntıları "Detay" penceresinde liste olarak görünür.
+    await satirPaket.getByRole("button", { name: `${paket.ad} detayı` }).click();
+    const detay = page.getByRole("dialog", { name: "Paket detayı" });
+    await expect(detay).toContainText("Nakit");
+    await expect(detay).toContainText("3.400 ₺");
+    await expect(detay).toContainText("Ödenen");
+    await detay.getByRole("button", { name: "Kapat", exact: true }).last().click();
+    await expect(detay).toHaveCount(0);
 
     // Ödemeler sayfası
     await page.goto("/odemeler");
@@ -54,7 +61,8 @@ test.describe("Ödemeler", () => {
 
     // Geri al: neden zorunlu
     await page.goto(`/ogrenciler/${ogr.id}`);
-    await page.getByRole("button", { name: "Ödemeyi geri al" }).first().click();
+    await page.getByRole("button", { name: `${paket.ad} detayı` }).click();
+    await page.getByRole("dialog", { name: "Paket detayı" }).getByRole("button", { name: /ödemeyi geri al/i }).click();
     const geriAl = page.getByRole("dialog", { name: "Ödemeyi geri al" });
     await expect(geriAl).toContainText("ders hakkı da geri alınır");
     await geriAl.getByRole("button", { name: "Ödemeyi geri al" }).click();
@@ -64,9 +72,12 @@ test.describe("Ödemeler", () => {
     await expect(geriAl).toHaveCount(0);
 
     await expect(satirPaket).toContainText("Ödeme bekliyor");
-    await expect(satirPaket).toContainText("Geri alındı");
-    await expect(satirPaket).toContainText("Yanlış tutar girildi");
     await expect(kalan).toContainText("0");
+    await satirPaket.getByRole("button", { name: `${paket.ad} detayı` }).click();
+    const gecmis = page.getByRole("dialog", { name: "Paket detayı" });
+    await expect(gecmis).toContainText("Geri alındı");
+    await expect(gecmis).toContainText("Yanlış tutar girildi");
+    await gecmis.getByRole("button", { name: "Kapat", exact: true }).last().click();
 
     // Yeniden ödeme bekleyenlerde
     await page.goto("/odemeler");

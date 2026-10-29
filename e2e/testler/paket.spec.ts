@@ -51,7 +51,8 @@ test.describe("Paketler", () => {
 
     // İptal (window.confirm testte otomatik kabul edilir)
     const ilk = page.getByRole("listitem").filter({ hasText: paketAdi }).first();
-    await ilk.getByRole("button", { name: /iptal et/i }).click();
+    await ilk.getByRole("button", { name: `${paketAdi} detayı` }).click();
+    await page.getByRole("dialog", { name: "Paket detayı" }).getByRole("button", { name: /iptal et/i }).click();
     await expect(page.getByRole("listitem").filter({ hasText: paketAdi }).filter({ hasText: "İptal" })).toHaveCount(1);
 
     // Özel fiyat: nedensiz reddedilir
