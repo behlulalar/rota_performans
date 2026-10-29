@@ -7,7 +7,7 @@ import OgrenciFoto from "../components/OgrenciFoto";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { hataMesaji } from "../lib/dogrulama";
 import { saat } from "../lib/program";
-import { rozetNotr, rozetUyari } from "../lib/stil";
+import { rozetHata, rozetNotr, rozetUyari } from "../lib/stil";
 import { tarihCoz } from "../lib/tarih";
 
 export const dersMetni = (d: VeliDers) =>
@@ -34,7 +34,7 @@ function CocukKarti({ c }: { c: CocukOzet }) {
               </span>
             ))}
             {c.odeme_bekleyen > 0 && <span className={rozetUyari}>Ödeme bekliyor</span>}
-            {c.ders_hakki_bitti && <span className={rozetUyari}>Ders hakkı bitti</span>}
+            {c.ders_hakki_bitti && <span className={rozetHata}>Ders hakkı bitti</span>}
           </div>
         </div>
       </div>

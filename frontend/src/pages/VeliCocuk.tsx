@@ -10,7 +10,7 @@ import { ApiHata } from "../lib/api";
 import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
 import { paraBicimle } from "../lib/para";
 import { GUNLER, saat } from "../lib/program";
-import { dugme, listeSatiri, rozetBasari, rozetBirincil, rozetHata, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
+import { dugme, listeSatiri, rozetBasari, rozetBirincil, rozetHata, rozetNotr, rozetUyari, uyariKutusu, hataKutusu } from "../lib/stil";
 import { tarihCoz } from "../lib/tarih";
 import { dersMetni } from "./VeliAna";
 
@@ -166,7 +166,7 @@ export default function VeliCocuk() {
       )}
 
       {c.ders_hakki_bitti && (
-        <p role="status" className={`${uyariKutusu} mb-5`}>
+        <p role="status" className={`${hataKutusu} mb-5`}>
           <span className="font-semibold">Ders hakkınız bitti.</span> Derslere devam edebilmek için lütfen kulüple iletişime geçip yeni paket alın.
         </p>
       )}

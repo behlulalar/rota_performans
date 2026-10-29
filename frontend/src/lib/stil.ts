@@ -10,6 +10,7 @@ export const secimKutusu =
 export const bilgiKutusu = "rounded-[10px] border border-altin/50 bg-altin/10 text-altin-metin text-[13px] px-3 py-2";
 export const tehlikeKutusu = "rounded-[10px] border-2 border-hata bg-hata-zemin text-hata text-sm font-semibold px-3 py-2.5";
 export const uyariKutusu = "rounded-[10px] border border-uyari/40 bg-uyari-zemin text-uyari text-[13px] px-3 py-2";
+export const hataKutusu = "rounded-[10px] border border-hata/40 bg-hata-zemin text-hata text-[13px] px-3 py-2";
 export const basariKutusu = "rounded-[10px] border border-basari/40 bg-basari-zemin text-basari text-[13px] px-3 py-2";
 
 // Rozetler yuvarlak ve dolgu zeminlidir.
