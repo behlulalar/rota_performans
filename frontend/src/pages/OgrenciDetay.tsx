@@ -15,6 +15,7 @@ import { apiBlob } from "../lib/api";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { bilgiKutusu, dugme, girdi, rozetBasari, rozetBirincil, rozetNotr, secimKutusu, tehlikeKutusu, uyariKutusu } from "../lib/stil";
+import WhatsAppDugmesi from "../components/WhatsAppDugmesi";
 import { useOnay } from "../components/OnayPenceresi";
 
 const RIZA_ADI: Record<RizaTur, string> = {
@@ -214,7 +215,10 @@ export default function OgrenciDetay() {
 
           <dl className="flex-1 min-w-0 grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2.5 text-sm content-start">
             <dt className="text-metin-soluk">Doğum tarihi</dt><dd className="num">{tarihBicimle(o.dogum_tarihi)} ({o.yas} yaş)</dd>
-            <dt className="text-metin-soluk">Telefon</dt><dd className="num">{o.telefon ? bicimle(o.telefon) : "—"}</dd>
+            <dt className="text-metin-soluk">Telefon</dt><dd className="num flex flex-wrap items-center gap-3">
+              {o.telefon ? bicimle(o.telefon) : "—"}
+              <WhatsAppDugmesi telefon={o.telefon} ad={`${o.ad} ${o.soyad}`} />
+            </dd>
             <dt className="text-metin-soluk">Cinsiyet</dt><dd>{o.cinsiyet === "kadin" ? "Kadın" : o.cinsiyet === "erkek" ? "Erkek" : "—"}</dd>
             <dt className="text-metin-soluk">Anne adı</dt><dd>{o.anne_adi || "—"}</dd>
             <dt className="text-metin-soluk">Baba adı</dt><dd>{o.baba_adi || "—"}</dd>
@@ -286,9 +290,10 @@ export default function OgrenciDetay() {
                   <div className="font-medium">{k.ad_soyad} <span className="text-metin-soluk font-normal">({ROL_ETIKET[k.rol]})</span></div>
                   <a href={`tel:${k.telefon}`} className="num text-metin-soluk hover:text-altin-metin">{bicimle(k.telefon)}</a>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {k.birincil && <span className={rozetBirincil}>Birincil</span>}
                   {k.whatsapp_izni && <span className={rozetBasari}>WhatsApp izni</span>}
+                  <WhatsAppDugmesi telefon={k.telefon} ad={k.ad_soyad} />
                 </div>
               </li>
             ))}

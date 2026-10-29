@@ -27,3 +27,10 @@ export function telefonSec(giris: string | null | undefined, yedek: string | nul
   if (giris && !giris.includes("@") && gecerliMi(rakamlaraCevir(giris))) return giris;
   return yedek && gecerliMi(rakamlaraCevir(yedek)) ? yedek : null;
 }
+
+/** "+905321234567" -> "https://wa.me/905321234567" (sohbeti doğrudan açar); geçersiz numarada null. */
+export function whatsappAdresi(apiDegeri: string | null | undefined, metin?: string): string | null {
+  const r = rakamlaraCevir(apiDegeri);
+  if (!gecerliMi(r)) return null;
+  return `https://wa.me/90${r}${metin ? `?text=${encodeURIComponent(metin)}` : ""}`;
+}

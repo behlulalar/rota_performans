@@ -3,6 +3,7 @@ import {
   expect,
   gecersizTcUret,
   KUCUK_PNG,
+  ogrenciOlusturAPI,
   tcMaskeli,
   tcUret,
   telefonUret10,
@@ -180,5 +181,17 @@ test.describe("Öğrenci kaydı", () => {
     };
     expect(detay.telefon).toBe("+90" + yeni10);
     expect(detay.birincil_iletisim.telefon).toBe("+90" + yeni10);
+  });
+
+  test("iletişim kişisinin yanında WhatsApp düğmesi var ve doğrudan sohbeti açar", async ({ page }) => {
+    const token = await yoneticiApiGirisi(page);
+    const ogr = await ogrenciOlusturAPI(page, token, "Whats");
+    await page.goto(`/ogrenciler/${ogr.id}`);
+    const kisiler = page.getByRole("list").filter({ has: page.getByText("Birincil") });
+    const dugme = kisiler.getByRole("link", { name: /ile WhatsApp'ta yaz/ });
+    await expect(dugme).toHaveCount(1);
+    await expect(dugme).toHaveAttribute("href", `https://wa.me/${ogr.telefon.replace("+", "")}`);
+    await expect(dugme).toHaveAttribute("target", "_blank");
+    await expect(dugme).toHaveAttribute("rel", /noopener/);
   });
 });
