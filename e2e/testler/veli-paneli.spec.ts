@@ -28,14 +28,17 @@ test.describe("Veli paneli", () => {
     await expect(page).toHaveURL(/\/panel\/cocuk\//);
     await expect(page.getByRole("heading", { name: `${ogr.ad} ${ogr.soyad}` })).toBeVisible();
     await expect(page.getByRole("status").filter({ hasText: "Ödemesi bekleyen paket var" })).toContainText(paket.ad);
-    await expect(page.getByText("Ödeme bekliyor").first()).toBeVisible();
     await expect(page.getByText("Planlanmış yaklaşan ders yok.")).toBeVisible();
+    await page.getByRole("tab", { name: "Paket ve ödemeler" }).click();
+    await expect(page).toHaveURL(/sekme=paket/);
+    await expect(page.getByText("Ödeme bekliyor").first()).toBeVisible();
 
     // Ödeme alınınca ders hakkı yüklenir, uyarı kalkar.
     // Yönetici belirteci baştan alındı: yeniden giriş yapmak veli çerezini ezerdi.
     await odemeAlAPI(page, token, opId);
     await page.reload();
     await expect(page.getByRole("status").filter({ hasText: "Ödemesi bekleyen paket var" })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Paket ve ödemeler" })).toHaveAttribute("aria-selected", "true"); // sekme yenilemede korunur
     await expect(page.getByText("Ödendi", { exact: true })).toBeVisible();
     await expect(page.getByText("Nakit")).toBeVisible();
   });

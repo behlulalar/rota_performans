@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { YONTEM_ETIKET } from "../api/odeme";
 import type { HakTur, Sayac } from "../api/ogrenci";
 import { cocukGetir, type CocukDetay, type VeliDers, type VeliPaket } from "../api/veli";
@@ -22,6 +22,13 @@ const TUR_ETIKET: Record<HakTur, string> = {
   manuel_duzeltme: "Kulüp düzeltmesi",
   iptal: "Düzeltme",
 };
+const SEKMELER = [
+  { anahtar: "yaklasan", ad: "Yaklaşan dersler" },
+  { anahtar: "program", ad: "Haftalık program" },
+  { anahtar: "paket", ad: "Paket ve ödemeler" },
+  { anahtar: "gecmis", ad: "Son dersler" },
+  { anahtar: "hareket", ad: "Ders hakkı hareketleri" },
+] as const;
 const SAYAC_ETIKET: Record<Sayac, string> = { normal: "Kalan ders", telafi: "Telafi" };
 
 function DersSatiri({ d, yoklamaGoster = false }: { d: VeliDers; yoklamaGoster?: boolean }) {
@@ -81,7 +88,8 @@ export default function VeliCocuk() {
   const { id = "" } = useParams();
   const [c, setC] = useState<CocukDetay | null>(null);
   const [hata, setHata] = useState<string | null>(null);
-  const [hareketAcik, setHareketAcik] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const sekme = SEKMELER.find((t) => t.anahtar === params.get("sekme"))?.anahtar ?? SEKMELER[0].anahtar;
 
   useEffect(() => {
     let iptal = false;
@@ -168,78 +176,98 @@ export default function VeliCocuk() {
         <p className="mt-3 text-[13px] text-metin-soluk">Negatif değer, paket yüklemesinin henüz yapılmadığını gösterir.</p>
       )}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2 items-start">
-        <Kart baslik="Yaklaşan dersler" aciklama="Önümüzdeki 4 hafta" bosluksuz>
-          {c.yaklasan_dersler.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-metin-soluk">Planlanmış yaklaşan ders yok.</p>
-          ) : (
-            <ul className="px-6 pb-3">
-              {c.yaklasan_dersler.map((d) => (
-                <DersSatiri key={d.oturum_id} d={d} />
-              ))}
-            </ul>
-          )}
-        </Kart>
-
-        <Kart baslik="Haftalık program" bosluksuz>
-          {c.program.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-metin-soluk">Haftalık program yok.</p>
-          ) : (
-            <ul className="px-6 pb-3">
-              {c.program.map((p, i) => (
-                <li key={i} className={`${listeSatiri} py-2.5 flex flex-wrap items-center justify-between gap-2`}>
-                  <span className="text-sm font-medium">{GUNLER[p.gun - 1]}</span>
-                  <span className="num text-sm text-metin-soluk">
-                    {saat(p.baslangic)}–{saat(p.bitis)} · {p.grup_ad}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Kart>
-
-        <Kart baslik="Paket ve ödemeler" bosluksuz>
-          {c.paketler.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-metin-soluk">Henüz paket tanımlanmamış.</p>
-          ) : (
-            <ul className="pb-2">
-              {c.paketler.map((p) => (
-                <PaketSatiri key={p.id} p={p} />
-              ))}
-            </ul>
-          )}
-        </Kart>
-
-        <Kart baslik="Son dersler" bosluksuz>
-          {c.gecmis_dersler.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-metin-soluk">Geçmiş ders kaydı yok.</p>
-          ) : (
-            <ul className="px-6 pb-3">
-              {c.gecmis_dersler.map((d) => (
-                <DersSatiri key={d.oturum_id} d={d} yoklamaGoster />
-              ))}
-            </ul>
-          )}
-        </Kart>
+      <div role="tablist" aria-label="Öğrenci bölümleri" className="mt-6 -mx-4 px-4 md:mx-0 md:px-0 flex gap-1 overflow-x-auto border-b border-cizgi">
+        {SEKMELER.map((t) => {
+          const sec = t.anahtar === sekme;
+          return (
+            <button
+              key={t.anahtar}
+              type="button"
+              role="tab"
+              id={`sekme-${t.anahtar}`}
+              aria-selected={sec}
+              aria-controls="sekme-icerik"
+              onClick={() => setParams(t.anahtar === SEKMELER[0].anahtar ? {} : { sekme: t.anahtar }, { replace: true })}
+              className={`shrink-0 px-3.5 min-h-11 -mb-px border-b-2 text-[14px] transition-colors ${
+                sec ? "border-altin text-metin font-semibold" : "border-transparent text-metin-soluk hover:text-metin"
+              }`}
+            >
+              {t.ad}
+            </button>
+          );
+        })}
       </div>
 
-      <Kart sinif="mt-4" bosluksuz>
-        <div className="px-6 py-4">
-          <button
-            type="button"
-            className="text-[13px] font-semibold hover:text-altin-metin min-h-11 md:min-h-0"
-            aria-expanded={hareketAcik}
-            onClick={() => setHareketAcik((a) => !a)}
-          >
-            {hareketAcik ? "▾" : "▸"} Ders hakkı hareketleri
-          </button>
-          {hareketAcik &&
-            (c.hareketler.length === 0 ? (
-              <p className="mt-2 text-sm text-metin-soluk">Henüz hareket yok.</p>
+      <div role="tabpanel" id="sekme-icerik" aria-labelledby={`sekme-${sekme}`} className="mt-4">
+        {sekme === "yaklasan" && (
+          <Kart baslik="Yaklaşan dersler" aciklama="Önümüzdeki 4 hafta" bosluksuz>
+            {c.yaklasan_dersler.length === 0 ? (
+              <p className="px-6 pb-6 text-sm text-metin-soluk">Planlanmış yaklaşan ders yok.</p>
             ) : (
-              <ul className="mt-2 divide-y divide-cizgi border-y border-cizgi">
+              <ul className="px-6 pb-3">
+                {c.yaklasan_dersler.map((d) => (
+                  <DersSatiri key={d.oturum_id} d={d} />
+                ))}
+              </ul>
+            )}
+          </Kart>
+        )}
+
+        {sekme === "program" && (
+          <Kart baslik="Haftalık program" bosluksuz>
+            {c.program.length === 0 ? (
+              <p className="px-6 pb-6 text-sm text-metin-soluk">Haftalık program yok.</p>
+            ) : (
+              <ul className="px-6 pb-3">
+                {c.program.map((p, i) => (
+                  <li key={i} className={`${listeSatiri} py-2.5 flex flex-wrap items-center justify-between gap-2`}>
+                    <span className="text-sm font-medium">{GUNLER[p.gun - 1]}</span>
+                    <span className="num text-sm text-metin-soluk">
+                      {saat(p.baslangic)}–{saat(p.bitis)} · {p.grup_ad}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Kart>
+        )}
+
+        {sekme === "paket" && (
+          <Kart baslik="Paket ve ödemeler" bosluksuz>
+            {c.paketler.length === 0 ? (
+              <p className="px-6 pb-6 text-sm text-metin-soluk">Henüz paket tanımlanmamış.</p>
+            ) : (
+              <ul className="pb-2">
+                {c.paketler.map((p) => (
+                  <PaketSatiri key={p.id} p={p} />
+                ))}
+              </ul>
+            )}
+          </Kart>
+        )}
+
+        {sekme === "gecmis" && (
+          <Kart baslik="Son dersler" bosluksuz>
+            {c.gecmis_dersler.length === 0 ? (
+              <p className="px-6 pb-6 text-sm text-metin-soluk">Geçmiş ders kaydı yok.</p>
+            ) : (
+              <ul className="px-6 pb-3">
+                {c.gecmis_dersler.map((d) => (
+                  <DersSatiri key={d.oturum_id} d={d} yoklamaGoster />
+                ))}
+              </ul>
+            )}
+          </Kart>
+        )}
+
+        {sekme === "hareket" && (
+          <Kart baslik="Ders hakkı hareketleri" bosluksuz>
+            {c.hareketler.length === 0 ? (
+              <p className="px-6 pb-6 text-sm text-metin-soluk">Henüz hareket yok.</p>
+            ) : (
+              <ul className="px-6 pb-3 divide-y divide-cizgi">
                 {c.hareketler.map((x, i) => (
-                  <li key={i} className="py-2 text-sm flex flex-wrap items-center justify-between gap-2">
+                  <li key={i} className="py-2.5 text-sm flex flex-wrap items-center justify-between gap-2">
                     <span>
                       <span className="font-medium">{TUR_ETIKET[x.tur] ?? x.tur}</span>{" "}
                       <span className="text-metin-soluk">· {SAYAC_ETIKET[x.sayac]}</span>
@@ -253,9 +281,10 @@ export default function VeliCocuk() {
                   </li>
                 ))}
               </ul>
-            ))}
-        </div>
-      </Kart>
+            )}
+          </Kart>
+        )}
+      </div>
     </>
   );
 }
