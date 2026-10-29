@@ -1,3 +1,4 @@
+from app.models.ayarlar import KulupAyari
 from app.models.base import Base
 from app.models.bildirim import Bildirim, BildirimDurum, BildirimKanal, BildirimTercihi, PushAbonelik
 from app.models.kullanici import DenetimKaydi, Kullanici, Oturum, Rol
@@ -32,6 +33,7 @@ __all__ = [
     "IletisimKisisi",
     "IletisimRolu",
     "KimlikTur",
+    "KulupAyari",
     "Kullanici",
     "Odeme",
     "OdemeYontemi",

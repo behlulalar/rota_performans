@@ -2,6 +2,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
+    ayarlar,
+    bildirim_yonetimi,
+    denetim,
     antrenorler,
     auth,
     genel_bakis,
@@ -58,3 +61,6 @@ app.include_router(genel_bakis.router)
 app.include_router(raporlar.router)
 app.include_router(oturumlar.router)
 app.include_router(veli.router)
+app.include_router(bildirim_yonetimi.router)
+app.include_router(denetim.router)
+app.include_router(ayarlar.router)

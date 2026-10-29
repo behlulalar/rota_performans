@@ -9,6 +9,9 @@ import GrupForm from "./pages/GrupForm";
 import GrupListe from "./pages/GrupListe";
 import Giris from "./pages/Giris";
 import GelirRaporu from "./pages/GelirRaporu";
+import BildirimYonetimi from "./pages/BildirimYonetimi";
+import DenetimKaydi from "./pages/DenetimKaydi";
+import Ayarlar from "./pages/Ayarlar";
 import GenelBakis from "./pages/GenelBakis";
 import OgrenciDetay from "./pages/OgrenciDetay";
 import OgrenciForm from "./pages/OgrenciForm";
@@ -92,6 +95,9 @@ export default function App() {
             <Route path="/antrenorler" element={<AntrenorListe />} />
             <Route path="/odemeler" element={<OdemeListe />} />
             <Route path="/gelir-raporu" element={<GelirRaporu />} />
+            <Route path="/bildirimler" element={<BildirimYonetimi />} />
+            <Route path="/denetim-kaydi" element={<DenetimKaydi />} />
+            <Route path="/ayarlar" element={<Ayarlar />} />
             <Route path="/paketler" element={<PaketListe />} />
             <Route path="/gruplar" element={<GrupListe />} />
             <Route path="/gruplar/yeni" element={<GrupForm />} />

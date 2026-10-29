@@ -67,20 +67,17 @@ test.describe("Yönetici menüsü", () => {
     }
   });
 
-  test("Sistem öğeleri 'Yakında' etiketli ve tıklanamaz; gerçek bağlantılar çalışır", async ({ page }) => {
+  test("Sistem öğeleri (Bildirimler, Denetim kaydı, Ayarlar) bağlantıdır ve sayfaları açar", async ({ page }) => {
     await yoneticiApiGirisi(page);
     await page.goto("/gruplar");
     await expect(page.getByRole("heading", { name: "Gruplar" })).toBeVisible();
-    const url = page.url();
     const menu = page.getByRole("complementary", { name: "Menü" });
+    await expect(menu.locator('[aria-disabled="true"]')).toHaveCount(0);
 
-    for (const ad of ["Bildirimler", "Denetim kaydı", "Ayarlar"]) {
-      const oge = menu.locator('[aria-disabled="true"]', { hasText: ad });
-      await expect(oge).toBeVisible();
-      await expect(oge).toContainText("Yakında");
-      await oge.click({ force: true });
-      await expect(page).toHaveURL(url);
-      await expect(menu.getByRole("link", { name: ad })).toHaveCount(0);
+    for (const [ad, yol] of [["Bildirimler", "/bildirimler"], ["Denetim kaydı", "/denetim-kaydi"], ["Ayarlar", "/ayarlar"]]) {
+      await menu.getByRole("link", { name: ad }).click();
+      await expect(page).toHaveURL(new RegExp(`${yol}$`));
+      await expect(page.getByRole("heading", { name: ad, level: 1 })).toBeVisible();
     }
 
     await menu.getByRole("link", { name: "Genel bakış" }).click();

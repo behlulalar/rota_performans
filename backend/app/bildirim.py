@@ -13,6 +13,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.ayarlar import KulupAyari
 from app.models.bildirim import Bildirim, BildirimDurum, BildirimKanal, BildirimTercihi
 from app.models.ogrenci import IletisimKisisi, Ogrenci
 from app.models.paket import OgrenciPaketi, OgrenciPaketiDurum
@@ -21,6 +22,15 @@ from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, Yoklama
 
 GERI_ALMA_SURESI = timedelta(minutes=3)
 AZALDI_ESIGI = 2  # "son 2 ders"
+# Yukarıdaki iki değer varsayılandır; kulüp ayarları (kulup_ayari) varsa oradan okunur.
+
+
+async def ayarlari_oku(session: AsyncSession) -> tuple[timedelta, int]:
+    """(geri alma süresi, "azaldı" eşiği). Ayar satırı yoksa varsayılanlar."""
+    a = await session.get(KulupAyari, 1)
+    if a is None:
+        return GERI_ALMA_SURESI, AZALDI_ESIGI
+    return timedelta(minutes=a.geri_alma_dakika), a.azaldi_esigi
 
 DERS_GELMEDI = "ders_gelmedi"
 DERS_HAKKI_AZALDI = "ders_hakki_azaldi"
@@ -118,6 +128,7 @@ async def yoklama_isaretlendi(session: AsyncSession, yoklama: Yoklama, simdi: da
         return
     if yoklama.durum.value == "gelmedi":
         oturum = await session.get(DersOturumu, yoklama.oturum_id)
+        geri_alma, _ = await ayarlari_oku(session)
         await kuyruga_ekle(
             session,
             ogrenci_id=yoklama.ogrenci_id,
@@ -129,7 +140,7 @@ async def yoklama_isaretlendi(session: AsyncSession, yoklama: Yoklama, simdi: da
                 "tarih": oturum.tarih.isoformat(),
                 "baslangic": oturum.baslangic.strftime("%H:%M"),
             },
-            bekleme=GERI_ALMA_SURESI,
+            bekleme=geri_alma,
         )
     elif yoklama.durum.value == "geldi":
         await bakiye_olaylari(session, yoklama.ogrenci_id, yoklama.id, simdi)
@@ -167,9 +178,10 @@ async def _bu_donemde_var_mi(session: AsyncSession, ogrenci_id: uuid.UUID, sablo
 
 async def bakiye_olaylari(session: AsyncSession, ogrenci_id: uuid.UUID, yoklama_id: uuid.UUID, simdi: datetime) -> None:
     """Normal bakiye düştükten sonra çağrılır (defter satırları yazılmış/flush edilmiş olmalı).
-    Bakiye tam 2 ise `ders_hakki_azaldi`; 0 ya da altındaysa ve ödenmiş paketi varsa `ders_hakki_bitti`."""
+    Bakiye tam eşiğe (varsayılan 2) eşitse `ders_hakki_azaldi`; 0 ya da altındaysa ve ödenmiş paketi varsa `ders_hakki_bitti`."""
     bakiye = await _normal_bakiye(session, ogrenci_id)
-    if bakiye == AZALDI_ESIGI:
+    _, esik = await ayarlari_oku(session)
+    if bakiye == esik:
         sablon, parametreler = DERS_HAKKI_AZALDI, {"bakiye": bakiye}
     elif bakiye <= 0:
         odenmis = (

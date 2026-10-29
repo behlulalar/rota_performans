@@ -27,7 +27,7 @@ test("mobilde giriş yapılır, öğrenci listesi kart görünümünde açılır
   await expect(cekmece.getByRole("link", { name: "Takvim" })).toBeVisible();
   await expect(cekmece.getByRole("link", { name: "Antrenörler" })).toBeVisible();
   await expect(cekmece.getByRole("link", { name: "Gelir raporu" })).toBeVisible();
-  await expect(cekmece.locator('[aria-disabled="true"]', { hasText: "Bildirimler" })).toContainText("Yakında");
+  await expect(cekmece.getByRole("link", { name: "Bildirimler" })).toBeVisible();
   // Tema düğmesi mobilde üst çubukta durur.
   await expect(page.getByRole("button", { name: /temaya geç/ })).toBeVisible();
   await expect(cekmece.getByRole("button", { name: "Çıkış" })).toBeVisible();
