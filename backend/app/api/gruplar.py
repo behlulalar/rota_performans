@@ -1,8 +1,8 @@
 import uuid
-from datetime import date, time
+from datetime import date, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, exists, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +11,9 @@ from app.db import get_session
 from app.deps import rol_gerekli
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import Ogrenci, OgrenciDurum
-from app.models.program import Antrenor, Grup, GrupProgrami, OgrenciGrup
+from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
+from app.models.yoklama import Yoklama
+from app.oturumlar import URETIM_GUN, bugun, oturumlari_uret
 from app.schemas.grup import (
     GrupAntrenor,
     GrupDetay,
@@ -228,6 +230,26 @@ async def program_degistir(
     if any(s.id is not None and s.id not in mevcut for s in program):
         raise _hata422("Program satırı bu gruba ait değil")
     korunan = {s.id for s in program if s.id is not None}
+    # Saati, günü değişen ya da silinen satırların önceden üretilmiş ileri tarihli dersleri yeniden üretilmek üzere kaldırılır.
+    degisen = {
+        sid
+        for sid, satir in mevcut.items()
+        if sid not in korunan
+        or any(
+            s.id == sid and (s.gun, _saat(s.baslangic), _saat(s.bitis)) != (satir.gun, satir.baslangic, satir.bitis)
+            for s in program
+        )
+    }
+    if degisen:
+        await session.execute(
+            delete(DersOturumu).where(
+                DersOturumu.grup_programi_id.in_(degisen),
+                DersOturumu.tarih >= bugun(),
+                DersOturumu.durum == OturumDurum.planli,
+                ~exists().where(Yoklama.oturum_id == DersOturumu.id),
+                ~exists().where(TelafiPlani.oturum_id == DersOturumu.id),
+            )
+        )
     for sid, satir in mevcut.items():
         if sid not in korunan:
             await session.delete(satir)
@@ -244,6 +266,9 @@ async def program_degistir(
         ip=_ip(request),
     )
     try:
+        await session.flush()
+        if grup.aktif:
+            await oturumlari_uret(session, bugun(), bugun() + timedelta(days=URETIM_GUN), [grup.id])
         await session.commit()
     except IntegrityError:
         await session.rollback()

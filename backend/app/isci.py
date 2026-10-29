@@ -9,13 +9,12 @@ from datetime import timedelta
 
 from app import ders_hakki
 from app.db import SessionLocal, engine
-from app.oturumlar import bugun, oturumlari_uret, simdi
+from app.oturumlar import URETIM_GUN, bugun, oturumlari_uret, simdi
 
 log = logging.getLogger("isci")
 
 DONGU_SANIYE = 30
 URETIM_SANIYE = 3600
-URETIM_GUN = 14
 
 
 async def devamsizliklari_isle() -> None:

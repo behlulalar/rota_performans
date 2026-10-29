@@ -13,6 +13,10 @@ from app.models.program import DersOturumu, Grup, GrupProgrami, OturumDurum
 PARCA_BOYUTU = 1000
 
 
+# Programdan kaç gün ilerisine kadar ders oturumu önceden üretilir.
+URETIM_GUN = 14
+
+
 def simdi() -> datetime:
     return datetime.now(timezone.utc)
 

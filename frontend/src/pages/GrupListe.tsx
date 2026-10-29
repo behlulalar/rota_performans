@@ -58,6 +58,7 @@ export default function GrupListe() {
                   <th className={th}>Program</th>
                   <th className={`${th} w-48`}>Doluluk</th>
                   <th className={th}>Durum</th>
+                  <th className={`${th} w-24`}><span className="sr-only">İşlemler</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -70,6 +71,9 @@ export default function GrupListe() {
                     <td className={`${td} num`}>{programOzeti(g.program)}</td>
                     <td className="px-4 py-1.5 h-[52px]"><DolulukCubugu dolu={g.ogrenci_sayisi} kontenjan={g.kontenjan} /></td>
                     <td className={td}><span className={g.aktif ? rozetBasari : rozetNotr}>{g.aktif ? "Aktif" : "Pasif"}</span></td>
+                    <td className={`${td} text-right`}>
+                      <Link to={`/gruplar/${g.id}/duzenle`} aria-label={`${g.ad} grubunu düzenle`} className="text-[13px] font-medium hover:text-altin-metin">Düzenle</Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -78,8 +82,8 @@ export default function GrupListe() {
 
           <ul className="md:hidden space-y-2">
             {liste.map((g) => (
-              <li key={g.id}>
-                <Link to={`/gruplar/${g.id}`} className="block bg-yuzey border border-cizgi rounded-[14px] p-4 hover:border-altin transition-colors space-y-2">
+              <li key={g.id} className="bg-yuzey border border-cizgi rounded-[14px] hover:border-altin transition-colors">
+                <Link to={`/gruplar/${g.id}`} className="block p-4 pb-2 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-medium">{g.ad}</span>
                     <span className={g.aktif ? rozetBasari : rozetNotr}>{g.aktif ? "Aktif" : "Pasif"}</span>
@@ -88,6 +92,9 @@ export default function GrupListe() {
                   <div className="num text-[13px]">{programOzeti(g.program)}</div>
                   <DolulukCubugu dolu={g.ogrenci_sayisi} kontenjan={g.kontenjan} />
                 </Link>
+                <div className="px-4 pb-3 flex justify-end">
+                  <Link to={`/gruplar/${g.id}/duzenle`} aria-label={`${g.ad} grubunu düzenle`} className="inline-flex items-center min-h-11 text-[13px] font-medium hover:text-altin-metin">Düzenle</Link>
+                </div>
               </li>
             ))}
           </ul>

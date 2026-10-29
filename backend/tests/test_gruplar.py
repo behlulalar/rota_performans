@@ -1,12 +1,15 @@
 import asyncio
 import uuid
+from datetime import date, time, timedelta
 
 import pytest
 from sqlalchemy import select
 
 from app.db import SessionLocal
 from app.models import DenetimKaydi, Ogrenci, Rol
-from app.models.program import OgrenciGrup
+from app.models.program import DersOturumu, OgrenciGrup
+from app.models.yoklama import Yoklama, YoklamaDurum
+from app.oturumlar import bugun
 from tests.conftest import SIFRE, kullanici_olustur
 
 TC_LISTESI = ["10000000146", "10000001068"]
@@ -262,6 +265,47 @@ async def test_program_degistirme(istemci, yonetici):
         headers=yonetici,
     )
     assert yanit.status_code == 422
+
+
+async def test_program_saati_degisince_ileri_dersler_yeniden_uretilir(istemci, yonetici):
+    gun = bugun() + timedelta(days=1)
+    g = await grup_olustur(
+        istemci, yonetici, program=[{"gun": gun.isoweekday(), "baslangic": "17:00", "bitis": "18:30"}]
+    )
+    slot = g["program"][0]
+    gid = uuid.UUID(g["id"])
+    async with SessionLocal() as s:
+        # Üretici çalışmış gibi: ileri tarihli planlı iki ders (biri yoklamalı) ve geçmiş bir ders.
+        s.add_all([
+            DersOturumu(grup_id=gid, grup_programi_id=uuid.UUID(slot["id"]), tarih=gun, baslangic=time(17), bitis=time(18, 30)),
+            DersOturumu(grup_id=gid, grup_programi_id=uuid.UUID(slot["id"]), tarih=gun + timedelta(days=7), baslangic=time(17), bitis=time(18, 30)),
+            DersOturumu(grup_id=gid, grup_programi_id=uuid.UUID(slot["id"]), tarih=bugun() - timedelta(days=7), baslangic=time(17), bitis=time(18, 30)),
+        ])
+        await s.commit()
+    async with SessionLocal() as s:
+        korunan = (
+            await s.execute(select(DersOturumu).where(DersOturumu.grup_id == gid, DersOturumu.tarih == gun + timedelta(days=7)))
+        ).scalar_one()
+        ogr = Ogrenci(ad="Ali", soyad="Veli", dogum_tarihi=date(2015, 1, 1))
+        s.add(ogr)
+        await s.flush()
+        s.add(Yoklama(oturum_id=korunan.id, ogrenci_id=ogr.id, durum=YoklamaDurum.geldi, telafi_mi=False, surum=0, hareket_islendi=True))
+        await s.commit()
+
+    yanit = await istemci.put(
+        f"/api/gruplar/{g['id']}/program",
+        json=[{"id": slot["id"], "gun": gun.isoweekday(), "baslangic": "19:00", "bitis": "20:30"}],
+        headers=yonetici,
+    )
+    assert yanit.status_code == 200, yanit.text
+    async with SessionLocal() as s:
+        satirlar = (await s.execute(select(DersOturumu).where(DersOturumu.grup_id == gid))).scalars().all()
+    saatler = sorted((o.tarih, o.baslangic) for o in satirlar)
+    # Geçmiş ders ve yoklaması alınmış ders eski saatte kalır; diğer ileri dersler yeni saatte üretilir, çift ders oluşmaz.
+    assert (bugun() - timedelta(days=7), time(17)) in saatler
+    assert (gun + timedelta(days=7), time(17)) in saatler
+    assert (gun, time(19)) in saatler and (gun, time(17)) not in saatler
+    assert len({(o.tarih, o.baslangic) for o in satirlar}) == len(satirlar)
 
 
 async def test_ogrenci_pasife_alininca_uyelikler_kapanir(istemci, yonetici):

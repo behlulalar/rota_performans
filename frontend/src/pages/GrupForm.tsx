@@ -88,7 +88,7 @@ export default function GrupForm() {
     if (h) return setHata(h);
     setHata(null);
     setGonderiliyor(true);
-    const program: ProgramSlot[] = satirlar.map((s) => ({ gun: s.gun, baslangic: s.baslangic, bitis: s.bitis }));
+    const program: ProgramSlot[] = satirlar.map((s) => ({ id: s.id, gun: s.gun, baslangic: s.baslangic, bitis: s.bitis }));
     try {
       if (id) {
         await grupGuncelle(id, { ad: ad.trim(), antrenor_id: antrenorId || null, kontenjan: Number(kontenjan) });
