@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     dosya_dizini: str = "/app/uploads"
     # "Bugün" ve ders saatleri bu saat dilimine göre hesaplanır.
     saat_dilimi: str = "Europe/Istanbul"
+    # Web Push (VAPID). Üçü de doluysa push gönderimi açıktır. Anahtar üretimi: python -m app.cli vapid-uret
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = ""  # mailto:kulup@ornek.com
+
+    @property
+    def push_etkin(self) -> bool:
+        return bool(self.vapid_public_key and self.vapid_private_key and self.vapid_subject)
 
     @property
     def cors_origin_list(self) -> list[str]:

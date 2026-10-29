@@ -191,22 +191,16 @@ async def bakiye_olaylari(session: AsyncSession, ogrenci_id: uuid.UUID, yoklama_
     )
 
 
-async def gonderilecekleri_al(session: AsyncSession, simdi: datetime, limit: int = 50) -> list[Bildirim]:
+async def gonderilecekleri_al(
+    session: AsyncSession, simdi: datetime, limit: int = 50, kanal: BildirimKanal | None = None
+) -> list[Bildirim]:
     """Zamanı gelmiş bekleyen bildirimler. Satırlar kilitlenir (SKIP LOCKED): birden çok işçi aynı satırı almaz.
     Kilit, çağıranın işlemi bitene kadar sürer."""
-    return list(
-        (
-            await session.execute(
-                select(Bildirim)
-                .where(Bildirim.durum == BildirimDurum.bekliyor, Bildirim.planli_zaman <= simdi)
-                .order_by(Bildirim.planli_zaman, Bildirim.id)
-                .limit(limit)
-                .with_for_update(skip_locked=True)
-            )
-        )
-        .scalars()
-        .all()
-    )
+    sorgu = select(Bildirim).where(Bildirim.durum == BildirimDurum.bekliyor, Bildirim.planli_zaman <= simdi)
+    if kanal is not None:
+        sorgu = sorgu.where(Bildirim.kanal == kanal)
+    sorgu = sorgu.order_by(Bildirim.planli_zaman, Bildirim.id).limit(limit).with_for_update(skip_locked=True)
+    return list((await session.execute(sorgu)).scalars().all())
 
 
 async def metin_olustur(session: AsyncSession, bildirim: Bildirim) -> str:

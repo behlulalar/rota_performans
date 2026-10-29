@@ -114,7 +114,7 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [x] Profil güncelleme, şifre değiştirme
 
 ### Faz 4: Bildirimler (24 – 28 Kas)
-- [ ] Web Push (VAPID), cihaz kaydı, bildirim ayarları
+- [x] Web Push (VAPID), cihaz kaydı, bildirim ayarları
 - [ ] WhatsApp kuyruğu, ban korumaları, geri alma penceresi
 - [x] Bildirimler yalnızca birincil iletişim kişisine
 - [x] PWA kurulumu (manifest, simge, ana ekrana ekleme yönlendirmesi)

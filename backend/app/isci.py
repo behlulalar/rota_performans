@@ -7,7 +7,7 @@ import signal
 import time
 from datetime import timedelta
 
-from app import ders_hakki
+from app import ders_hakki, push
 from app.db import SessionLocal, engine
 from app.oturumlar import URETIM_GUN, bugun, oturumlari_uret, simdi
 
@@ -15,6 +15,7 @@ log = logging.getLogger("isci")
 
 DONGU_SANIYE = 30
 URETIM_SANIYE = 3600
+PUSH_PARTI = 50
 
 
 async def devamsizliklari_isle() -> None:
@@ -23,6 +24,12 @@ async def devamsizliklari_isle() -> None:
         await session.commit()
     if sayi:
         log.info("%d yoklama için devamsızlık hareketi yazıldı", sayi)
+
+
+async def push_bildirimlerini_gonder() -> None:
+    async with SessionLocal() as session:
+        await push.push_gonder(session, simdi(), limit=PUSH_PARTI)
+        await session.commit()
 
 
 async def oturumlari_hazirla() -> None:
@@ -40,6 +47,10 @@ async def calis(durdur: asyncio.Event) -> None:
             await devamsizliklari_isle()
         except Exception:
             log.exception("Devamsızlık işleme başarısız")
+        try:
+            await push_bildirimlerini_gonder()
+        except Exception:
+            log.exception("Push gönderimi başarısız")
         if son_uretim is None or time.monotonic() - son_uretim >= URETIM_SANIYE:
             try:
                 await oturumlari_hazirla()

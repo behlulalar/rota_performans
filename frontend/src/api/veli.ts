@@ -77,3 +77,10 @@ export type BildirimTercihYaniti = BildirimTercihleri & { whatsapp_izni_var: boo
 export const bildirimTercihleriGetir = () => api<BildirimTercihYaniti>("/api/benim/bildirim-tercihleri");
 export const bildirimTercihleriKaydet = (g: BildirimTercihleri) =>
   api<BildirimTercihYaniti>("/api/benim/bildirim-tercihleri", { method: "PUT", body: JSON.stringify(g) });
+
+export type PushAnahtari = { etkin: boolean; anahtar: string | null };
+export const pushAnahtariGetir = () => api<PushAnahtari>("/api/benim/push/anahtar");
+export const pushAboneligiKaydet = (g: { endpoint: string; keys: { p256dh: string; auth: string }; cihaz?: string }) =>
+  api<void>("/api/benim/push/abonelik", { method: "POST", body: JSON.stringify(g) });
+export const pushAboneliginiSil = (endpoint: string) =>
+  api<void>("/api/benim/push/abonelik", { method: "DELETE", body: JSON.stringify({ endpoint }) });

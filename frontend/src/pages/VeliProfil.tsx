@@ -9,12 +9,13 @@ import {
   type BildirimTercihleri,
   type Profil,
 } from "../api/veli";
+import { pushAc, pushDurumuBul, pushKapat, type PushDurumu } from "../lib/push";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import { hataMesaji, yeniSifreHatasi } from "../lib/dogrulama";
 import { apiyeCevir, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
-import { basariKutusu, birincilDugme, girdi } from "../lib/stil";
+import { basariKutusu, birincilDugme, dugme, girdi } from "../lib/stil";
 
 function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil) => void }) {
   const [ad, setAd] = useState(profil.ad_soyad ?? "");
@@ -155,7 +156,69 @@ function BildirimFormu() {
           {mesgul ? "Kaydediliyor…" : "Tercihleri kaydet"}
         </button>
       </form>
+      <CihazBildirimi />
     </Kart>
+  );
+}
+
+const PUSH_METINLERI: Record<PushDurumu, string> = {
+  kontrol: "Kontrol ediliyor…",
+  desteklenmiyor: "Bu tarayıcı uygulama bildirimlerini desteklemiyor.",
+  "ios-ana-ekran": "iPhone'da bildirim almak için önce uygulamayı ana ekrana ekleyin, sonra buradan açın.",
+  "yalniz-kurulu": "Bildirimler yalnızca yüklü (yayındaki) uygulamada açılabilir.",
+  "sunucu-kapali": "Uygulama bildirimleri şu an kulüp tarafında etkin değil.",
+  reddedildi: "Bildirim izni reddedildi. Tarayıcı ayarlarından bu site için izin vermeniz gerekir.",
+  kapali: "Bu cihazda bildirimler kapalı.",
+  acik: "Bu cihazda bildirimler açık.",
+};
+
+function CihazBildirimi() {
+  const [durum, setDurum] = useState<PushDurumu>("kontrol");
+  const [hata, setHata] = useState<string | null>(null);
+  const [mesgul, setMesgul] = useState(false);
+
+  useEffect(() => {
+    let iptal = false;
+    pushDurumuBul()
+      .then((d) => !iptal && setDurum(d))
+      .catch(() => !iptal && setDurum("desteklenmiyor"));
+    return () => {
+      iptal = true;
+    };
+  }, []);
+
+  async function degistir(ac: boolean) {
+    setMesgul(true);
+    setHata(null);
+    try {
+      setDurum(ac ? await pushAc() : await pushKapat());
+    } catch (err) {
+      setHata(hataMesaji(err));
+    } finally {
+      setMesgul(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2 max-w-md border-t border-cizgi pt-4 mt-4" data-testid="cihaz-bildirimi">
+      <h3 className="text-sm font-medium">Bu cihaz</h3>
+      <p className="text-[13px] text-metin-soluk">{PUSH_METINLERI[durum]}</p>
+      {hata && (
+        <p role="alert" className="text-[13px] text-hata">
+          {hata}
+        </p>
+      )}
+      {durum === "kapali" && (
+        <button type="button" disabled={mesgul} onClick={() => degistir(true)} className={birincilDugme}>
+          {mesgul ? "Açılıyor…" : "Bu cihazda bildirimleri aç"}
+        </button>
+      )}
+      {durum === "acik" && (
+        <button type="button" disabled={mesgul} onClick={() => degistir(false)} className={dugme}>
+          {mesgul ? "Kapatılıyor…" : "Bu cihazda kapat"}
+        </button>
+      )}
+    </div>
   );
 }
 

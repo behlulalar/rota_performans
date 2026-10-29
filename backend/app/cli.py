@@ -101,6 +101,27 @@ async def ornek_odeme_verisi() -> int:
     return await modul.yukle_odeme()
 
 
+def vapid_uret() -> int:
+    """Web Push için VAPID anahtar çifti üretir ve .env satırlarını yazdırır (hiçbir yere kaydetmez)."""
+    import base64
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    def b64(b: bytes) -> str:
+        return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+
+    anahtar = ec.generate_private_key(ec.SECP256R1())
+    ozel = anahtar.private_numbers().private_value.to_bytes(32, "big")
+    genel = anahtar.public_key().public_bytes(
+        serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint
+    )
+    print(f"VAPID_PUBLIC_KEY={b64(genel)}")
+    print(f"VAPID_PRIVATE_KEY={b64(ozel)}")
+    print("VAPID_SUBJECT=mailto:kulup@example.com  # gerçek bir e-posta ile değiştirin")
+    return 0
+
+
 async def main() -> int:
     ayrac = argparse.ArgumentParser(prog="app.cli")
     alt = ayrac.add_subparsers(dest="komut", required=True)
@@ -109,6 +130,7 @@ async def main() -> int:
     alt.add_parser("e2e-tohum", help="E2E test yöneticisini oluşturur (yalnız ENV=test|e2e)")
     alt.add_parser("ornek-veri", help="Geliştirme veritabanına örnek veri ekler (yalnız ENV=dev)")
     alt.add_parser("ornek-odeme-verisi", help="Örnek öğrencilere paket ve ödeme ekler (yalnız ENV=dev)")
+    alt.add_parser("vapid-uret", help="Web Push için VAPID anahtar çifti üretir")
     argumanlar = ayrac.parse_args()
 
     try:
@@ -120,6 +142,8 @@ async def main() -> int:
             return await ornek_veri()
         if argumanlar.komut == "ornek-odeme-verisi":
             return await ornek_odeme_verisi()
+        if argumanlar.komut == "vapid-uret":
+            return vapid_uret()
         return 2
     finally:
         await engine.dispose()

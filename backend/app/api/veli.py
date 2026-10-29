@@ -14,7 +14,8 @@ from app import telefon as telefon_modulu
 from app.db import get_session
 from app.depolama import depolama
 from app.deps import rol_gerekli
-from app.models.bildirim import BildirimTercihi
+from app.config import settings
+from app.models.bildirim import BildirimTercihi, PushAbonelik
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import IletisimKisisi, Ogrenci
 from app.models.paket import Odeme, OgrenciPaketi, OgrenciPaketiDurum, Paket
@@ -28,6 +29,9 @@ from app.schemas.veli import (
     CocukOzet,
     DersOzeti,
     Profil,
+    PushAbonelikGiris,
+    PushAbonelikSil,
+    PushAnahtari,
     ProfilGuncelle,
     VeliDers,
     VeliGrup,
@@ -429,3 +433,58 @@ async def bildirim_tercihleri_kaydet(
     await session.commit()
     await session.refresh(t)
     return await _tercih_yaniti(session, kullanici, t)
+
+
+# ---------- web push cihaz kaydı ----------
+
+
+@router.get("/push/anahtar", response_model=PushAnahtari)
+async def push_anahtari(kullanici: Kullanici = Veli):
+    if not settings.push_etkin:
+        return PushAnahtari(etkin=False)
+    return PushAnahtari(etkin=True, anahtar=settings.vapid_public_key)
+
+
+@router.post("/push/abonelik", status_code=status.HTTP_204_NO_CONTENT)
+async def push_abonelik_kaydet(
+    govde: PushAbonelikGiris,
+    request: Request,
+    kullanici: Kullanici = Veli,
+    session: AsyncSession = Depends(get_session),
+):
+    """Aynı uç nokta başka hesapta kayıtlıysa (ortak cihaz) bu hesaba taşınır."""
+    a = (await session.execute(select(PushAbonelik).where(PushAbonelik.endpoint == govde.endpoint))).scalar_one_or_none()
+    if a is None:
+        a = PushAbonelik(endpoint=govde.endpoint)
+        session.add(a)
+    a.kullanici_id = kullanici.id
+    a.p256dh = govde.keys.p256dh
+    a.auth = govde.keys.auth
+    a.cihaz = govde.cihaz
+    await audit.kaydet(
+        session, "push_abonelik_kaydedildi", kullanici_id=kullanici.id, hedef_tur="kullanici",
+        hedef_id=str(kullanici.id), ip=_ip(request),
+    )
+    await session.commit()
+
+
+@router.delete("/push/abonelik", status_code=status.HTTP_204_NO_CONTENT)
+async def push_abonelik_sil(
+    govde: PushAbonelikSil,
+    request: Request,
+    kullanici: Kullanici = Veli,
+    session: AsyncSession = Depends(get_session),
+):
+    """Yalnız kendi aboneliğini siler; olmayan kayıt için de 204 döner."""
+    a = (
+        await session.execute(
+            select(PushAbonelik).where(PushAbonelik.endpoint == govde.endpoint, PushAbonelik.kullanici_id == kullanici.id)
+        )
+    ).scalar_one_or_none()
+    if a is not None:
+        await session.delete(a)
+        await audit.kaydet(
+            session, "push_abonelik_silindi", kullanici_id=kullanici.id, hedef_tur="kullanici",
+            hedef_id=str(kullanici.id), ip=_ip(request),
+        )
+        await session.commit()

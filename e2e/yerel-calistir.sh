@@ -45,6 +45,7 @@ docker compose exec -T db psql -U rota -d postgres -qc "CREATE DATABASE $VERITAB
 docker compose exec -T redis redis-cli -n 2 flushdb >/dev/null
 
 echo "==> E2E backend ($BACKEND, 127.0.0.1:8101)"
+docker compose build backend >/dev/null
 docker compose run -d --rm --no-deps --name "$BACKEND" -p 127.0.0.1:8101:8000 \
   -e ENV=e2e \
   -e DATABASE_URL="postgresql+asyncpg://rota:rota_dev_sifre@db:5432/$VERITABANI" \

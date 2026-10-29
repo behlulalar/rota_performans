@@ -3,7 +3,7 @@
  * - Statik dosyalar (/assets/, simgeler, manifest): önce önbellek.
  * - /api/ ve diğer her şey: hiç dokunulmaz (önbelleğe alınmaz).
  */
-const SURUM = "v1";
+const SURUM = "v2";
 const ONBELLEK = `rota-statik-${SURUM}`;
 const OFFLINE_SAYFA = "/offline.html";
 const ON_YUKLEME = [OFFLINE_SAYFA, "/icon-192.png", "/manifest.webmanifest"];
@@ -59,6 +59,45 @@ self.addEventListener("fetch", (olay) => {
   }
 });
 
-/* --- PUSH BİLDİRİMLERİ (Faz 4, sonraki dilim) ---
- * "push" ve "notificationclick" olay işleyicileri buraya eklenecek.
+/* --- PUSH BİLDİRİMLERİ ---
+ * Sunucu yükü: {baslik, govde, url, etiket}. Kişisel veri içermez; metin gönderim anında üretilir.
  */
+self.addEventListener("push", (olay) => {
+  let veri = {};
+  try {
+    veri = olay.data ? olay.data.json() : {};
+  } catch {
+    veri = {};
+  }
+  const baslik = typeof veri.baslik === "string" && veri.baslik ? veri.baslik : "Rota Performans";
+  const secenekler = {
+    body: typeof veri.govde === "string" ? veri.govde : "",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    data: { url: typeof veri.url === "string" ? veri.url : "/" },
+  };
+  if (typeof veri.etiket === "string" && veri.etiket) secenekler.tag = veri.etiket;
+  olay.waitUntil(self.registration.showNotification(baslik, secenekler));
+});
+
+self.addEventListener("notificationclick", (olay) => {
+  olay.notification.close();
+  // Yalnızca aynı kökenli adreslere gidilir.
+  let hedef = new URL("/", self.location.origin);
+  try {
+    const url = new URL((olay.notification.data && olay.notification.data.url) || "/", self.location.origin);
+    if (url.origin === self.location.origin) hedef = url;
+  } catch {
+    /* geçersiz adres: ana sayfa */
+  }
+  olay.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((pencereler) => {
+      for (const p of pencereler) {
+        if (new URL(p.url).origin === self.location.origin && "focus" in p) {
+          return p.focus().then((f) => (f && "navigate" in f ? f.navigate(hedef.href) : f));
+        }
+      }
+      return self.clients.openWindow(hedef.href);
+    }),
+  );
+});

@@ -111,6 +111,11 @@ test.describe("Veli paneli", () => {
     await expect(page.getByLabel("Uygulama bildirimi (push)")).not.toBeChecked();
     await expect(page.getByLabel("Ders hakkı hatırlatmaları")).toBeChecked();
     await expect(page.getByLabel("WhatsApp ile")).toBeChecked();
+
+    // Cihaz bildirimi bölümü hatasız görünür (geliştirme sunucusunda service worker yok: izin istenmez).
+    const cihaz = page.getByTestId("cihaz-bildirimi");
+    await expect(cihaz.getByText("Bu cihaz", { exact: true })).toBeVisible();
+    await expect(cihaz.getByText(/yalnızca yüklü|desteklemiyor|ana ekrana ekleyin|kapalı|açık/)).toBeVisible();
   });
 
   test("veli yönetici sayfalarına giremez", async ({ page }) => {

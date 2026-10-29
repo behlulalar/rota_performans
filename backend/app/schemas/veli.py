@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime, time
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.metin import Baslik
 
 from app.models.kullanici import Rol
@@ -126,3 +126,36 @@ class BildirimTercihleri(BaseModel):
 class BildirimTercihYaniti(BildirimTercihleri):
     # Hesaba bağlı kişilerden en az birinde WhatsApp izni var mı (arayüz notu için).
     whatsapp_izni_var: bool
+
+
+class PushAnahtari(BaseModel):
+    etkin: bool
+    anahtar: str | None = None
+
+
+class PushAnahtarlari(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    p256dh: str = Field(min_length=1, max_length=255)
+    auth: str = Field(min_length=1, max_length=255)
+
+
+class PushAbonelikGiris(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: str = Field(min_length=10, max_length=2000)
+    keys: PushAnahtarlari
+    cihaz: str | None = Field(default=None, max_length=255)
+
+    @field_validator("endpoint")
+    @classmethod
+    def _https(cls, v: str) -> str:
+        if not v.startswith("https://"):
+            raise ValueError("Uç nokta https olmalı")
+        return v
+
+
+class PushAbonelikSil(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: str = Field(min_length=1, max_length=2000)
