@@ -7,6 +7,8 @@ import { BolumBaglami } from "./SayfaBasligi";
 import Simge from "./Simge";
 import TemaDugmesi from "./TemaDugmesi";
 
+const MENU_ANAHTARI = "rota-menu-gizli";
+
 function PasifOge({ o }: { o: MenuOgesi }) {
   return (
     <div
@@ -70,6 +72,24 @@ export default function Kabuk({
   const { pathname } = useLocation();
   const rotaBolumu = aktifBolum(menu, pathname) ?? menu[0];
   const [cekmece, setCekmece] = useState(false);
+  // Masaüstünde sol menü gizlenip açılabilir; tercih bu tarayıcıda hatırlanır.
+  const [menuGizli, setMenuGizli] = useState(() => {
+    try {
+      return localStorage.getItem(MENU_ANAHTARI) === "1";
+    } catch {
+      return false;
+    }
+  });
+  function menuyuDegistir() {
+    setMenuGizli((g) => {
+      try {
+        localStorage.setItem(MENU_ANAHTARI, g ? "0" : "1");
+      } catch {
+        /* depolama kapalıysa tercih yalnız bu oturumda geçerli */
+      }
+      return !g;
+    });
+  }
   const tumOgeler = menu.flatMap((b) => b.ogeler);
 
   useEffect(() => setCekmece(false), [pathname]);
@@ -88,6 +108,18 @@ export default function Kabuk({
       <div className={`min-h-dvh flex flex-col ${sekmeler ? "sekmeli-kabuk" : ""}`}>
         {/* Siyah marka çubuğu */}
         <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center gap-3 px-4 md:px-6 bg-serit text-white">
+          {yerlesim === "yan" && (
+            <button
+              type="button"
+              onClick={menuyuDegistir}
+              aria-label={menuGizli ? "Menüyü göster" : "Menüyü gizle"}
+              aria-expanded={!menuGizli}
+              aria-controls="yan-menu"
+              className="hidden md:grid place-items-center size-10 -ml-2 rounded-[10px] text-serit-ikon hover:text-altin transition-colors"
+            >
+              <Simge ad="menu" />
+            </button>
+          )}
           <Logo />
           <span className="hidden md:block font-display text-[17px] leading-none mr-2">Rota Performans</span>
           <span className="md:hidden flex-1 min-w-0 font-display text-[18px] leading-none truncate">{sayfaAdi}</span>
@@ -142,8 +174,9 @@ export default function Kabuk({
         </header>
 
         <div className="flex flex-1 min-w-0">
-          {yerlesim === "yan" && (
+          {yerlesim === "yan" && !menuGizli && (
             <aside
+              id="yan-menu"
               aria-label="Menü"
               className="hidden md:block w-[232px] shrink-0 sticky top-14 h-[calc(100dvh-3.5rem)] overflow-y-auto bg-menu border-r border-cizgi p-3 space-y-5"
             >

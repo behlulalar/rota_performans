@@ -87,4 +87,22 @@ test.describe("Yönetici menüsü", () => {
     await expect(page).toHaveURL(/\/genel-bakis$/);
     await expect(page.getByRole("heading", { name: "Genel bakış" })).toBeVisible();
   });
+
+  test("sol menü üstteki düğmeyle gizlenip açılır; tercih yenilemede korunur", async ({ page }) => {
+    await yoneticiApiGirisi(page);
+    await page.goto("/gruplar");
+    const menu = page.getByRole("complementary", { name: "Menü" });
+    await expect(menu).toBeVisible();
+
+    await page.getByRole("button", { name: "Menüyü gizle" }).click();
+    await expect(menu).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Gruplar" })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Gruplar" })).toBeVisible();
+    await expect(menu).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Menüyü göster" }).click();
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Gruplar" })).toHaveAttribute("aria-current", "page");
+  });
 });

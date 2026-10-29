@@ -59,9 +59,9 @@ export default function OgrenciFoto({ id, fotoVar, ad, soyad, boyut, sinif = "si
   return (
     <div
       ref={kap}
-      className={`${sinif} shrink-0 overflow-hidden bg-yuzey-yuksek border border-cizgi grid place-items-center text-altin-metin text-sm font-semibold`}
+      className={`${sinif} relative shrink-0 overflow-hidden bg-yuzey-yuksek border border-cizgi grid place-items-center text-altin-metin text-sm font-semibold`}
     >
-      {url ? <img src={url} alt={`${ad} ${soyad}`} className="size-full object-cover" /> : bas}
+      {url ? <img src={url} alt={`${ad} ${soyad}`} className="absolute inset-0 size-full object-cover object-center" /> : bas}
     </div>
   );
 }
