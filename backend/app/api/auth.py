@@ -194,10 +194,10 @@ async def login(
     giris = normalize_giris(govde.giris)
     kullanici = (await session.execute(select(Kullanici).where(Kullanici.giris == giris))).scalar_one_or_none()
     if kullanici is None and "@" not in giris and telefon_modulu.giris_icin(giris) is not None:
-        # İkinci giriş yolu: yalnız yöneticilerin telefon alanı. Antrenör/veli yalnız kendi girişiyle girer.
+        # İkinci giriş yolu: yalnız yönetici ve teknik destek telefon alanı. Antrenör/veli yalnız kendi girişiyle girer.
         kullanici = (
             await session.execute(
-                select(Kullanici).where(Kullanici.telefon == giris, Kullanici.rol == Rol.admin)
+                select(Kullanici).where(Kullanici.telefon == giris, Kullanici.rol.in_((Rol.admin, Rol.destek)))
             )
         ).scalar_one_or_none()
     simdi_ = simdi()
@@ -540,8 +540,8 @@ async def giris_degistir(
     session: AsyncSession = Depends(get_session),
     yenileme: str | None = Cookie(default=None, alias=COOKIE_ADI),
 ):
-    """Personelin (yönetici, antrenör) kendi giriş bilgisini, şifresini doğrulayarak değiştirmesi."""
-    if kullanici.rol not in (Rol.admin, Rol.antrenor):
+    """Personelin (yönetici, teknik destek, antrenör) kendi giriş bilgisini, şifresini doğrulayarak değiştirmesi."""
+    if kullanici.rol not in (Rol.admin, Rol.destek, Rol.antrenor):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Bu işlem için yetkiniz yok")
     ip = _istemci_ip(request)
     simdi_ = simdi()
@@ -591,8 +591,8 @@ async def telefon_degistir(
     session: AsyncSession = Depends(get_session),
     yenileme: str | None = Cookie(default=None, alias=COOKIE_ADI),
 ):
-    """Yöneticinin kendi telefonunu (ikinci giriş yolu), şifresini doğrulayarak değiştirmesi veya kaldırması."""
-    if kullanici.rol != Rol.admin:
+    """Yöneticinin/teknik desteğin kendi telefonunu (ikinci giriş yolu), şifresini doğrulayarak değiştirmesi veya kaldırması."""
+    if kullanici.rol not in (Rol.admin, Rol.destek):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Bu işlem için yetkiniz yok")
     ip = _istemci_ip(request)
     simdi_ = simdi()

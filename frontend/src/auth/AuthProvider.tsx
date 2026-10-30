@@ -17,7 +17,7 @@ type AuthDegeri = {
   /** Destek hesabında oturum açmaz, ikinci adımı döner; diğer rollerde oturum açar ve null döner. */
   girisYap: (giris: string, sifre: string, beniHatirla: boolean, panel: Panel) => Promise<IkiAdim | null>;
   /** İkinci adım bittikten sonra elde edilen erişim belirteciyle oturumu açar. */
-  belirtecleGiris: (erisimBelirteci: string) => Promise<void>;
+  belirtecleGiris: (erisimBelirteci: string, beniHatirla: boolean, panel: Panel) => Promise<void>;
   cikisYap: () => Promise<void>;
   /** Zorunlu şifre değişiminden sonra çağrılır; kullanıcı durumunu sunucudan yeniler. */
   sifreDegistirildi: () => Promise<void>;
@@ -70,9 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }, []);
 
-  const belirtecleGiris = useCallback(async (erisimBelirteci: string) => {
+  const belirtecleGiris = useCallback(async (erisimBelirteci: string, beniHatirla: boolean, panel: Panel) => {
     belirteciAyarla(erisimBelirteci);
     const ben = await api<Kullanici>("/api/auth/me");
+    if (beniHatirla) hatirlananiKaydet({ giris: ben.giris, ad: ben.ad_soyad || ben.giris, panel });
+    else hatirlananiSil();
     cikisIsaretle(false);
     setOturumSuresiDoldu(false);
     setKullanici(ben);

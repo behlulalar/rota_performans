@@ -3,9 +3,11 @@ import { Navigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { ikiAdimDogrula, ikiAdimKurulumu, ikiAdimKurulumuDogrula, type KurulumBilgisi } from "../api/ikiAdim";
 import { useAuth } from "../auth/AuthProvider";
+import BeniHatirla from "../components/BeniHatirla";
 import Karsilama from "../components/Karsilama";
 import { ApiHata } from "../lib/api";
 import { hataMesaji } from "../lib/dogrulama";
+import { hatirlananiOku, varsayilanHatirla } from "../lib/hatirla";
 import { rolPaneli } from "../lib/panel";
 import { birincilDugme, dugme, girdi, uyariKutusu } from "../lib/stil";
 
@@ -31,7 +33,12 @@ const gruplu = (a: string) => a.replace(/\s/g, "").replace(/(.{4})(?=.)/g, "$1 "
 export default function DestekGiris() {
   const { kullanici, girisYap, belirtecleGiris } = useAuth();
   const [adim, setAdim] = useState<Adim>({ ad: "sifre" });
-  const [giris, setGiris] = useState("");
+  // Bu cihazda hatırlanan destek hesabı varsa giriş alanı dolu gelir (yalnız kod ve şifre sorulur).
+  const [giris, setGiris] = useState(() => {
+    const h = hatirlananiOku();
+    return h?.panel === "destek" ? h.giris : "";
+  });
+  const [beniHatirla, setBeniHatirla] = useState(() => hatirlananiOku()?.panel === "destek" || varsayilanHatirla());
   const [sifre, setSifre] = useState("");
   const [kod, setKod] = useState("");
   const [hata, setHata] = useState<string | null>(null);
@@ -72,7 +79,7 @@ export default function DestekGiris() {
     setHata(null);
     setGonderiliyor(true);
     try {
-      const sonuc = await girisYap(giris, sifre, false, "destek");
+      const sonuc = await girisYap(giris, sifre, beniHatirla, "destek");
       if (sonuc) {
         setKod("");
         setAdim(
@@ -100,7 +107,7 @@ export default function DestekGiris() {
         setAdim({ ad: "kodlar", erisim: s.access_token, kodlar: s.kurtarma_kodlari });
       } else {
         const s = await ikiAdimDogrula(adim.belirtec, kod.trim());
-        await belirtecleGiris(s.access_token);
+        await belirtecleGiris(s.access_token, beniHatirla, "destek");
       }
     } catch (err) {
       adimHatasi(err);
@@ -114,7 +121,7 @@ export default function DestekGiris() {
     setHata(null);
     setGonderiliyor(true);
     try {
-      await belirtecleGiris(adim.erisim);
+      await belirtecleGiris(adim.erisim, beniHatirla, "destek");
     } catch (err) {
       setHata(hataMesaji(err));
       setGonderiliyor(false);
@@ -160,7 +167,7 @@ export default function DestekGiris() {
         {adim.ad === "sifre" && (
           <form onSubmit={sifreGonder} className={KART} noValidate>
             <label className="block">
-              <span className="text-[13px] text-metin-soluk">E-posta</span>
+              <span className="text-[13px] text-metin-soluk">Telefon veya e-posta</span>
               <input
                 className={girdi}
                 value={giris}
@@ -168,6 +175,7 @@ export default function DestekGiris() {
                 autoComplete="username"
                 type="text"
                 autoCapitalize="none"
+                placeholder="05xx xxx xx xx veya e-posta"
                 required
               />
             </label>
@@ -182,6 +190,7 @@ export default function DestekGiris() {
                 required
               />
             </label>
+            <BeniHatirla isaretli={beniHatirla} degisti={setBeniHatirla} />
             {hataSatiri}
             <button type="submit" disabled={gonderiliyor || giris.length < 3 || sifre.length < 1} className={`${birincilDugme} w-full`}>
               {gonderiliyor ? "Giriş yapılıyor…" : "Devam et"}

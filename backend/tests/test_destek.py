@@ -452,3 +452,13 @@ async def test_e2e_tohumu_destek_hesabi(istemci, monkeypatch):
     assert k.rol == Rol.destek and k.totp_aktif is False and k.totp_sifreli is None
     y = await login(istemci, "destek@rota.test", "destek", sifre=cli.E2E_DESTEK_SIFRE)
     assert y.json()["durum"] == "kurulum"
+
+
+async def test_destek_telefonla_girer_ve_telefonunu_degistirir(istemci):
+    h = await destek_baslik(istemci)
+    r = await istemci.patch("/api/auth/telefon", json={"telefon": "05321112233", "sifre": SIFRE}, headers=h)
+    assert r.status_code == 200, r.text
+    r = await login(istemci, "0532 111 22 33", panel="destek")
+    assert r.status_code == 200 and r.json()["iki_adim"] is True
+    # Telefon yönetici panelinden destek hesabına giriş açmaz.
+    assert (await login(istemci, "05321112233", panel="yonetici")).status_code == 401
