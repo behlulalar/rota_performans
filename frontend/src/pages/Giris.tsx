@@ -8,7 +8,10 @@ import { PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
 import { girisiBicimle, hatirlananiOku, hatirlananiSil, varsayilanHatirla } from "../lib/hatirla";
 import { bilgiKutusu, birincilDugme, girdi } from "../lib/stil";
 
-const BASLIK: Record<Panel, { baslik: string; karsilama: ReactNode; ipucu: string; yer: string }> = {
+// Teknik destek kendi iki adımlı giriş sayfasını kullanır (DestekGiris).
+type GirisPaneli = Exclude<Panel, "destek">;
+
+const BASLIK: Record<GirisPaneli, { baslik: string; karsilama: ReactNode; ipucu: string; yer: string }> = {
   veli: {
     baslik: "Veli / öğrenci girişi",
     karsilama: (
@@ -24,9 +27,9 @@ const BASLIK: Record<Panel, { baslik: string; karsilama: ReactNode; ipucu: strin
   antrenor: { baslik: "Antrenör girişi", karsilama: "İyi dersler.", ipucu: "Kulübün size verdiği giriş bilgileriyle giriş yapın.", yer: "e-posta veya telefon" },
   yonetici: { baslik: "Yönetici girişi", karsilama: "Yönetim paneli.", ipucu: "Yönetici hesabınızla e-posta veya telefon numaranızla giriş yapın.", yer: "E-posta veya telefon" },
 };
-const DIGER: Record<Panel, Panel | null> = { veli: null, antrenor: "yonetici", yonetici: "antrenor" };
+const DIGER: Record<GirisPaneli, GirisPaneli | null> = { veli: null, antrenor: "yonetici", yonetici: "antrenor" };
 
-export default function Giris({ panel = "veli" }: { panel?: Panel }) {
+export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
   const { kullanici, girisYap, oturumSuresiDoldu } = useAuth();
   const [giris, setGiris] = useState("");
   const [sifre, setSifre] = useState("");

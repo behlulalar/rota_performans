@@ -20,6 +20,7 @@ const YOLLAR = {
   bildirim: "M4.5 13.5V8a4.5 4.5 0 0 1 9 0v5.5M3 13.5h12M7.5 15.5h3",
   duyuru: "M3 7.5v3h2.5L12 14V4L5.5 7.5zM14.5 7a3 3 0 0 1 0 4",
   denetim: "M4 2.5h10v13H4zM6.5 6h5M6.5 9h5M6.5 12h3",
+  durum: "M2 9h3.2l2-5.5 3.2 11 2-5.5H16",
   odeme: "M2.5 5h13v9h-13zM2.5 8h13M5 11.5h3",
 } as const;
 

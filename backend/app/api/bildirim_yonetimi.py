@@ -148,6 +148,13 @@ async def listele(
     return BildirimListesi(kayitlar=kayitlar, toplam=toplam, sayfa=sayfa, boyut=boyut)
 
 
+def yeniden_denemeye_al(b: Bildirim) -> None:
+    """Hatalı bildirimi hemen gönderilecek şekilde kuyruğa geri koyar (durum denetimi çağıranda)."""
+    b.durum = BildirimDurum.bekliyor
+    b.planli_zaman = datetime.now(timezone.utc)
+    b.deneme = 0
+
+
 async def _kilitle(session: AsyncSession, bildirim_id: int) -> Bildirim:
     b = (
         await session.execute(select(Bildirim).where(Bildirim.id == bildirim_id).with_for_update())
@@ -180,9 +187,7 @@ async def yeniden_dene(
     b = await _kilitle(session, bildirim_id)
     if b.durum != BildirimDurum.hata:
         raise HTTPException(409, "Yalnız hatalı bildirim yeniden denenebilir")
-    b.durum = BildirimDurum.bekliyor
-    b.planli_zaman = datetime.now(timezone.utc)
-    b.deneme = 0
+    yeniden_denemeye_al(b)
     await audit.kaydet(
         session, "bildirim_yeniden_denendi", kullanici_id=yonetici.id, hedef_tur="bildirim", hedef_id=str(b.id),
         ip=_ip(request), detay={"kanal": b.kanal.value, "sablon": b.sablon},

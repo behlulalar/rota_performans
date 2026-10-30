@@ -36,6 +36,8 @@ class YoneticiOzet(BaseModel):
     olusturma: datetime
     # Listeyi isteyen yöneticinin kendi satırı.
     ben: bool
+    # Teknik destek hesabı: listede salt okunur görünür (yönetici düzenleyemez), son yönetici sayımına girmez.
+    destek: bool = False
 
 
 class YoneticiOlusturYanit(BaseModel):

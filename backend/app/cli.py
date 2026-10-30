@@ -10,27 +10,23 @@ import os
 import sys
 
 from email_validator import EmailNotValidError, validate_email
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.config import settings
 from app.db import SessionLocal, engine
-from app.models.kullanici import Kullanici, Rol
-from app import telefon
+from app import audit, telefon
+from app.models.kullanici import Kullanici, Oturum, Rol
 from app.security import normalize_giris, sifre_ozeti
 
 MIN_SIFRE_UZUNLUK = 12
+# E2E test destek hesabı (yalnız e2e-tohum; üretimde kullanılmaz). Ortamdan geçersiz kılınabilir.
+E2E_DESTEK_GIRIS = "destek@rota.test"
+E2E_DESTEK_SIFRE = "Destek-test-sifre-123"
 
 
 async def admin_olustur(giris: str) -> int:
     giris = normalize_giris(giris)
-    if "@" in giris:
-        try:
-            validate_email(giris, check_deliverability=False)
-        except EmailNotValidError as hata:
-            print(f"Geçersiz e-posta adresi: {hata}", file=sys.stderr)
-            return 1
-    elif telefon.giris_icin(giris) is None:
-        print("Giriş bir e-posta adresi veya +90 ardından 10 haneli telefon numarası olmalı.", file=sys.stderr)
+    if _giris_dogrula(giris) is None:
         return 1
     sifre = getpass.getpass("Şifre: ")
     if len(sifre) < MIN_SIFRE_UZUNLUK:
@@ -51,6 +47,64 @@ async def admin_olustur(giris: str) -> int:
     return 0
 
 
+def _giris_dogrula(giris: str) -> str | None:
+    """E-posta/telefon biçimini denetler; hata varsa mesajı yazdırıp None döner."""
+    if "@" in giris:
+        try:
+            validate_email(giris, check_deliverability=False)
+        except EmailNotValidError as hata:
+            print(f"Geçersiz e-posta adresi: {hata}", file=sys.stderr)
+            return None
+    elif telefon.giris_icin(giris) is None:
+        print("Giriş bir e-posta adresi veya +90 ardından 10 haneli telefon numarası olmalı.", file=sys.stderr)
+        return None
+    return giris
+
+
+async def destek_olustur(giris: str) -> int:
+    """Teknik destek hesabı oluşturur (şifre burada belirlenir; 2FA ilk girişte kurulur)."""
+    giris = normalize_giris(giris)
+    if _giris_dogrula(giris) is None:
+        return 1
+    sifre = getpass.getpass("Şifre: ")
+    if len(sifre) < MIN_SIFRE_UZUNLUK:
+        print(f"Şifre en az {MIN_SIFRE_UZUNLUK} karakter olmalı.", file=sys.stderr)
+        return 1
+    if sifre != getpass.getpass("Şifre (tekrar): "):
+        print("Şifreler eşleşmiyor.", file=sys.stderr)
+        return 1
+
+    async with SessionLocal() as session:
+        var = (await session.execute(select(Kullanici).where(Kullanici.giris == giris))).scalar_one_or_none()
+        if var is not None:
+            print("Bu giriş zaten kayıtlı.", file=sys.stderr)
+            return 1
+        session.add(Kullanici(rol=Rol.destek, giris=giris, sifre_ozeti=sifre_ozeti(sifre), ad_soyad="Teknik Destek"))
+        await session.commit()
+    print("Teknik destek hesabı oluşturuldu. İlk girişte (destek paneli) iki adımlı doğrulama kurulacak.")
+    return 0
+
+
+async def destek_2fa_sifirla(giris: str) -> int:
+    """Destek hesabının 2FA'sını siler: anahtar, kurtarma kodları ve tüm oturumlar. Sonraki girişte yeniden kurulur."""
+    giris = normalize_giris(giris)
+    async with SessionLocal() as session:
+        k = (await session.execute(select(Kullanici).where(Kullanici.giris == giris))).scalar_one_or_none()
+        if k is None or k.rol != Rol.destek:
+            print("Bu girişe ait bir destek hesabı yok.", file=sys.stderr)
+            return 1
+        k.totp_sifreli = None
+        k.totp_aktif = False
+        k.totp_kurtarma = None
+        k.basarisiz_deneme = 0
+        k.kilit_bitis = None
+        await session.execute(update(Oturum).where(Oturum.kullanici_id == k.id).values(iptal=True))
+        await audit.kaydet(session, "destek_2fa_sifirlandi_cli", kullanici_id=k.id, hedef_tur="kullanici", hedef_id=str(k.id))
+        await session.commit()
+    print("İki adımlı doğrulama sıfırlandı; sonraki girişte yeniden kurulacak.")
+    return 0
+
+
 async def e2e_tohum() -> int:
     """E2E testleri için yönetici hesabını oluşturur (varsa şifresini günceller).
 
@@ -68,7 +122,26 @@ async def e2e_tohum() -> int:
         print(f"Şifre en az {MIN_SIFRE_UZUNLUK} karakter olmalı.", file=sys.stderr)
         return 1
 
+    destek_giris = normalize_giris(os.environ.get("E2E_DESTEK_GIRIS", E2E_DESTEK_GIRIS))
+    destek_sifre = os.environ.get("E2E_DESTEK_SIFRE", E2E_DESTEK_SIFRE)
+
     async with SessionLocal() as session:
+        # Test destek hesabı: sabit şifre, 2FA KURULMAMIŞ (testler kurulum akışını kendisi yürütür).
+        d = (await session.execute(select(Kullanici).where(Kullanici.giris == destek_giris))).scalar_one_or_none()
+        if d is None:
+            session.add(
+                Kullanici(rol=Rol.destek, giris=destek_giris, sifre_ozeti=sifre_ozeti(destek_sifre), ad_soyad="Test Destek")
+            )
+        elif d.rol == Rol.destek:
+            d.sifre_ozeti = sifre_ozeti(destek_sifre)
+            d.aktif = True
+            d.basarisiz_deneme = 0
+            d.kilit_bitis = None
+            d.sifre_degistirmeli = False
+            d.totp_sifreli = None
+            d.totp_aktif = False
+            d.totp_kurtarma = None
+            await session.execute(update(Oturum).where(Oturum.kullanici_id == d.id).values(iptal=True))
         var = (await session.execute(select(Kullanici).where(Kullanici.giris == giris))).scalar_one_or_none()
         if var is None:
             session.add(Kullanici(rol=Rol.admin, giris=giris, sifre_ozeti=sifre_ozeti(sifre)))
@@ -127,6 +200,10 @@ async def main() -> int:
     alt = ayrac.add_subparsers(dest="komut", required=True)
     admin = alt.add_parser("admin-olustur", help="Yönetici hesabı oluşturur")
     admin.add_argument("giris", help="E-posta veya telefon")
+    destek = alt.add_parser("destek-olustur", help="Teknik destek hesabı oluşturur (2FA ilk girişte kurulur)")
+    destek.add_argument("giris", help="E-posta veya telefon")
+    d2fa = alt.add_parser("destek-2fa-sifirla", help="Destek hesabının iki adımlı doğrulamasını sıfırlar")
+    d2fa.add_argument("giris", help="Destek hesabının girişi")
     alt.add_parser("e2e-tohum", help="E2E test yöneticisini oluşturur (yalnız ENV=test|e2e)")
     alt.add_parser("ornek-veri", help="Geliştirme veritabanına örnek veri ekler (yalnız ENV=dev)")
     alt.add_parser("ornek-odeme-verisi", help="Örnek öğrencilere paket ve ödeme ekler (yalnız ENV=dev)")
@@ -136,6 +213,10 @@ async def main() -> int:
     try:
         if argumanlar.komut == "admin-olustur":
             return await admin_olustur(argumanlar.giris)
+        if argumanlar.komut == "destek-olustur":
+            return await destek_olustur(argumanlar.giris)
+        if argumanlar.komut == "destek-2fa-sifirla":
+            return await destek_2fa_sifirla(argumanlar.giris)
         if argumanlar.komut == "e2e-tohum":
             return await e2e_tohum()
         if argumanlar.komut == "ornek-veri":

@@ -1,4 +1,8 @@
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { deflateSync } from "node:zlib";
+import { Secret, TOTP } from "otpauth";
 import { test as temel, expect, type APIResponse, type Page } from "@playwright/test";
 
 export { expect };
@@ -13,6 +17,7 @@ export const test = temel.extend({
       await pencere.getByRole("button").last().click();
     }, { noWaitAfter: true }); // art arda iki onay penceresi çıkabilir
     await kullan(page);
+    await destekOturumunuSakla(page);
   },
 });
 
@@ -300,4 +305,160 @@ export async function gelirRaporuAPI(page: Page, token: string, yil: number, ay:
   const yanit = await page.request.get(`/api/raporlar/gelir?yil=${yil}&ay=${ay}`, { headers: { Authorization: `Bearer ${token}` } });
   expect(yanit.status(), await yanit.text()).toBe(200);
   return (await yanit.json()) as { ozet: { toplam_tahsilat: string; odeme_adedi: number } };
+}
+
+// --- Teknik destek (şifre + iki adımlı doğrulama) ---
+
+export const DESTEK_GIRIS = process.env.E2E_DESTEK_GIRIS ?? "destek@rota.test";
+export const DESTEK_SIFRE = process.env.E2E_DESTEK_SIFRE ?? "Destek-test-sifre-123";
+
+const ADIM_SANIYE = 30;
+// e2e-tohum her çalıştırmada destek hesabının 2FA'sını sıfırlar; kurulumdan sonra gizli anahtar ve
+// kurtarma kodları test dosyaları arasında bu geçici dosyada paylaşılır (depoya girmez).
+const DESTEK_DURUM_DOSYASI = join(tmpdir(), "rota-e2e-destek-2fa.json");
+
+type DestekDurumu = { gizli: string; kurtarma: string[]; kullanilan: number[] };
+
+function destekDurumuOku(): DestekDurumu | null {
+  try {
+    return JSON.parse(readFileSync(DESTEK_DURUM_DOSYASI, "utf8")) as DestekDurumu;
+  } catch {
+    return null;
+  }
+}
+
+/** Yeni kurulumda eski durum atılır: dosya her zaman son kurulumun anahtarını taşır. */
+export function destekDurumuKaydet(d: DestekDurumu): void {
+  writeFileSync(DESTEK_DURUM_DOSYASI, JSON.stringify(d));
+}
+
+/** Kurulumda gösterilen kurtarma kodlarını, kullanılmış zaman adımlarını koruyarak kaydeder. */
+export function destekKurtarmaKodlariniKaydet(kodlar: string[]): void {
+  const d = destekDurumuOku();
+  if (d) destekDurumuKaydet({ ...d, kurtarma: kodlar });
+}
+
+const simdikiAdim = () => Math.floor(Date.now() / 1000 / ADIM_SANIYE);
+
+function totpUret(gizli: string, adim: number): string {
+  return new TOTP({ secret: Secret.fromBase32(gizli), digits: 6, period: ADIM_SANIYE }).generate({ timestamp: adim * ADIM_SANIYE * 1000 });
+}
+
+/**
+ * Anahtardan 6 haneli kod üretir. Sunucu aynı zaman adımındaki kodu ikinci kez kabul etmez ve ±1 adım
+ * tolerans tanır; bu yüzden daha önce kullanılmamış bir adım seçilir, yoksa bir sonraki adım beklenir.
+ */
+export async function destekKoduAl(gizli: string): Promise<string> {
+  for (;;) {
+    const durum = destekDurumuOku();
+    const kullanilan = durum && durum.gizli === gizli ? durum.kullanilan : [];
+    const simdi = simdikiAdim();
+    const adim = [simdi, simdi + 1, simdi - 1].find((a) => !kullanilan.includes(a));
+    if (adim !== undefined) {
+      destekDurumuKaydet({ gizli, kurtarma: durum?.gizli === gizli ? durum.kurtarma : [], kullanilan: [...kullanilan.filter((a) => a >= simdi - 2), adim] });
+      return totpUret(gizli, adim);
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
+/** Kurulum sonrası kaydedilen kurtarma kodlarından kullanılmamış bir tanesini ayırır. */
+export function destekKurtarmaKodu(): string {
+  const durum = destekDurumuOku();
+  const kod = durum?.kurtarma[0];
+  if (!durum || !kod) throw new Error("Kullanılabilir kurtarma kodu yok (destek 2FA kurulumu yapılmamış).");
+  destekDurumuKaydet({ ...durum, kurtarma: durum.kurtarma.slice(1) });
+  return kod;
+}
+
+/**
+ * Arayüzden destek girişi: 2FA kurulu değilse kurulum yapılır (kurtarma kodları kaydedilir), kuruluysa
+ * kayıtlı anahtardan üretilen kodla girilir. `bitir` kapalıysa kurtarma kodları ekranında durur.
+ */
+export async function destekArayuzdenGiris(page: Page, { bitir = true }: { bitir?: boolean } = {}): Promise<void> {
+  destekSayfalari.add(page);
+  await page.goto("/destek-giris");
+  await page.getByLabel("E-posta").fill(DESTEK_GIRIS);
+  await page.getByLabel("Şifre", { exact: true }).fill(DESTEK_SIFRE);
+  await page.getByRole("button", { name: "Devam et" }).click();
+  await expect(page.getByLabel("Doğrulama kodu")).toBeVisible();
+
+  if (await page.getByText("İki adımlı doğrulama kurulumu").isVisible()) {
+    const anahtar = page.getByTestId("gizli-anahtar");
+    await expect(anahtar).toBeVisible();
+    const gizli = (await anahtar.innerText()).replace(/\s/g, "");
+    // Yeni kurulum: önceki çalıştırmanın durumu geçersizdir.
+    destekDurumuKaydet({ gizli, kurtarma: [], kullanilan: [] });
+    await page.getByLabel("Doğrulama kodu").fill(await destekKoduAl(gizli));
+    await page.getByRole("button", { name: "Kurulumu tamamla" }).click();
+    const kutu = page.getByTestId("kurtarma-kodlari");
+    await expect(kutu).toBeVisible();
+    const kodlar = (await kutu.locator("li").allInnerTexts()).map((k) => k.trim());
+    destekKurtarmaKodlariniKaydet(kodlar);
+    if (bitir) await page.getByRole("button", { name: "Kaydettim, devam et" }).click();
+  } else {
+    const durum = destekDurumuOku();
+    if (!durum) throw new Error("Destek hesabında 2FA kurulu ama kayıtlı anahtar yok (e2e-tohum'u yeniden çalıştırın).");
+    await page.getByLabel("Doğrulama kodu").fill(await destekKoduAl(durum.gizli));
+    await page.getByRole("button", { name: "Giriş yap", exact: true }).click();
+  }
+  if (bitir) await expect(page).toHaveURL(/\/genel-bakis$/);
+}
+
+// Destek girişi pahalıdır: 2FA kodu bir zaman adımında yalnız bir kez geçer ve sunucu hesap başına
+// 5 dakikada 10 doğrulama denemesine izin verir. Bu yüzden başarılı bir oturumun yenileme çerezi testler
+// arasında devredilir: test bitince en son çerez saklanır, sonraki test onunla oturumu yeniler.
+// (Çerez her yenilemede döner; eski çerezin yeniden kullanımı tüm oturumları kapatacağından yalnız en
+// son çerez saklanır ve yalnız destek oturumu açan testlerde.)
+const DESTEK_OTURUM_DOSYASI = join(tmpdir(), "rota-e2e-destek-oturum.json");
+const destekSayfalari = new WeakSet<Page>();
+const YENILEME_CEREZI = "rota_yenileme";
+
+async function destekOturumunuSakla(page: Page): Promise<void> {
+  if (!destekSayfalari.has(page)) return;
+  try {
+    const cerez = (await page.context().cookies()).filter((c) => c.name === YENILEME_CEREZI);
+    if (cerez.length > 0) writeFileSync(DESTEK_OTURUM_DOSYASI, JSON.stringify(cerez));
+    else unlinkSync(DESTEK_OTURUM_DOSYASI);
+  } catch {
+    /* dosya yoksa ya da bağlam kapanmışsa saklanacak oturum yoktur */
+  }
+}
+
+/** API ile destek girişi (gerekirse kurulumu da yapar); yenileme çerezi sayfanın bağlamına yazılır. */
+export async function destekApiGirisi(page: Page): Promise<string> {
+  destekSayfalari.add(page);
+  try {
+    const cerez = JSON.parse(readFileSync(DESTEK_OTURUM_DOSYASI, "utf8")) as Parameters<ReturnType<Page["context"]>["addCookies"]>[0];
+    unlinkSync(DESTEK_OTURUM_DOSYASI); // tek kullanımlık: yenilenen çerez test sonunda yeniden saklanır
+    await page.context().addCookies(cerez);
+    const y = await page.request.post("/api/auth/refresh");
+    if (y.ok()) return ((await y.json()) as { access_token: string }).access_token;
+    await page.context().clearCookies();
+  } catch {
+    /* saklı oturum yok ya da geçersiz: tam giriş */
+  }
+  const l = await page.request.post("/api/auth/login", { data: { giris: DESTEK_GIRIS, sifre: DESTEK_SIFRE, panel: "destek" } });
+  expect(l.ok(), await l.text()).toBeTruthy();
+  const g = (await l.json()) as { durum: "kurulum" | "dogrulama"; bekleyen_belirtec: string };
+  if (g.durum === "kurulum") {
+    const k = await page.request.post("/api/auth/2fa/kurulum", { data: { bekleyen_belirtec: g.bekleyen_belirtec } });
+    expect(k.ok(), await k.text()).toBeTruthy();
+    const { gizli_anahtar } = (await k.json()) as { gizli_anahtar: string };
+    destekDurumuKaydet({ gizli: gizli_anahtar, kurtarma: [], kullanilan: [] });
+    const t = await page.request.post("/api/auth/2fa/kurulum-dogrula", {
+      data: { bekleyen_belirtec: g.bekleyen_belirtec, kod: await destekKoduAl(gizli_anahtar) },
+    });
+    expect(t.ok(), await t.text()).toBeTruthy();
+    const govde = (await t.json()) as { access_token: string; kurtarma_kodlari: string[] };
+    destekKurtarmaKodlariniKaydet(govde.kurtarma_kodlari);
+    return govde.access_token;
+  }
+  const durum = destekDurumuOku();
+  if (!durum) throw new Error("Destek hesabında 2FA kurulu ama kayıtlı anahtar yok (e2e-tohum'u yeniden çalıştırın).");
+  const d = await page.request.post("/api/auth/2fa/dogrula", {
+    data: { bekleyen_belirtec: g.bekleyen_belirtec, kod: await destekKoduAl(durum.gizli) },
+  });
+  expect(d.ok(), await d.text()).toBeTruthy();
+  return ((await d.json()) as { access_token: string }).access_token;
 }

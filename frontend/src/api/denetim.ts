@@ -24,8 +24,20 @@ export type DenetimSorgusu = {
 
 /** Bilinen işlem adlarının Türkçe karşılığı; bilinmeyen ad olduğu gibi gösterilir. */
 export const ISLEM_ETIKET: Record<string, string> = {
+  destek_bildirim_toplu_iptal: "Destek: bildirimler toplu iptal",
+  destek_bildirim_toplu_yeniden_denendi: "Destek: bildirimler yeniden denendi",
+  destek_hesap_aktife_alindi: "Destek: hesap aktif edildi",
+  destek_hesap_pasife_alindi: "Destek: hesap pasife alındı",
+  destek_kilit_acildi: "Destek: hesap kilidi açıldı",
+  destek_oturumlar_kapatildi: "Destek: oturumlar kapatıldı",
+  destek_sifre_sifirlandi: "Destek: şifre sıfırlandı",
   giris_basarili: "Giriş",
   giris_basarisiz: "Başarısız giriş",
+  giris_sifre_dogru_ikili_bekliyor: "Şifre doğru, kod bekleniyor",
+  ikili_dogrulama_basarisiz: "İki adımlı doğrulama başarısız",
+  ikili_kurtarma_kodu_kullanildi: "Kurtarma kodu kullanıldı",
+  ikili_kurulum_basladi: "İki adımlı doğrulama kurulumu başladı",
+  ikili_kurulum_tamamlandi: "İki adımlı doğrulama kuruldu",
   sifre_degistirildi: "Şifre değiştirildi",
   sifre_degistirme_basarisiz: "Şifre değiştirme başarısız",
   profil_guncellendi: "Profil güncellendi",

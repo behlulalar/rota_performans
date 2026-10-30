@@ -13,3 +13,4 @@ pillow>=11.0
 python-multipart>=0.0.12
 tzdata>=2024.1
 pywebpush==2.0.3
+pyotp>=2.9

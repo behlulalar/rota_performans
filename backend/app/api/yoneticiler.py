@@ -29,6 +29,7 @@ KENDINI_PASIFE_ALMA = "Kendi hesabınızı pasife alamazsınız"
 KENDI_GIRISI = "Kendi giriş bilginizi Ayarlar > Hesabım bölümünden değiştirin"
 KENDI_TELEFONU = "Kendi telefonunuzu Ayarlar > Hesabım bölümünden değiştirin"
 KENDI_SIFRESI = "Kendi şifrenizi Ayarlar > Hesabım bölümünden değiştirin"
+DESTEK_KORUMALI = "Teknik destek hesabı yönetici ekranından değiştirilemez"
 
 Yonetici = Depends(rol_gerekli(Rol.admin))
 
@@ -40,21 +41,26 @@ def _ip(request: Request) -> str:
 def _ozet(k: Kullanici, ben_id: uuid.UUID) -> YoneticiOzet:
     return YoneticiOzet(
         id=k.id, ad_soyad=k.ad_soyad, giris=k.giris, telefon=k.telefon, aktif=k.aktif, son_giris=k.son_giris,
-        olusturma=k.olusturma, ben=k.id == ben_id,
+        olusturma=k.olusturma, ben=k.id == ben_id, destek=k.rol == Rol.destek,
     )
 
 
-async def _yonetici_al(session: AsyncSession, yonetici_id: uuid.UUID) -> Kullanici:
+async def _yonetici_al(session: AsyncSession, yonetici_id: uuid.UUID, ben: Kullanici) -> Kullanici:
     k = await session.get(Kullanici, yonetici_id)
-    if k is None or k.rol != Rol.admin:
+    if k is None or k.rol not in (Rol.admin, Rol.destek):
         raise HTTPException(status.HTTP_404_NOT_FOUND, BULUNAMADI)
+    if k.rol == Rol.destek and ben.rol != Rol.destek:
+        # Destek hesapları listede görünür ama yalnız destek tarafından değiştirilebilir.
+        raise HTTPException(status.HTTP_403_FORBIDDEN, DESTEK_KORUMALI)
     return k
 
 
 @router.get("", response_model=list[YoneticiOzet])
 async def listele(ben: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
     satirlar = await session.execute(
-        select(Kullanici).where(Kullanici.rol == Rol.admin).order_by(Kullanici.ad_soyad, Kullanici.olusturma)
+        select(Kullanici)
+        .where(Kullanici.rol.in_((Rol.admin, Rol.destek)))
+        .order_by(Kullanici.ad_soyad, Kullanici.olusturma)
     )
     return [_ozet(k, ben.id) for k in satirlar.scalars()]
 
@@ -103,7 +109,7 @@ async def guncelle(
     ben: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
-    hedef = await _yonetici_al(session, yonetici_id)
+    hedef = await _yonetici_al(session, yonetici_id, ben)
     verilen = govde.model_fields_set
     for alan in ("ad_soyad", "giris", "aktif"):
         if alan in verilen and getattr(govde, alan) is None:
@@ -112,11 +118,14 @@ async def guncelle(
     oturumlar_kapansin = False
 
     if "aktif" in verilen and govde.aktif is False and hedef.aktif:
-        diger = await session.scalar(
-            select(func.count(Kullanici.id)).where(
-                Kullanici.rol == Rol.admin, Kullanici.aktif.is_(True), Kullanici.id != hedef.id
+        # Son aktif yönetici sayımı yalnız admin rolündedir: destek hesabı sayıma girmez, pasife alınması da sayımı bozmaz.
+        diger = 1
+        if hedef.rol == Rol.admin:
+            diger = await session.scalar(
+                select(func.count(Kullanici.id)).where(
+                    Kullanici.rol == Rol.admin, Kullanici.aktif.is_(True), Kullanici.id != hedef.id
+                )
             )
-        )
         if not diger:
             raise HTTPException(status.HTTP_409_CONFLICT, SON_YONETICI)
         if kendisi:
@@ -173,7 +182,7 @@ async def sifre_sifirla(
     ben: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
-    hedef = await _yonetici_al(session, yonetici_id)
+    hedef = await _yonetici_al(session, yonetici_id, ben)
     if hedef.id == ben.id:
         raise HTTPException(422, KENDI_SIFRESI)
     sifre = gecici_sifre_uret()

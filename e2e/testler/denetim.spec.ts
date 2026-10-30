@@ -1,14 +1,13 @@
-import { arayuzdenGiris, expect, ogrenciOlusturAPI, test, YONETICI_GIRIS, YONETICI_SIFRE, yoneticiApiGirisi } from "../yardimci";
+import { destekApiGirisi, expect, ogrenciOlusturAPI, test, yoneticiApiGirisi } from "../yardimci";
 
 test.describe("Denetim kaydı", () => {
-  test("yönetici kayıtları görür ve işleme göre süzer", async ({ page }) => {
+  test("teknik destek kayıtları görür ve işleme göre süzer", async ({ page }) => {
     const token = await yoneticiApiGirisi(page);
     await ogrenciOlusturAPI(page, token, "Denetim");
 
     await page.context().clearCookies();
-    await arayuzdenGiris(page, YONETICI_GIRIS, YONETICI_SIFRE);
-    await expect(page).toHaveURL(/\/genel-bakis$/);
-    await page.goto("/denetim-kaydi");
+    await destekApiGirisi(page);
+    await page.goto("/destek/denetim-kaydi");
     await expect(page.getByRole("heading", { name: "Denetim kaydı" })).toBeVisible();
 
     const satirlar = page.getByTestId("denetim-satiri");
@@ -27,5 +26,13 @@ test.describe("Denetim kaydı", () => {
     // Eşleşmeyen arama boş durumu gösterir.
     await page.getByRole("searchbox", { name: "Ara" }).fill("kesinlikle-yok-zzz");
     await expect(page.getByText("Bu filtreyle denetim kaydı yok.")).toBeVisible();
+  });
+
+  test("yönetici denetim kaydına erişemez", async ({ page }) => {
+    const token = await yoneticiApiGirisi(page);
+    const yanit = await page.request.get("/api/denetim", { headers: { Authorization: `Bearer ${token}` } });
+    expect(yanit.status()).toBe(403);
+    await page.goto("/destek/denetim-kaydi");
+    await expect(page).toHaveURL(/\/genel-bakis$/);
   });
 });

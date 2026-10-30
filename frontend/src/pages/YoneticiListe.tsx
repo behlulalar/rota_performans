@@ -13,12 +13,18 @@ import TelefonGirdisi from "../components/TelefonGirdisi";
 import { hataMesaji } from "../lib/dogrulama";
 import { girisiBicimle } from "../lib/hatirla";
 import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
-import { birincilDugme, dugme, girdi, rozetBasari, rozetNotr, satir, td, th } from "../lib/stil";
+import { birincilDugme, dugme, girdi, rozetBasari, rozetBirincil, rozetNotr, satir, td, th } from "../lib/stil";
 
+const DESTEK_NOTU = "Teknik destek hesabı bu ekrandan değiştirilemez";
 const KENDI_NOTU = "Kendi hesabınız için Ayarlar > Hesabım bölümünü kullanın";
 
 function AktifRozeti({ aktif }: { aktif: boolean }) {
   return <span className={aktif ? rozetBasari : rozetNotr}>{aktif ? "Aktif" : "Pasif"}</span>;
+}
+
+// Teknik destek hesabı salt okunurdur: rozetle işaretlenir, işlem düğmesi gösterilmez.
+function DestekRozeti() {
+  return <span className={rozetBirincil}>Teknik destek</span>;
 }
 
 function sonGiris(s: string | null): string {
@@ -81,7 +87,7 @@ export default function YoneticiListe() {
       setSifre({ baslik: `${adi(y)} için yeni geçici şifre`, deger: r.gecici_sifre, giris: y.giris, telefon: y.telefon });
     });
 
-  const eylemler = (y: YoneticiOzet) => (
+  const eylemler = (y: YoneticiOzet) => y.destek ? null : (
     <>
       <button className={dugme} onClick={() => setDuzenlenen(y)}>Düzenle</button>
       <button className={dugme} disabled={mesgul || y.ben} title={y.ben ? KENDI_NOTU : undefined} onClick={() => void sifirla(y)}>Şifre sıfırla</button>
@@ -124,9 +130,13 @@ export default function YoneticiListe() {
                     <td className={`${td} text-metin-soluk`}>{girisiBicimle(y.giris)}</td>
                     <td className={`${td} text-metin-soluk`}>{y.telefon ? bicimle(y.telefon) : "—"}</td>
                     <td className={`${td} text-metin-soluk`}>{sonGiris(y.son_giris)}</td>
-                    <td className={td}><AktifRozeti aktif={y.aktif} /></td>
+                    <td className={td}><span className="inline-flex flex-wrap gap-1.5"><AktifRozeti aktif={y.aktif} />{y.destek && <DestekRozeti />}</span></td>
                     <td className="px-4 py-1.5">
-                      <div className="flex gap-2 justify-end flex-wrap">{eylemler(y)}</div>
+                      {y.destek ? (
+                        <div className="text-right text-[12px] text-metin-soluk">{DESTEK_NOTU}</div>
+                      ) : (
+                        <div className="flex gap-2 justify-end flex-wrap">{eylemler(y)}</div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -139,13 +149,14 @@ export default function YoneticiListe() {
               <li key={y.id} className="bg-yuzey border border-cizgi rounded-[14px] p-4 text-[13px]">
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-medium">{y.ad_soyad ?? y.giris}{siz(y)}</span>
-                  <AktifRozeti aktif={y.aktif} />
+                  <span className="inline-flex flex-wrap justify-end gap-1.5"><AktifRozeti aktif={y.aktif} />{y.destek && <DestekRozeti />}</span>
                 </div>
                 <div className="text-metin-soluk mt-1 break-all">{girisiBicimle(y.giris)}</div>
                 {y.telefon && <div className="text-metin-soluk">Telefon: {bicimle(y.telefon)}</div>}
                 <div className="text-metin-soluk">Son giriş: {sonGiris(y.son_giris)}</div>
+                {y.destek && <div className="mt-1 text-[12px] text-metin-soluk">{DESTEK_NOTU}.</div>}
                 {y.ben && <div className="mt-1 text-[12px] text-metin-soluk">{KENDI_NOTU}.</div>}
-                <div className="flex gap-2 flex-wrap mt-3">{eylemler(y)}</div>
+                {!y.destek && <div className="flex gap-2 flex-wrap mt-3">{eylemler(y)}</div>}
               </li>
             ))}
           </ul>

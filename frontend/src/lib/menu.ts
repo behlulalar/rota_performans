@@ -47,11 +47,24 @@ export const YONETICI_MENUSU: MenuBolumu[] = [
     ogeler: [
       { ad: "Duyurular", simge: "duyuru", yol: "/duyurular" },
       { ad: "Bildirimler", simge: "bildirim", yol: "/bildirimler" },
-      { ad: "Denetim kaydı", simge: "denetim", yol: "/denetim-kaydi" },
       { ad: "Ayarlar", simge: "sistem", yol: "/ayarlar" },
     ],
   },
 ];
+
+/** Yalnız teknik destek rolüne eklenen bölüm (yönetici menüsünün sonunda). */
+export const DESTEK_BOLUMU: MenuBolumu = {
+  anahtar: "destek",
+  ad: "Teknik destek",
+  simge: "sistem",
+  ogeler: [
+    { ad: "Sistem durumu", simge: "durum", yol: "/destek/sistem-durumu" },
+    { ad: "Hesaplar", simge: "yonetici", yol: "/destek/hesaplar" },
+    { ad: "Bildirim kuyruğu", simge: "bildirim", yol: "/destek/bildirimler" },
+    { ad: "Denetim kaydı", simge: "denetim", yol: "/destek/denetim-kaydi" },
+  ],
+};
+export const DESTEK_MENUSU: MenuBolumu[] = [...YONETICI_MENUSU, DESTEK_BOLUMU];
 
 /** Mobilde altta sabit duran hızlı sekmeler (son sekme "Menü" çekmeceyi açar). */
 export const YONETICI_SEKMELERI: MenuOgesi[] = [

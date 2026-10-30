@@ -20,7 +20,10 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /mobil\.spec\.ts/ },
+    // Destek hesabının 2FA kurulumu yalnız bir kez yapılabilir (e2e-tohum sıfırlar): kurulum senaryosunu
+    // içeren destek.spec.ts diğer dosyalardan önce çalışır.
+    { name: "destek", use: { ...devices["Desktop Chrome"] }, testMatch: /destek\.spec\.ts/ },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /(mobil|destek)\.spec\.ts/, dependencies: ["destek"] },
     // Mobil profil yalnızca mobil görünüm senaryosu için.
     { name: "mobil", use: { ...devices["Pixel 7"] }, testMatch: /mobil\.spec\.ts/ },
   ],

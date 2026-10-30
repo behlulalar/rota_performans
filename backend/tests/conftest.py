@@ -8,6 +8,8 @@ os.environ["COOKIE_SECURE"] = "true"
 
 import asyncio  # noqa: E402
 
+import pyotp  # noqa: E402
+
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
@@ -61,3 +63,38 @@ async def kullanici_olustur(giris: str = "yonetici@kulup.com", rol: Rol = Rol.ad
         session.add(k)
         await session.commit()
         return k
+
+
+async def destek_olustur(giris: str = "destek@kulup.com", totp: bool = True) -> tuple[Kullanici, str | None]:
+    """Destek hesabı; totp=True ise 2FA kurulu (gizli anahtar döner), değilse kurulmamış."""
+    from app import totp as totp_modulu
+
+    gizli = pyotp.random_base32() if totp else None
+    async with SessionLocal() as session:
+        k = Kullanici(
+            rol=Rol.destek, giris=giris, sifre_ozeti=sifre_ozeti(SIFRE), ad_soyad="Destek",
+            totp_aktif=totp, totp_sifreli=totp_modulu.sifrele(gizli) if gizli else None,
+            totp_kurtarma=[],
+        )
+        session.add(k)
+        await session.commit()
+        return k, gizli
+
+
+async def destek_baslik(istemci, giris: str = "destek@kulup.com", gizli: str | None = None) -> dict:
+    """Destek hesabını (yoksa oluşturup) gerçek akışla girdirir: şifre + panel, sonra TOTP kodu."""
+    if gizli is None:
+        _, gizli = await destek_olustur(giris)
+    # Aynı zaman adımındaki kod tekrar kullanılamaz; testlerde art arda girişe izin vermek için işaretler temizlenir.
+    redis = Redis.from_url(settings.redis_url)
+    async for anahtar in redis.scan_iter("2fa:kullanilan:*"):
+        await redis.delete(anahtar)
+    await redis.aclose()
+    y = await istemci.post("/api/auth/login", json={"giris": giris, "sifre": SIFRE, "panel": "destek"})
+    assert y.status_code == 200, y.text
+    bekleyen = y.json()["bekleyen_belirtec"]
+    y = await istemci.post(
+        "/api/auth/2fa/dogrula", json={"bekleyen_belirtec": bekleyen, "kod": pyotp.TOTP(gizli).now()}
+    )
+    assert y.status_code == 200, y.text
+    return {"Authorization": f"Bearer {y.json()['access_token']}"}

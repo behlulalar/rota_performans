@@ -5,6 +5,7 @@ from app.api import (
     ayarlar,
     bildirim_yonetimi,
     denetim,
+    destek,
     duyurular,
     antrenor_paneli,
     antrenorler,
@@ -69,4 +70,5 @@ app.include_router(veli.router)
 app.include_router(bildirim_yonetimi.router)
 app.include_router(duyurular.router)
 app.include_router(denetim.router)
+app.include_router(destek.router)
 app.include_router(ayarlar.router)

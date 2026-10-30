@@ -7,7 +7,10 @@ import signal
 import time
 from datetime import timedelta
 
+from redis.asyncio import Redis
+
 from app import ders_hakki, push
+from app.config import settings
 from app.db import SessionLocal, engine
 from app.oturumlar import URETIM_GUN, bugun, oturumlari_uret, simdi
 
@@ -16,6 +19,9 @@ log = logging.getLogger("isci")
 DONGU_SANIYE = 30
 URETIM_SANIYE = 3600
 PUSH_PARTI = 50
+# Destek ekranı işçinin canlı olduğunu bu anahtardan (son atışın epoch saniyesi) anlar.
+KALP_ATISI_ANAHTAR = "isci:kalp_atisi"
+KALP_ATISI_TTL = 120
 
 
 async def devamsizliklari_isle() -> None:
@@ -40,9 +46,21 @@ async def oturumlari_hazirla() -> None:
     log.info("Oturum üretimi tamamlandı, yeni oturum: %d", sayi)
 
 
+async def kalp_atisi_yaz() -> None:
+    redis = Redis.from_url(settings.redis_url, decode_responses=True)
+    try:
+        await redis.set(KALP_ATISI_ANAHTAR, str(int(time.time())), ex=KALP_ATISI_TTL)
+    finally:
+        await redis.aclose()
+
+
 async def calis(durdur: asyncio.Event) -> None:
     son_uretim: float | None = None
     while not durdur.is_set():
+        try:
+            await kalp_atisi_yaz()
+        except Exception:
+            log.exception("Kalp atışı yazılamadı")
         try:
             await devamsizliklari_isle()
         except Exception:

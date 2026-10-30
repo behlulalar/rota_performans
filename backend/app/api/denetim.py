@@ -1,4 +1,4 @@
-"""Denetim kaydı ekranı (yalnız yönetici, salt okunur). Bu ekranın görüntülenmesi denetim kaydı üretmez."""
+"""Denetim kaydı ekranı (yalnız teknik destek, salt okunur; yönetici erişemez). Bu ekranın görüntülenmesi denetim kaydı üretmez."""
 import uuid
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
@@ -15,7 +15,7 @@ from app.schemas.denetim import DenetimKullanici, DenetimListe, DenetimSatiri
 
 router = APIRouter(prefix="/api/denetim", tags=["denetim"])
 
-Yonetici = Depends(rol_gerekli(Rol.admin))
+Destek = Depends(rol_gerekli(Rol.destek))
 
 _GIZLI_ANAHTARLAR = ("sifre", "token")
 
@@ -34,7 +34,7 @@ def _gun_basi(gun: date) -> datetime:
 
 
 @router.get("/islemler", response_model=list[str])
-async def islemler(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
+async def islemler(_: Kullanici = Destek, session: AsyncSession = Depends(get_session)):
     satirlar = await session.execute(select(DenetimKaydi.islem).distinct().order_by(DenetimKaydi.islem))
     return list(satirlar.scalars().all())
 
@@ -48,7 +48,7 @@ async def listele(
     ara: str | None = Query(None, max_length=100),
     sayfa: int = Query(1, ge=1),
     boyut: int = Query(50, ge=1, le=100),
-    _: Kullanici = Yonetici,
+    _: Kullanici = Destek,
     session: AsyncSession = Depends(get_session),
 ):
     kosullar = []

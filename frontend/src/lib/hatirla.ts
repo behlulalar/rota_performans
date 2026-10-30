@@ -11,7 +11,7 @@ export function hatirlananiOku(): HatirlananHesap | null {
     const ham = localStorage.getItem(HATIRLA_ANAHTARI);
     if (!ham) return null;
     const v = JSON.parse(ham) as Partial<HatirlananHesap>;
-    const panel = v.panel === "veli" || v.panel === "antrenor" || v.panel === "yonetici" ? v.panel : undefined;
+    const panel = v.panel === "veli" || v.panel === "antrenor" || v.panel === "yonetici" || v.panel === "destek" ? v.panel : undefined;
     return typeof v.giris === "string" && v.giris
       ? { giris: v.giris, ad: typeof v.ad === "string" && v.ad ? v.ad : v.giris, panel }
       : null;

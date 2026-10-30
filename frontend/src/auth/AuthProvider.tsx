@@ -3,15 +3,21 @@ import { api, belirteciAyarla, oturumuYenile, sifreZorunluDinleyiciAyarla } from
 import type { Panel } from "../lib/panel";
 import { cikisIsaretle, cikisYapildiMi, hatirlananiKaydet, hatirlananiOku, hatirlananiSil } from "../lib/hatirla";
 
-export type Rol = "admin" | "antrenor" | "veli" | "ogrenci";
+export type Rol = "admin" | "destek" | "antrenor" | "veli" | "ogrenci";
 export type Kullanici = { id: string; rol: Rol; giris: string; ad_soyad: string | null; sifre_degistirmeli: boolean; telefon?: string | null };
+
+/** Teknik destek şifreyle girince oturum açılmaz; ikinci adım (kurulum ya da doğrulama) için bekleyen belirteç döner. */
+export type IkiAdim = { durum: "kurulum" | "dogrulama"; bekleyen_belirtec: string; expires_in: number };
 
 type AuthDegeri = {
   kullanici: Kullanici | null;
   yukleniyor: boolean;
   /** Hatırlanan kullanıcı varken sessiz yenileme başarısız olduysa (oturum süresi dolmuş) true. */
   oturumSuresiDoldu: boolean;
-  girisYap: (giris: string, sifre: string, beniHatirla: boolean, panel: Panel) => Promise<void>;
+  /** Destek hesabında oturum açmaz, ikinci adımı döner; diğer rollerde oturum açar ve null döner. */
+  girisYap: (giris: string, sifre: string, beniHatirla: boolean, panel: Panel) => Promise<IkiAdim | null>;
+  /** İkinci adım bittikten sonra elde edilen erişim belirteciyle oturumu açar. */
+  belirtecleGiris: (erisimBelirteci: string) => Promise<void>;
   cikisYap: () => Promise<void>;
   /** Zorunlu şifre değişiminden sonra çağrılır; kullanıcı durumunu sunucudan yeniler. */
   sifreDegistirildi: () => Promise<void>;
@@ -47,14 +53,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const girisYap = useCallback(async (giris: string, sifre: string, beniHatirla: boolean, panel: Panel) => {
-    const yanit = await api<{ access_token: string }>("/api/auth/login", {
+    const yanit = await api<{ access_token?: string; iki_adim?: boolean } & Partial<IkiAdim>>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ giris, sifre, beni_hatirla: beniHatirla, panel }),
     });
-    belirteciAyarla(yanit.access_token);
+    if (yanit.iki_adim && yanit.durum && yanit.bekleyen_belirtec) {
+      return { durum: yanit.durum, bekleyen_belirtec: yanit.bekleyen_belirtec, expires_in: yanit.expires_in ?? 300 };
+    }
+    belirteciAyarla(yanit.access_token ?? null);
     const ben = await api<Kullanici>("/api/auth/me");
     if (beniHatirla) hatirlananiKaydet({ giris: ben.giris, ad: ben.ad_soyad || ben.giris, panel });
     else hatirlananiSil();
+    cikisIsaretle(false);
+    setOturumSuresiDoldu(false);
+    setKullanici(ben);
+    return null;
+  }, []);
+
+  const belirtecleGiris = useCallback(async (erisimBelirteci: string) => {
+    belirteciAyarla(erisimBelirteci);
+    const ben = await api<Kullanici>("/api/auth/me");
     cikisIsaretle(false);
     setOturumSuresiDoldu(false);
     setKullanici(ben);
@@ -89,8 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deger = useMemo(
-    () => ({ kullanici, yukleniyor, oturumSuresiDoldu, girisYap, cikisYap, sifreDegistirildi }),
-    [kullanici, yukleniyor, oturumSuresiDoldu, girisYap, cikisYap, sifreDegistirildi],
+    () => ({ kullanici, yukleniyor, oturumSuresiDoldu, girisYap, belirtecleGiris, cikisYap, sifreDegistirildi }),
+    [kullanici, yukleniyor, oturumSuresiDoldu, girisYap, belirtecleGiris, cikisYap, sifreDegistirildi],
   );
   return <AuthBaglami.Provider value={deger}>{children}</AuthBaglami.Provider>;
 }

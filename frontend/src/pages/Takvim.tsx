@@ -36,7 +36,7 @@ function OturumKarti({ o, bugunStr }: { o: OturumOzet; bugunStr: string }) {
 
 export default function Takvim() {
   const { kullanici } = useAuth();
-  const admin = kullanici?.rol === "admin";
+  const admin = kullanici?.rol === "admin" || kullanici?.rol === "destek";
   const bugunStr = bugun();
   const [hafta, setHafta] = useState(() => haftaBasi(new Date()));
   const [antrenorler, setAntrenorler] = useState<AntrenorOzet[]>([]);

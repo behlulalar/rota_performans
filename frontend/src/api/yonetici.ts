@@ -9,6 +9,8 @@ export type YoneticiOzet = {
   son_giris: string | null;
   olusturma: string;
   ben: boolean;
+  /** Teknik destek hesabı: listede salt okunur görünür. */
+  destek: boolean;
 };
 
 export type YoneticiOlusturYaniti = { yonetici: YoneticiOzet; gecici_sifre: string };

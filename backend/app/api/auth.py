@@ -1,3 +1,5 @@
+import json
+import secrets
 import uuid
 from datetime import timedelta
 from typing import Literal
@@ -10,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
+from app import totp as totp_modulu
 from app import telefon as telefon_modulu
 from app.api.antrenorler import GIRIS_TEKRAR, TELEFON_TEKRAR, _giris_hazirla, cakisma_denetle
 from app.config import settings
@@ -45,7 +48,13 @@ PANEL_ROLLERI = {
     "veli": {Rol.veli, Rol.ogrenci},
     "antrenor": {Rol.antrenor},
     "yonetici": {Rol.admin},
+    # Teknik destek yalnız kendi panelinden girer; yönetici de buradan giremez.
+    "destek": {Rol.destek},
 }
+
+# Şifresi doğru girilen destek hesabı tam oturum almaz; kısa ömürlü "2FA bekleyen" belirteci alır (Redis).
+BEKLEYEN_TTL = 300
+IKILI_KULLANICI_LIMITI = 10  # 5 dakikada, hesap başına (kilit mantığına ek)
 
 # Hesabın var olup olmadığını sızdırmamak için tüm başarısız girişler aynı yanıtı verir.
 GENEL_HATA = "Giriş bilgileri hatalı veya hesap geçici olarak kilitli."
@@ -57,7 +66,32 @@ class LoginIstegi(BaseModel):
     beni_hatirla: bool = False
     # Giriş sayfasının paneli. Verilirse yalnız o panelin rolleri girebilir (yanlış panel = hatalı şifre gibi reddedilir).
     # Yetki yine her istekte rolden verilir; bu alan yalnız kullanıcıyı doğru sayfaya yönlendirmek içindir.
-    panel: Literal["veli", "antrenor", "yonetici"] | None = None
+    # "destek" paneli yalnız destek rolüne açıktır; destek hesabı panel verilmeden de giremez.
+    panel: Literal["veli", "antrenor", "yonetici", "destek"] | None = None
+
+
+class BekleyenIstegi(BaseModel):
+    bekleyen_belirtec: str = Field(min_length=16, max_length=128)
+
+
+class KodIstegi(BekleyenIstegi):
+    # 6 haneli TOTP kodu ya da kurtarma kodu (xxxxx-xxxxx).
+    kod: str = Field(min_length=1, max_length=32)
+
+
+class IkiAdimYaniti(BaseModel):
+    """Destek hesabı şifreyle girince dönen yanıt: henüz oturum yok, 2. adım gerekli."""
+
+    iki_adim: bool = True
+    # "kurulum": TOTP hiç kurulmamış; "dogrulama": kurulu, kod istenir.
+    durum: Literal["kurulum", "dogrulama"]
+    bekleyen_belirtec: str
+    expires_in: int = BEKLEYEN_TTL
+
+
+class KurulumYaniti(BaseModel):
+    gizli_anahtar: str
+    otpauth_uri: str
 
 
 class SifreDegistirIstegi(BaseModel):
@@ -84,6 +118,11 @@ class BelirtecYaniti(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class KurulumTamamYaniti(BelirtecYaniti):
+    # Yalnız bu yanıtta, bir kez gösterilir.
+    kurtarma_kodlari: list[str]
 
 
 class KullaniciYaniti(BaseModel):
@@ -140,7 +179,7 @@ def _belirtec_yaniti(kullanici: Kullanici) -> BelirtecYaniti:
     )
 
 
-@router.post("/login", response_model=BelirtecYaniti)
+@router.post("/login", response_model=BelirtecYaniti | IkiAdimYaniti)
 async def login(
     govde: LoginIstegi,
     request: Request,
@@ -176,7 +215,11 @@ async def login(
         await session.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, GENEL_HATA)
 
-    panel_uygun = govde.panel is None or kullanici.rol in PANEL_ROLLERI[govde.panel]
+    if govde.panel is None:
+        # Panel verilmeyen genel girişte destek hesabı reddedilir: yalnız destek panelinden girer.
+        panel_uygun = kullanici.rol != Rol.destek
+    else:
+        panel_uygun = kullanici.rol in PANEL_ROLLERI[govde.panel]
     if not (sifre_dogru_mu(kullanici.sifre_ozeti, govde.sifre) and kullanici.aktif and panel_uygun):
         kullanici.basarisiz_deneme += 1
         detay = {"neden": "hatali_sifre" if panel_uygun else "yanlis_panel"}
@@ -190,15 +233,171 @@ async def login(
 
     if ozet_yenilenmeli_mi(kullanici.sifre_ozeti):
         kullanici.sifre_ozeti = sifre_ozeti(govde.sifre)
+    if kullanici.rol == Rol.destek:
+        # Şifre tek başına yetmez: sayaç sıfırlanmaz (yoksa 2. adım denemeleri sınırsız tekrarlanırdı),
+        # oturum verilmez, kod doğrulanana kadar bekleyen belirteç döner.
+        bekleyen = await _bekleyen_olustur(redis, kullanici.id, govde.beni_hatirla)
+        await audit.kaydet(session, "giris_sifre_dogru_ikili_bekliyor", kullanici_id=kullanici.id, ip=ip)
+        await session.commit()
+        return IkiAdimYaniti(durum="dogrulama" if kullanici.totp_aktif else "kurulum", bekleyen_belirtec=bekleyen)
+
+    return await _tam_oturum(session, response, kullanici, govde.beni_hatirla, ip)
+
+
+def _bekleyen_anahtar(belirtec: str) -> str:
+    return f"2fa:bekleyen:{belirtec_ozeti(belirtec)}"
+
+
+async def _bekleyen_olustur(redis: Redis, kullanici_id: uuid.UUID, hatirla: bool) -> str:
+    belirtec = secrets.token_urlsafe(32)
+    await redis.set(
+        _bekleyen_anahtar(belirtec), json.dumps({"k": str(kullanici_id), "h": hatirla}), ex=BEKLEYEN_TTL
+    )
+    return belirtec
+
+
+async def _tam_oturum(
+    session: AsyncSession, response: Response, kullanici: Kullanici, hatirla: bool, ip: str, ikili: bool = False
+) -> BelirtecYaniti:
     kullanici.basarisiz_deneme = 0
     kullanici.kilit_bitis = None
-    kullanici.son_giris = simdi_
-    belirtec = await _oturum_ac(session, kullanici, govde.beni_hatirla)
-    await audit.kaydet(session, "giris_basarili", kullanici_id=kullanici.id, ip=ip)
+    kullanici.son_giris = simdi()
+    belirtec = await _oturum_ac(session, kullanici, hatirla)
+    await audit.kaydet(
+        session, "giris_basarili", kullanici_id=kullanici.id, ip=ip, detay={"ikili_dogrulama": True} if ikili else None
+    )
     await session.commit()
 
-    _cookie_yaz(response, belirtec, govde.beni_hatirla)
+    _cookie_yaz(response, belirtec, hatirla)
     return _belirtec_yaniti(kullanici)
+
+
+async def _bekleyen_coz(
+    request: Request, redis: Redis, session: AsyncSession, bekleyen_belirtec: str
+) -> tuple[Kullanici, bool]:
+    """Bekleyen belirteci doğrular ve hesabı kilitleyerek döner. Her hatada aynı genel yanıt verilir."""
+    ip = _istemci_ip(request)
+    if not await izin_var_mi(redis, f"rl:2fa:ip:{ip}", IP_LIMITI, 60):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Çok fazla deneme. Lütfen biraz bekleyin.")
+    ham = await redis.get(_bekleyen_anahtar(bekleyen_belirtec))
+    suresi_doldu = HTTPException(
+        status.HTTP_401_UNAUTHORIZED, "Doğrulama süresi doldu, lütfen şifrenizle yeniden giriş yapın."
+    )
+    if ham is None:
+        raise suresi_doldu
+    veri = json.loads(ham)
+    kullanici = (
+        await session.execute(select(Kullanici).where(Kullanici.id == uuid.UUID(veri["k"])).with_for_update())
+    ).scalar_one_or_none()
+    if kullanici is None or not kullanici.aktif or kullanici.rol != Rol.destek:
+        raise suresi_doldu
+    if kullanici.kilit_bitis is not None and kullanici.kilit_bitis > simdi():
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, GENEL_HATA)
+    if not await izin_var_mi(redis, f"rl:2fa:kullanici:{kullanici.id}", IKILI_KULLANICI_LIMITI, 300):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Çok fazla deneme. Lütfen biraz bekleyin.")
+    return kullanici, bool(veri.get("h"))
+
+
+async def _kod_hatasi(
+    session: AsyncSession, redis: Redis, kullanici: Kullanici, bekleyen_belirtec: str, ip: str, neden: str
+) -> HTTPException:
+    """Başarısız 2. adım denemesi şifre denemesiyle aynı sayaca ve kilide yazılır."""
+    kullanici.basarisiz_deneme += 1
+    detay = {"neden": neden}
+    if kullanici.basarisiz_deneme >= HESAP_DENEME_LIMITI:
+        kullanici.kilit_bitis = simdi() + timedelta(minutes=HESAP_KILIT_DAKIKA)
+        kullanici.basarisiz_deneme = 0
+        detay["kilitlendi"] = True
+        await redis.delete(_bekleyen_anahtar(bekleyen_belirtec))
+    await audit.kaydet(session, "ikili_dogrulama_basarisiz", kullanici_id=kullanici.id, ip=ip, detay=detay)
+    await session.commit()
+    if detay.get("kilitlendi"):
+        return HTTPException(status.HTTP_401_UNAUTHORIZED, GENEL_HATA)
+    return HTTPException(status.HTTP_401_UNAUTHORIZED, "Doğrulama kodu hatalı")
+
+
+@router.post("/2fa/kurulum", response_model=KurulumYaniti)
+async def ikili_kurulum(
+    govde: BekleyenIstegi,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
+):
+    """Kurulu olmayan destek hesabı için gizli anahtar üretir (kod doğrulanana kadar etkin değildir).
+    Çağrı tekrarlanırsa henüz doğrulanmamış anahtar yenilenir."""
+    kullanici, _ = await _bekleyen_coz(request, redis, session, govde.bekleyen_belirtec)
+    if kullanici.totp_aktif:
+        raise HTTPException(status.HTTP_409_CONFLICT, "İki adımlı doğrulama zaten kurulu")
+    gizli = totp_modulu.gizli_uret()
+    kullanici.totp_sifreli = totp_modulu.sifrele(gizli)
+    await audit.kaydet(session, "ikili_kurulum_basladi", kullanici_id=kullanici.id, ip=_istemci_ip(request))
+    await session.commit()
+    return KurulumYaniti(gizli_anahtar=gizli, otpauth_uri=totp_modulu.uri(gizli, kullanici.giris))
+
+
+@router.post("/2fa/kurulum-dogrula", response_model=KurulumTamamYaniti)
+async def ikili_kurulum_dogrula(
+    govde: KodIstegi,
+    request: Request,
+    response: Response,
+    session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
+):
+    """Uygulamadaki ilk kodu doğrular: 2FA etkinleşir, oturum açılır, 8 kurtarma kodu bir kez gösterilir."""
+    ip = _istemci_ip(request)
+    kullanici, hatirla = await _bekleyen_coz(request, redis, session, govde.bekleyen_belirtec)
+    if kullanici.totp_aktif:
+        raise HTTPException(status.HTTP_409_CONFLICT, "İki adımlı doğrulama zaten kurulu")
+    if kullanici.totp_sifreli is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Önce kurulumu başlatın")
+    kod = totp_modulu.kod_normalize(govde.kod)
+    if not await totp_modulu.kod_dogru_mu(redis, kullanici.id, totp_modulu.coz(kullanici.totp_sifreli), kod):
+        raise await _kod_hatasi(session, redis, kullanici, govde.bekleyen_belirtec, ip, "hatali_kod_kurulum")
+
+    kodlar, ozetler = totp_modulu.kurtarma_kodlari_uret()
+    kullanici.totp_aktif = True
+    kullanici.totp_kurtarma = ozetler
+    await audit.kaydet(session, "ikili_kurulum_tamamlandi", kullanici_id=kullanici.id, ip=ip)
+    await redis.delete(_bekleyen_anahtar(govde.bekleyen_belirtec))
+    yanit = await _tam_oturum(session, response, kullanici, hatirla, ip, ikili=True)
+    return KurulumTamamYaniti(**yanit.model_dump(), kurtarma_kodlari=kodlar)
+
+
+@router.post("/2fa/dogrula", response_model=BelirtecYaniti)
+async def ikili_dogrula(
+    govde: KodIstegi,
+    request: Request,
+    response: Response,
+    session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
+):
+    """Kurulu 2FA için 6 haneli kodu ya da bir kurtarma kodunu (tek kullanımlık) doğrular ve oturum açar."""
+    ip = _istemci_ip(request)
+    kullanici, hatirla = await _bekleyen_coz(request, redis, session, govde.bekleyen_belirtec)
+    if not kullanici.totp_aktif or kullanici.totp_sifreli is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "İki adımlı doğrulama kurulu değil")
+    kod = totp_modulu.kod_normalize(govde.kod)
+    kurtarma_kullanildi = False
+    if totp_modulu.kod_biciminde_mi(kod):
+        dogru = await totp_modulu.kod_dogru_mu(redis, kullanici.id, totp_modulu.coz(kullanici.totp_sifreli), kod)
+    else:
+        ozet = totp_modulu.kurtarma_ozeti(kod)
+        kalan = list(kullanici.totp_kurtarma or [])
+        dogru = ozet in kalan
+        if dogru:
+            kalan.remove(ozet)  # tek kullanımlık
+            kullanici.totp_kurtarma = kalan
+            kurtarma_kullanildi = True
+    if not dogru:
+        raise await _kod_hatasi(session, redis, kullanici, govde.bekleyen_belirtec, ip, "hatali_kod")
+
+    if kurtarma_kullanildi:
+        await audit.kaydet(
+            session, "ikili_kurtarma_kodu_kullanildi", kullanici_id=kullanici.id, ip=ip,
+            detay={"kalan": len(kullanici.totp_kurtarma)},
+        )
+    await redis.delete(_bekleyen_anahtar(govde.bekleyen_belirtec))
+    return await _tam_oturum(session, response, kullanici, hatirla, ip, ikili=True)
 
 
 @router.post("/refresh", response_model=BelirtecYaniti)

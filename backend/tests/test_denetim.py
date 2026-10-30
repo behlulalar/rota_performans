@@ -5,12 +5,14 @@ from sqlalchemy import func, select
 
 from app.db import SessionLocal
 from app.models import DenetimKaydi, Rol
+from tests.conftest import destek_baslik
 from tests.test_paketler import giris
 
 
 @pytest.fixture
 async def yonetici(istemci):
-    return await giris(istemci, "yonetici@kulup.com", Rol.admin)
+    # Denetim ekranı yalnız teknik destek içindir (fixture adı eski testlerle uyum için korundu).
+    return await destek_baslik(istemci, "destek@kulup.com")
 
 
 async def ekle(islem, zaman=None, **kw):
@@ -30,10 +32,12 @@ async def sayi():
 async def test_yetki(istemci, yonetici):
     antrenor = await giris(istemci, "hoca@kulup.com", Rol.antrenor)
     veli = await giris(istemci, "veli@kulup.com", Rol.veli)
+    admin = await giris(istemci, "admin@kulup.com", Rol.admin)
     for yol in ("/api/denetim", "/api/denetim/islemler"):
         assert (await istemci.get(yol, headers=yonetici)).status_code == 200
         assert (await istemci.get(yol, headers=antrenor)).status_code == 403
         assert (await istemci.get(yol, headers=veli)).status_code == 403
+        assert (await istemci.get(yol, headers=admin)).status_code == 403  # yönetici artık erişemez
         assert (await istemci.get(yol)).status_code == 401
 
 
@@ -41,8 +45,8 @@ async def test_giris_kaydi_ve_kullanici(istemci, yonetici):
     r = (await istemci.get("/api/denetim", headers=yonetici)).json()
     assert r["toplam"] >= 1
     s = next(x for x in r["items"] if x["islem"] == "giris_basarili")
-    assert s["kullanici"]["giris"] == "yonetici@kulup.com"
-    assert s["kullanici"]["rol"] == "admin"
+    assert s["kullanici"]["giris"] == "destek@kulup.com"
+    assert s["kullanici"]["rol"] == "destek"
     assert "sifre_ozeti" not in str(s)
 
 
@@ -53,7 +57,7 @@ async def test_filtreler(istemci, yonetici):
     assert r["toplam"] == 1 and r["items"][0]["hedef_id"] == "xyz-999"
     r = (await istemci.get("/api/denetim?ara=abc-1", headers=yonetici)).json()
     assert [x["islem"] for x in r["items"]] == ["ogrenci_olusturuldu"]
-    r = (await istemci.get("/api/denetim?ara=yonetici@kulup", headers=yonetici)).json()
+    r = (await istemci.get("/api/denetim?ara=destek@kulup", headers=yonetici)).json()
     assert r["toplam"] >= 1 and all(x["kullanici"] for x in r["items"])
     kid = r["items"][0]["kullanici"]["id"]
     r = (await istemci.get(f"/api/denetim?kullanici_id={kid}", headers=yonetici)).json()

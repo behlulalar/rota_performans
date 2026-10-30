@@ -70,3 +70,17 @@ def maskele(numara: str) -> str:
     """Listelerde gösterim: ilk 3 ve son 2 hane görünür."""
     n = normalize(numara)
     return n if len(n) < 6 else f"{n[:3]}{'*' * (len(n) - 5)}{n[-2:]}"
+
+
+# Genel amaçlı gizli metin şifreleme (aynı anahtar, ayrı ilişkili veri): TOTP gizli anahtarı gibi.
+def gizli_sifrele(metin: str, iliskili: bytes) -> bytes:
+    nonce = os.urandom(_NONCE_UZUNLUK)
+    return nonce + AESGCM(_anahtar(settings.kimlik_sifreleme_anahtari)).encrypt(nonce, metin.encode(), iliskili)
+
+
+def gizli_coz(veri: bytes, iliskili: bytes) -> str:
+    nonce, sifreli = veri[:_NONCE_UZUNLUK], veri[_NONCE_UZUNLUK:]
+    try:
+        return AESGCM(_anahtar(settings.kimlik_sifreleme_anahtari)).decrypt(nonce, sifreli, iliskili).decode()
+    except InvalidTag as hata:
+        raise KimlikHatasi("Şifreli veri çözülemedi (anahtar yanlış veya veri bozuk)") from hata

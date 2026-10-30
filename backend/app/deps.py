@@ -35,6 +35,11 @@ async def aktif_kullanici_serbest(
     kullanici = await session.get(Kullanici, kullanici_id)
     if kullanici is None or not kullanici.aktif:
         raise _yetkisiz()
+    if kullanici.rol == Rol.destek and not kullanici.totp_aktif:
+        # Destek hesabı 2FA kurulmadan oturum alamaz; 2FA CLI ile sıfırlanmışsa eski belirteçler de kapanır.
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail="İki adımlı doğrulama gerekli", headers={"X-Hata-Kodu": "ikili_dogrulama"}
+        )
     return kullanici
 
 
@@ -50,6 +55,11 @@ async def aktif_kullanici(kullanici: Kullanici = Depends(aktif_kullanici_serbest
 
 
 def rol_gerekli(*roller: Rol):
+    # Yönetici yetkisi isteyen her uç teknik destek hesabını da kabul eder (destek ⊇ yönetici).
+    # Yalnız destek'e özel uçlar rol_gerekli(Rol.destek) ile yönetici eklenmeden kapatılır.
+    if Rol.admin in roller:
+        roller = (*roller, Rol.destek)
+
     async def _kontrol(kullanici: Kullanici = Depends(aktif_kullanici)) -> Kullanici:
         if kullanici.rol not in roller:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Bu işlem için yetkiniz yok")

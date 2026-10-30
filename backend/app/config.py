@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
     vapid_subject: str = ""  # mailto:kulup@ornek.com
 
+    # Sürüm bilgisi (derleme sırasında ortamdan verilir; yoksa destek ekranı "geliştirme" gösterir).
+    app_surum: str = ""
+    git_sha: str = ""
+
+    @property
+    def surum(self) -> str:
+        return self.app_surum or self.git_sha or "geliştirme"
+
     @property
     def push_etkin(self) -> bool:
         return bool(self.vapid_public_key and self.vapid_private_key and self.vapid_subject)

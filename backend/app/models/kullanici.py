@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,8 @@ class Rol(str, enum.Enum):
     antrenor = "antrenor"
     veli = "veli"
     ogrenci = "ogrenci"
+    # Teknik destek (geliştirici) hesabı: yönetici yetkilerine ek olarak sistem uçları. 2FA zorunlu.
+    destek = "destek"
 
 
 class Kullanici(Base):
@@ -36,6 +38,12 @@ class Kullanici(Base):
     sifre_degistirmeli: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     son_giris: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # İki adımlı doğrulama (TOTP), yalnız destek rolü için zorunlu. Gizli anahtar AES-GCM ile şifreli saklanır.
+    totp_sifreli: Mapped[bytes | None] = mapped_column(LargeBinary)
+    # Kurulum kodla doğrulanana kadar False: o zamana dek anahtar var ama giriş için geçerli değildir.
+    totp_aktif: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Kullanılmamış kurtarma kodlarının özetleri (kodun kendisi saklanmaz). Kullanılan kod listeden çıkar.
+    totp_kurtarma: Mapped[list | None] = mapped_column(JSONB)
 
     __table_args__ = (
         Index("uq_kullanici_telefon", "telefon", unique=True, postgresql_where=text("telefon IS NOT NULL")),

@@ -120,7 +120,7 @@ export default function Yoklama() {
   };
 
   // Yalnız yönetici iptal edebilir; yoklaması alınmış ya da zaten iptal/yapıldı olan ders iptal edilemez.
-  const yonetici = kullanici?.rol === "admin";
+  const yonetici = kullanici?.rol === "admin" || kullanici?.rol === "destek";
   const iptalEdilebilir = yonetici && o.durum === "planli" && !o.yoklama_alindi;
   const geriAlinabilir = yonetici && iptal && o.tarih >= bugun();
   const telafiSayisi = o.ogrenciler.filter((x) => x.telafi_mi).length;

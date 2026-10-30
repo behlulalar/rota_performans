@@ -60,7 +60,7 @@ bekle http://127.0.0.1:8101/api/saglik "E2E backend"
 echo "==> E2E frontend ($FRONTEND, 127.0.0.1:5175)"
 docker compose run -d --rm --no-deps --name "$FRONTEND" -p 127.0.0.1:5175:5173 \
   -e API_PROXY_TARGET="http://$BACKEND:8000" \
-  frontend sh -c "[ -x node_modules/.bin/vite ] || npm ci; npx vite --host 0.0.0.0 --port 5173" >/dev/null
+  frontend sh -c "{ [ -x node_modules/.bin/vite ] && [ node_modules/.package-lock.json -nt package-lock.json ]; } || npm ci; npx vite --host 0.0.0.0 --port 5173" >/dev/null
 # Vite üzerinden /api'ye ulaşılabiliyorsa proxy ve ağ adları doğru kurulmuştur.
 bekle http://127.0.0.1:5175/api/saglik "E2E frontend (proxy dahil)"
 
