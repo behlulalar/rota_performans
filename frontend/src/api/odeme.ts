@@ -14,7 +14,7 @@ export type OdemeKaydi = {
   tarih: string;
   ogrenci: { id: string; ad: string; soyad: string };
   paket_adi: string;
-  tutar: string;
+  tutar: string | null;
   yontem: OdemeYontemi;
   aciklama?: string | null;
   iptal: boolean;
@@ -28,9 +28,9 @@ export type OdemeListesi = {
   sayfa: number;
   boyut: number;
   ozet: {
-    toplam_tutar: string;
+    toplam_tutar: string | null;
     adet: number;
-    yontem_dagilimi: { yontem: OdemeYontemi; tutar: string; adet: number }[];
+    yontem_dagilimi: { yontem: OdemeYontemi; tutar: string | null; adet: number }[];
   };
 };
 
@@ -38,7 +38,7 @@ export type BekleyenOdeme = {
   ogrenci_paketi_id: string;
   ogrenci: { id: string; ad: string; soyad: string };
   paket_adi: string;
-  uygulanan_fiyat: string;
+  uygulanan_fiyat: string | null;
   atama_tarihi: string;
   bekleme_gun: number;
 };

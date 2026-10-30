@@ -4,6 +4,7 @@ import {
   bekleyenOdemeleriGetir, odemeleriGetir, YONTEM_ETIKET,
   type BekleyenOdeme, type OdemeKaydi, type OdemeListesi,
 } from "../api/odeme";
+import FinansNotu, { useTutarGizli } from "../components/FinansNotu";
 import Kart from "../components/Kart";
 import OdemeAlPenceresi, { type OdemeHedefi } from "../components/OdemeAlPenceresi";
 import OzetKarti from "../components/OzetKarti";
@@ -23,6 +24,7 @@ const ayEtiketi = (d: Date) => d.toLocaleDateString("tr-TR", { month: "long", ye
 function Bekleyenler({ surum, onOdemeAl }: { surum: number; onOdemeAl: (h: OdemeHedefi) => void }) {
   const [liste, setListe] = useState<BekleyenOdeme[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
+  const gizli = useTutarGizli();
 
   useEffect(() => {
     let iptal = false;
@@ -33,11 +35,11 @@ function Bekleyenler({ surum, onOdemeAl }: { surum: number; onOdemeAl: (h: Odeme
   }, [surum]);
 
   const gun = (b: BekleyenOdeme) => <span className={`num ${b.bekleme_gun >= 7 ? "text-hata font-medium" : "text-metin-soluk"}`}>{b.bekleme_gun} gün</span>;
-  const al = (b: BekleyenOdeme) => (
+  const al = (b: BekleyenOdeme) => gizli ? null : (
     <button
       className={dugme}
       aria-label={`${b.ogrenci.ad} ${b.ogrenci.soyad} için ödeme al`}
-      onClick={() => onOdemeAl({ ogrenciPaketiId: b.ogrenci_paketi_id, paketAdi: b.paket_adi, tutar: b.uygulanan_fiyat, ogrenciAdi: `${b.ogrenci.ad} ${b.ogrenci.soyad}` })}
+      onClick={() => onOdemeAl({ ogrenciPaketiId: b.ogrenci_paketi_id, paketAdi: b.paket_adi, tutar: b.uygulanan_fiyat ?? "", ogrenciAdi: `${b.ogrenci.ad} ${b.ogrenci.soyad}` })}
     >Ödeme al</button>
   );
 
@@ -140,6 +142,7 @@ export default function OdemeListe() {
   return (
     <div className="space-y-6">
       <SayfaBasligi baslik="Ödemeler" aciklama={`${ayEtiketi(ay)} dönemi · tahsilatlar ve ödeme bekleyenler`} />
+      <FinansNotu />
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex items-center gap-1">
@@ -166,7 +169,7 @@ export default function OdemeListe() {
               {veri.ozet.yontem_dagilimi.map((d) => (
                 <li key={d.yontem} className="text-[13px]">
                   <div className="flex justify-between gap-2"><span>{YONTEM_ETIKET[d.yontem]} <span className="text-metin-soluk">({d.adet})</span></span><span className="num">{paraBicimle(d.tutar)}</span></div>
-                  <div className="h-1.5 rounded-full bg-yuzey-yuksek mt-1"><div className="h-full rounded-full bg-altin" style={{ width: `${Math.max(4, (Number(d.tutar) / enBuyuk) * 100)}%` }} /></div>
+                  {d.tutar !== null && <div className="h-1.5 rounded-full bg-yuzey-yuksek mt-1"><div className="h-full rounded-full bg-altin" style={{ width: `${Math.max(4, (Number(d.tutar) / enBuyuk) * 100)}%` }} /></div>}
                 </li>
               ))}
             </ul>

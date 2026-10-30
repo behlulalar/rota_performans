@@ -6,21 +6,21 @@ export { YONTEM_ETIKET } from "./odeme";
 export type GelirRaporu = {
   donem: { yil: number; ay: number; baslangic: string; bitis: string };
   ozet: {
-    toplam_tahsilat: string;
+    toplam_tahsilat: string | null;
     odeme_adedi: number;
-    ortalama_odeme: string;
-    onceki_ay_tahsilat: string;
+    ortalama_odeme: string | null;
+    onceki_ay_tahsilat: string | null;
     degisim_yuzde: number | string | null;
-    iptal_edilen_tutar: string;
+    iptal_edilen_tutar: string | null;
     iptal_adedi: number;
-    indirim_toplami: string;
+    indirim_toplami: string | null;
     ucretsiz_paket_adedi: number;
   };
-  bekleyen: { adet: number; tutar: string; gecikmis_adet: number; gecikmis_tutar: string };
-  yontem_dagilimi: { yontem: OdemeYontemi; tutar: string; adet: number; yuzde: number | string }[];
-  paket_dagilimi: { paket_adi: string; tutar: string; adet: number }[];
-  gunluk: { tarih: string; tutar: string; adet: number }[];
-  aylik_seri: { yil: number; ay: number; tutar: string; adet: number }[];
+  bekleyen: { adet: number; tutar: string | null; gecikmis_adet: number; gecikmis_tutar: string | null };
+  yontem_dagilimi: { yontem: OdemeYontemi; tutar: string | null; adet: number; yuzde: number | string }[];
+  paket_dagilimi: { paket_adi: string; tutar: string | null; adet: number }[];
+  gunluk: { tarih: string; tutar: string | null; adet: number }[];
+  aylik_seri: { yil: number; ay: number; tutar: string | null; adet: number }[];
 };
 
 export const gelirRaporuGetir = (yil: number, ay: number) =>

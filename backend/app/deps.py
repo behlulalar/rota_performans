@@ -66,3 +66,10 @@ def rol_gerekli(*roller: Rol):
         return kullanici
 
     return _kontrol
+
+
+async def yalniz_yonetici(kullanici: Kullanici = Depends(rol_gerekli(Rol.admin))) -> Kullanici:
+    """Finansal yazma işlemleri (ödeme, paket satışı/tanımı): teknik destek tutarları göremez ve işlem yapamaz."""
+    if kullanici.rol == Rol.destek:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Teknik destek hesabı finansal işlem yapamaz")
+    return kullanici

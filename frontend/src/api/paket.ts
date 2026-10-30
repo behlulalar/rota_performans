@@ -9,7 +9,7 @@ export type Paket = {
   tur: PaketTur;
   ders_sayisi: number;
   sure_ay: number;
-  varsayilan_fiyat: string;
+  varsayilan_fiyat: string | null;
   aciklama: string | null;
   aktif: boolean;
 };
@@ -29,13 +29,13 @@ export type OgrenciPaketi = {
   id: string;
   paket_adi: string;
   ders_sayisi: number;
-  liste_fiyati: string;
-  uygulanan_fiyat: string;
+  liste_fiyati: string | null;
+  uygulanan_fiyat: string | null;
   fiyat_ozel_mi: boolean;
   durum: PaketDurum;
   baslangic: string | null;
   bitis: string | null;
-  toplam_odenen: string;
+  toplam_odenen: string | null;
   olusturma: string;
   odemeler?: OdemeSatiri[];
 };
@@ -43,7 +43,7 @@ export type OgrenciPaketi = {
 export type OdemeYontemi = "nakit" | "havale_eft" | "diger";
 export type OdemeSatiri = {
   id: string;
-  tutar: string;
+  tutar: string | null;
   tarih: string;
   yontem: OdemeYontemi;
   aciklama?: string | null;

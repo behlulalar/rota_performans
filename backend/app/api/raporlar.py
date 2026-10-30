@@ -13,7 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import audit
 from app.config import settings
 from app.db import get_session
-from app.deps import rol_gerekli
+from app.deps import rol_gerekli, yalniz_yonetici
+from app.maskele import tutar_gizle
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import Ogrenci
 from app.models.paket import Odeme, OdemeYontemi, OgrenciPaketi, OgrenciPaketiDurum, Paket
@@ -85,7 +86,7 @@ def _yuzde(parca: Decimal, butun: Decimal) -> float:
 async def gelir_raporu(
     yil: int | None = Query(default=None, ge=2000, le=2100),
     ay: int | None = Query(default=None, ge=1, le=12),
-    _: Kullanici = Yonetici,
+    kullanici: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
     t = bugun()
@@ -208,7 +209,7 @@ async def gelir_raporu(
         tu, n = ay_harita.get((y, a), (SIFIR, 0))
         aylik.append(GelirAy(yil=y, ay=a, tutar=tu, adet=n))
 
-    return GelirRaporu(
+    yanit = GelirRaporu(
         donem=RaporDonem(yil=yil, ay=ay, baslangic=bas, bitis=son),
         ozet=GelirOzeti(
             toplam_tahsilat=tahsilat,
@@ -232,6 +233,7 @@ async def gelir_raporu(
         gunluk=gunluk,
         aylik_seri=aylik,
     )
+    return tutar_gizle(kullanici, yanit)
 
 
 def _csv_guvenli(deger: str | None) -> str:
@@ -245,7 +247,7 @@ async def gelir_csv(
     request: Request,
     baslangic: date | None = Query(default=None),
     bitis: date | None = Query(default=None),
-    yonetici: Kullanici = Yonetici,
+    yonetici: Kullanici = Depends(yalniz_yonetici),
     session: AsyncSession = Depends(get_session),
 ):
     t = bugun()

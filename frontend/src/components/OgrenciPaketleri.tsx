@@ -8,6 +8,7 @@ import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
 import { paraBicimle } from "../lib/para";
 import { bugun } from "../lib/tarih";
 import { birincilDugme, dugme, girdi, rozetBasari, rozetBirincil, rozetHata, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
+import FinansNotu, { useTutarGizli } from "./FinansNotu";
 import Kart from "./Kart";
 import Modal from "./Modal";
 import OdemeAlPenceresi from "./OdemeAlPenceresi";
@@ -146,9 +147,10 @@ function PaketDetayPenceresi({
   onIptal: () => void;
   onGeriAl: (odemeId: string) => void;
 }) {
+  const gizli = useTutarGizli();
   const odemeler = p.odemeler ?? [];
   const kalan = Math.max(0, Number(p.uygulanan_fiyat) - Number(p.toplam_odenen));
-  const iptalEdilebilir = p.durum === "odeme_bekliyor" && Number(p.toplam_odenen) === 0;
+  const iptalEdilebilir = !gizli && p.durum === "odeme_bekliyor" && Number(p.toplam_odenen) === 0;
   return (
     <Modal baslik="Paket detayı" onKapat={onKapat}>
       <div className="space-y-4">
@@ -187,7 +189,7 @@ function PaketDetayPenceresi({
                   {o.iptal ? (
                     <span className={rozetHata}>Geri alındı</span>
                   ) : (
-                    p.durum === "odendi" && (
+                    !gizli && p.durum === "odendi" && (
                       <button className={dugme} disabled={mesgul} onClick={() => onGeriAl(o.id)} aria-label={`${paraBicimle(o.tutar)} ödemeyi geri al`}>Geri al</button>
                     )
                   )}
@@ -199,7 +201,7 @@ function PaketDetayPenceresi({
 
         <div className="flex flex-wrap justify-between gap-2">
           <div className="flex flex-wrap gap-2">
-            {p.durum === "odeme_bekliyor" && (
+            {!gizli && p.durum === "odeme_bekliyor" && (
               <button className={birincilDugme} disabled={mesgul} onClick={onOdemeAl} aria-label={`${p.paket_adi} için ödeme al`}>Ödeme al</button>
             )}
             {iptalEdilebilir && (
@@ -215,6 +217,7 @@ function PaketDetayPenceresi({
 
 export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: { ogrenciId: string; aktif: boolean; onOdemeDegisti?: () => void }) {
   const onayla = useOnay();
+  const gizli = useTutarGizli();
   const [liste, setListe] = useState<OgrenciPaketi[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [surum, setSurum] = useState(0);
@@ -269,8 +272,9 @@ export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: {
   return (
     <Kart
       baslik="Paketler"
-      sag={<button className={dugme} disabled={mesgul || !aktif} onClick={() => void atamaAc()}>Paket ata</button>}
+      sag={gizli ? undefined : <button className={dugme} disabled={mesgul || !aktif} onClick={() => void atamaAc()}>Paket ata</button>}
     >
+      <FinansNotu />
       {!aktif && <p className="mb-3 text-sm text-metin-soluk">Öğrenci pasif olduğu için yeni paket atanamaz.</p>}
       {hata && <p role="alert" className="mb-3 text-[13px] text-hata">{hata}</p>}
       {!liste ? (
@@ -294,7 +298,7 @@ export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="num font-medium">{paraBicimle(p.uygulanan_fiyat)}</span>
-                  {p.durum === "odeme_bekliyor" && (
+                  {!gizli && p.durum === "odeme_bekliyor" && (
                     <button className={birincilDugme} disabled={mesgul} onClick={() => setOdemeAlinan(p)} aria-label={`${p.paket_adi} için ödeme al`}>Ödeme al</button>
                   )}
                   <button className={dugme} onClick={() => setDetaydaki(p.id)} aria-label={`${p.paket_adi} detayı`}>Detay</button>
@@ -321,7 +325,7 @@ export default function OgrenciPaketleri({ ogrenciId, aktif, onOdemeDegisti }: {
       )}
       {odemeAlinan && (
         <OdemeAlPenceresi
-          hedef={{ ogrenciPaketiId: odemeAlinan.id, paketAdi: odemeAlinan.paket_adi, tutar: odemeAlinan.uygulanan_fiyat, dersSayisi: odemeAlinan.ders_sayisi }}
+          hedef={{ ogrenciPaketiId: odemeAlinan.id, paketAdi: odemeAlinan.paket_adi, tutar: odemeAlinan.uygulanan_fiyat ?? "", dersSayisi: odemeAlinan.ders_sayisi }}
           onKapat={() => setOdemeAlinan(null)}
           onTamam={() => { setOdemeAlinan(null); setSurum((s) => s + 1); onOdemeDegisti?.(); }}
         />

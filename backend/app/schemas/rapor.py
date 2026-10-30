@@ -1,9 +1,11 @@
 from datetime import date
+from typing import Annotated
 
 from pydantic import BaseModel
 
+from app.maskele import GIZLI_TUTAR
 from app.models.paket import OdemeYontemi
-from app.schemas.paket import Tutar
+from app.schemas.paket import GizliTutar
 
 
 class RaporDonem(BaseModel):
@@ -14,47 +16,47 @@ class RaporDonem(BaseModel):
 
 
 class GelirOzeti(BaseModel):
-    toplam_tahsilat: Tutar
+    toplam_tahsilat: GizliTutar
     odeme_adedi: int
-    ortalama_odeme: Tutar
-    onceki_ay_tahsilat: Tutar
-    degisim_yuzde: float | None
-    iptal_edilen_tutar: Tutar
+    ortalama_odeme: GizliTutar
+    onceki_ay_tahsilat: GizliTutar
+    degisim_yuzde: Annotated[float | None, GIZLI_TUTAR]
+    iptal_edilen_tutar: GizliTutar
     iptal_adedi: int
-    indirim_toplami: Tutar
+    indirim_toplami: GizliTutar
     ucretsiz_paket_adedi: int
 
 
 class GelirBekleyen(BaseModel):
     adet: int
-    tutar: Tutar
+    tutar: GizliTutar
     gecikmis_adet: int
-    gecikmis_tutar: Tutar
+    gecikmis_tutar: GizliTutar
 
 
 class GelirYontem(BaseModel):
     yontem: OdemeYontemi
-    tutar: Tutar
+    tutar: GizliTutar
     adet: int
     yuzde: float
 
 
 class GelirPaket(BaseModel):
     paket_adi: str
-    tutar: Tutar
+    tutar: GizliTutar
     adet: int
 
 
 class GelirGun(BaseModel):
     tarih: date
-    tutar: Tutar
+    tutar: GizliTutar
     adet: int
 
 
 class GelirAy(BaseModel):
     yil: int
     ay: int
-    tutar: Tutar
+    tutar: GizliTutar
     adet: int
 
 

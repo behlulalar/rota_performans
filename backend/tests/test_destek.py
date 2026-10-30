@@ -18,6 +18,8 @@ from app.security import erisim_belirteci_uret
 from tests.conftest import SIFRE, destek_baslik, destek_olustur, kullanici_olustur
 from tests.test_bildirim import ortam
 from tests.test_bildirim_yonetimi import ekle as bildirim_ekle
+from tests.test_odemeler import bekleyen_paket, ode
+from tests.test_paketler import giris, paket_olustur
 
 D = "/api/destek"
 LOGIN = "/api/auth/login"
@@ -462,3 +464,96 @@ async def test_destek_telefonla_girer_ve_telefonunu_degistirir(istemci):
     assert r.status_code == 200 and r.json()["iki_adim"] is True
     # Telefon yönetici panelinden destek hesabına giriş açmaz.
     assert (await login(istemci, "05321112233", panel="yonetici")).status_code == 401
+
+
+# --- Finansal veri maskeleme ve yazma yasağı ---
+
+
+async def _finans_verisi(istemci, admin):
+    """Ödenmiş bir paket (3400 TL) + ödemesi bekleyen ikinci öğrenci; (ogrenci_id, ogrenci_paketi_id, odeme_id) döner."""
+    oid, opid = await bekleyen_paket(istemci, admin)
+    y = await ode(istemci, admin, opid)
+    assert y.status_code == 200, y.text
+    await bekleyen_paket(istemci, admin, ad="Bekleyen")
+    return oid, opid, y.json()["odemeler"][0]["id"]
+
+
+def _tutar_alanlari(deger, yol=""):
+    """Yanıt ağacındaki tüm tutar/fiyat/tahsilat alanlarını (yol, değer) olarak toplar."""
+    bulunan = []
+    if isinstance(deger, dict):
+        for k, v in deger.items():
+            if isinstance(v, (dict, list)):
+                bulunan += _tutar_alanlari(v, f"{yol}.{k}")
+            elif any(a in k for a in ("tutar", "fiyat", "tahsilat", "odenen", "ortalama_odeme", "indirim")) and not k.endswith(("adet", "adedi", "yuzde", "nedeni", "ozel_mi")):
+                bulunan.append((f"{yol}.{k}", v))
+    elif isinstance(deger, list):
+        for i, v in enumerate(deger):
+            bulunan += _tutar_alanlari(v, f"{yol}[{i}]")
+    return bulunan
+
+
+async def test_destek_finansal_tutarlari_goremez(istemci):
+    admin = await giris(istemci, "yonetici@kulup.com", Rol.admin)
+    oid, opid, _ = await _finans_verisi(istemci, admin)
+    destek = await destek_baslik(istemci)
+    yollar = [
+        "/api/odemeler", "/api/odemeler/bekleyenler", "/api/paketler", f"/api/ogrenciler/{oid}/paketler",
+        "/api/raporlar/gelir", "/api/genel-bakis",
+    ]
+    for yol in yollar:
+        a = await istemci.get(yol, headers=admin)
+        d = await istemci.get(yol, headers=destek)
+        assert a.status_code == d.status_code == 200, yol
+        admin_tutarlar = _tutar_alanlari(a.json())
+        destek_tutarlar = _tutar_alanlari(d.json())
+        assert admin_tutarlar, yol
+        assert any(v not in (None, "0.00") for _, v in admin_tutarlar), yol  # admin'de gerçek tutar var
+        assert destek_tutarlar and all(v is None for _, v in destek_tutarlar), (yol, destek_tutarlar)
+        # Tutar dışı alanlar (sayılar, ödeme yöntemi, paket adı) destek için de aynen görünür.
+        assert [k for k, _ in admin_tutarlar] == [k for k, _ in destek_tutarlar], yol
+    d = (await istemci.get("/api/odemeler", headers=destek)).json()
+    assert d["ozet"]["adet"] == 1 and d["kayitlar"][0]["yontem"] == "nakit" and d["kayitlar"][0]["paket_adi"]
+    assert (await istemci.get("/api/genel-bakis", headers=destek)).json()["bekleyen_odeme"]["adet"] == 1
+    assert (await istemci.get("/api/genel-bakis", headers=admin)).json()["bekleyen_odeme"]["toplam_tutar"] == "3400.00"
+    assert (await istemci.get("/api/odemeler", headers=admin)).json()["kayitlar"][0]["tutar"] == "3400.00"
+    # Öğrenci paketi satırındaki ödeme geçmişi ve toplam da null.
+    pk = (await istemci.get(f"/api/ogrenciler/{oid}/paketler", headers=destek)).json()[0]
+    assert pk["odemeler"][0]["tutar"] is None and pk["toplam_odenen"] is None
+
+
+async def test_destek_finansal_islem_yapamaz(istemci):
+    admin = await giris(istemci, "yonetici@kulup.com", Rol.admin)
+    oid, opid, odeme_id = await _finans_verisi(istemci, admin)
+    _, bekleyen_opid = await bekleyen_paket(istemci, admin, ad="Üçüncü")
+    paket = await paket_olustur(istemci, admin, ad="Başka")
+    destek = await destek_baslik(istemci)
+    yasak = "Teknik destek hesabı finansal işlem yapamaz"
+    istekler = [
+        ("post", f"/api/ogrenci-paketleri/{bekleyen_opid}/odeme", {"yontem": "nakit"}),
+        ("post", f"/api/odemeler/{odeme_id}/iptal", {"neden": "deneme"}),
+        ("post", f"/api/ogrenci-paketleri/{bekleyen_opid}/iptal", None),
+        ("post", f"/api/ogrenciler/{oid}/paketler", {"paket_id": paket["id"]}),
+        ("post", "/api/paketler", {"ad": "x", "tur": "aylik", "ders_sayisi": 1, "sure_ay": 1, "varsayilan_fiyat": "1"}),
+        ("patch", f"/api/paketler/{paket['id']}", {"varsayilan_fiyat": "5.00"}),
+        ("get", "/api/raporlar/gelir.csv", None),
+    ]
+    for yontem, yol, govde in istekler:
+        kw = {"json": govde} if govde is not None else {}
+        y = await getattr(istemci, yontem)(yol, headers=destek, **kw)
+        assert y.status_code == 403 and y.json()["detail"] == yasak, (yol, y.text)
+    # Hiçbir şey değişmedi: ödeme hâlâ geçerli, bekleyen paket hâlâ bekliyor.
+    assert (await istemci.get("/api/odemeler", headers=admin)).json()["ozet"]["adet"] == 1
+    assert len((await istemci.get("/api/odemeler/bekleyenler", headers=admin)).json()) == 2
+
+
+async def test_denetim_kaydinda_destek_tutar_gormez(istemci):
+    admin = await giris(istemci, "yonetici@kulup.com", Rol.admin)
+    await _finans_verisi(istemci, admin)
+    destek = await destek_baslik(istemci)
+    y = await istemci.get("/api/denetim", params={"islem": "odeme_alindi"}, headers=destek)
+    assert y.status_code == 200 and y.json()["items"]
+    detay = y.json()["items"][0]["detay"]
+    assert "tutar" not in detay and "yontem" in detay
+    y = await istemci.get("/api/denetim", params={"islem": "ogrenci_paketi_atandi"}, headers=destek)
+    assert all("uygulanan_fiyat" not in k["detay"] and "liste_fiyati" not in k["detay"] for k in y.json()["items"])

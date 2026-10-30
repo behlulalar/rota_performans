@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { paketGuncelle, paketleriGetir, paketOlustur, TUR_ETIKET, type Paket, type PaketTur } from "../api/paket";
+import FinansNotu, { useTutarGizli } from "../components/FinansNotu";
 import Modal from "../components/Modal";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { hataMesaji } from "../lib/dogrulama";
@@ -102,6 +103,7 @@ export default function PaketListe() {
   const [yeni, setYeni] = useState(false);
   const [duzenlenen, setDuzenlenen] = useState<Paket | null>(null);
   const [mesgul, setMesgul] = useState(false);
+  const gizli = useTutarGizli();
 
   useEffect(() => {
     let iptal = false;
@@ -130,7 +132,7 @@ export default function PaketListe() {
 
   const gorunen = (liste ?? []).filter((p) => filtre === "tum" || (filtre === "aktif" ? p.aktif : !p.aktif));
   const rozet = (p: Paket) => <span className={p.aktif ? rozetBasari : rozetNotr}>{p.aktif ? "Aktif" : "Pasif"}</span>;
-  const eylemler = (p: Paket) => (
+  const eylemler = (p: Paket) => gizli ? null : (
     <div className="flex flex-wrap gap-2">
       <button className={dugme} onClick={() => setDuzenlenen(p)} aria-label={`${p.ad} düzenle`}>Düzenle</button>
       <button className={dugme} disabled={mesgul} onClick={() => void durumDegistir(p)} aria-label={`${p.ad} ${p.aktif ? "pasife al" : "aktif et"}`}>
@@ -144,8 +146,9 @@ export default function PaketListe() {
       <SayfaBasligi
         baslik="Paketler"
         aciklama={liste ? `${liste.length} paket tanımı · ders sayısı, süre ve varsayılan fiyat` : "Paket tanımları ve varsayılan fiyatlar"}
-        eylemler={<button className={birincilDugme} onClick={() => setYeni(true)}>Yeni paket</button>}
+        eylemler={gizli ? undefined : <button className={birincilDugme} onClick={() => setYeni(true)}>Yeni paket</button>}
       />
+      <FinansNotu />
       <div className="mb-4">
         <select value={filtre} onChange={(e) => setFiltre(e.target.value)} aria-label="Durum filtresi" className={secimKutusu}>
           <option value="tum">Tüm paketler</option>

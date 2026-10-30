@@ -4,7 +4,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.paket import OdemeYontemi
-from app.schemas.paket import Tutar
+from app.schemas.paket import GizliTutar
 
 
 class OdemeAl(BaseModel):
@@ -34,7 +34,7 @@ class OdemeListeSatiri(BaseModel):
     tarih: date
     ogrenci: OdemeOgrenci
     paket_adi: str
-    tutar: Tutar
+    tutar: GizliTutar
     yontem: OdemeYontemi
     aciklama: str | None
     iptal: bool
@@ -44,12 +44,12 @@ class OdemeListeSatiri(BaseModel):
 
 class YontemDagilimi(BaseModel):
     yontem: OdemeYontemi
-    tutar: Tutar
+    tutar: GizliTutar
     adet: int
 
 
 class OdemeOzeti(BaseModel):
-    toplam_tutar: Tutar
+    toplam_tutar: GizliTutar
     adet: int
     yontem_dagilimi: list[YontemDagilimi]
 
@@ -66,6 +66,6 @@ class BekleyenPaket(BaseModel):
     ogrenci_paketi_id: uuid.UUID
     ogrenci: OdemeOgrenci
     paket_adi: str
-    uygulanan_fiyat: Tutar
+    uygulanan_fiyat: GizliTutar
     atama_tarihi: date
     bekleme_gun: int

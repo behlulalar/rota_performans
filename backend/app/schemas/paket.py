@@ -6,10 +6,17 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
 from app.metin import Baslik
 
+from app.maskele import GIZLI_TUTAR
 from app.models.paket import OdemeYontemi, OgrenciPaketiDurum, PaketTuru
 
 # Tutarlar JSON'da her zaman "3400.00" biçiminde metin olarak çıkar (float yok).
 Tutar = Annotated[Decimal, PlainSerializer(lambda d: f"{d:.2f}", return_type=str, when_used="json")]
+# Yönetici ekranlarındaki tutar: teknik destek isteğinde app.maskele.tutar_gizle ile null olur.
+GizliTutar = Annotated[
+    Decimal | None,
+    PlainSerializer(lambda d: None if d is None else f"{d:.2f}", return_type=str | None, when_used="json"),
+    GIZLI_TUTAR,
+]
 
 
 class PaketOlustur(BaseModel):
@@ -44,7 +51,7 @@ class PaketYanit(BaseModel):
     tur: PaketTuru
     ders_sayisi: int
     sure_ay: int
-    varsayilan_fiyat: Tutar
+    varsayilan_fiyat: GizliTutar
     aciklama: str | None
     aktif: bool
     olusturma: datetime
@@ -61,7 +68,7 @@ class PaketAta(BaseModel):
 
 class OdemeSatiri(BaseModel):
     id: uuid.UUID
-    tutar: Tutar
+    tutar: GizliTutar
     tarih: date
     yontem: OdemeYontemi
     aciklama: str | None
@@ -76,12 +83,12 @@ class OgrenciPaketiYanit(BaseModel):
     paket_id: uuid.UUID
     paket_adi: str
     ders_sayisi: int
-    liste_fiyati: Tutar
-    uygulanan_fiyat: Tutar
+    liste_fiyati: GizliTutar
+    uygulanan_fiyat: GizliTutar
     fiyat_ozel_mi: bool
     durum: OgrenciPaketiDurum
     baslangic: date | None
     bitis: date | None
-    toplam_odenen: Tutar
+    toplam_odenen: GizliTutar
     olusturma: datetime
     odemeler: list[OdemeSatiri] = []

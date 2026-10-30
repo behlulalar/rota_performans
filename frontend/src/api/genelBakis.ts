@@ -16,7 +16,7 @@ export type GenelBakisVerisi = {
   grupsuz_aktif_ogrenci: number;
   gruplar: { aktif_grup: number; toplam_kontenjan: number; dolu: number; doluluk_listesi: GrupDoluluk[] };
   antrenor: { aktif: number };
-  bekleyen_odeme: { adet: number; toplam_tutar: string };
+  bekleyen_odeme: { adet: number; toplam_tutar: string | null };
   son_kayitlar: SonKayit[];
 };
 

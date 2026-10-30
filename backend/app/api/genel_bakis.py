@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.deps import rol_gerekli
+from app.maskele import tutar_gizle
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import IletisimKisisi, Ogrenci, OgrenciDurum
 from app.models.paket import OgrenciPaketi, OgrenciPaketiDurum
@@ -31,7 +32,7 @@ SON_KAYIT_SAYISI = 5
 
 
 @router.get("", response_model=GenelBakisYanit)
-async def getir(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
+async def getir(kullanici: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
     bugun = date.today()
     ay_basi = bugun.replace(day=1)
     ay_sonu = date(bugun.year + (bugun.month == 12), bugun.month % 12 + 1, 1)
@@ -119,7 +120,7 @@ async def getir(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_ses
         )
     ).scalars()
 
-    return GenelBakisYanit(
+    yanit = GenelBakisYanit(
         ogrenci=OgrenciSayilari(aktif=ogrenci_satiri[0], pasif=ogrenci_satiri[1], bu_ay_kayit=ogrenci_satiri[2]),
         hesapsiz_aktif_ogrenci=ogrenci_satiri[3],
         grupsuz_aktif_ogrenci=ogrenci_satiri[4],
@@ -130,9 +131,10 @@ async def getir(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_ses
             doluluk_listesi=gosterilen,
         ),
         antrenor=AntrenorSayisi(aktif=antrenor_sayisi),
-        bekleyen_odeme=BekleyenOdeme(adet=adet, toplam_tutar=f"{Decimal(toplam):.2f}"),
+        bekleyen_odeme=BekleyenOdeme(adet=adet, toplam_tutar=Decimal(toplam)),
         son_kayitlar=[
             SonKayit(id=o.id, ad=o.ad, soyad=o.soyad, kayit_tarihi=o.kayit_tarihi, foto_var=o.foto_anahtar is not None)
             for o in son
         ],
     )
+    return tutar_gizle(kullanici, yanit)

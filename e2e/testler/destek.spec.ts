@@ -1,6 +1,6 @@
 import {
   arayuzdenGiris, destekApiGirisi, destekArayuzdenGiris, destekDurumuKaydet, destekKurtarmaKodlariniKaydet, destekKurtarmaKodu, DESTEK_GIRIS, DESTEK_SIFRE, destekKoduAl,
-  expect, ogrenciOlusturAPI, test, YONETICI_GIRIS, YONETICI_SIFRE, yoneticiApiGirisi,
+  expect, odemeAlAPI, ogrenciOlusturAPI, paketAtaAPI, paketOlusturAPI, test, YONETICI_GIRIS, YONETICI_SIFRE, yoneticiApiGirisi,
 } from "../yardimci";
 
 // Bu dosya ilk çalışır (playwright.config.ts): destek hesabının 2FA kurulumunu ilk senaryo yapar.
@@ -199,5 +199,42 @@ test.describe("Teknik destek", () => {
     const satir = page.getByRole("row", { name: new RegExp(DESTEK_GIRIS) });
     await expect(satir.getByText("Teknik destek", { exact: true })).toBeVisible();
     await expect(satir.getByRole("button")).toHaveCount(0);
+  });
+
+  test("destek tutarları göremez: ödemeler ve gelir raporunda ••• ₺, ödeme/paket düğmeleri yok", async ({ page }) => {
+    const yonetici = await yoneticiApiGirisi(page);
+    const paket = await paketOlusturAPI(page, yonetici);
+    const odenen = await ogrenciOlusturAPI(page, yonetici, "DestekOdenen");
+    await odemeAlAPI(page, yonetici, await paketAtaAPI(page, yonetici, odenen.id, paket.id));
+    const bekleyen = await ogrenciOlusturAPI(page, yonetici, "DestekBekleyen");
+    await paketAtaAPI(page, yonetici, bekleyen.id, paket.id);
+
+    await page.context().clearCookies();
+    const token = await destekApiGirisi(page);
+    await page.goto("/odemeler");
+    await expect(page.getByRole("heading", { name: "Ödemeler", level: 1 })).toBeVisible();
+    await expect(page.getByTestId("finans-notu")).toHaveText("Tutarlar teknik destek hesabında gizlenir.");
+    await expect(page.getByTestId("bekleyenler")).toContainText(bekleyen.ad);
+    await expect(page.getByText("••• ₺").first()).toBeVisible();
+    await expect(page.getByText(/\d[\d.]*\s?₺/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /ödeme al/i })).toHaveCount(0);
+
+    await page.goto("/gelir-raporu");
+    await expect(page.getByTestId("kpi-tahsilat")).toContainText("••• ₺");
+    await expect(page.getByTestId("tutar-gizli")).toHaveText("Teknik destek hesabında tutarlar gizlidir.");
+    await expect(page.getByRole("button", { name: /CSV indir/ })).toHaveCount(0);
+
+    await page.goto("/paketler");
+    await expect(page.getByRole("button", { name: "Yeni paket" })).toHaveCount(0);
+    await expect(page.getByText("••• ₺").first()).toBeVisible();
+
+    await page.goto(`/ogrenciler/${bekleyen.id}`);
+    await expect(page.getByText("••• ₺").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Paket ata" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /için ödeme al/ })).toHaveCount(0);
+
+    // Sunucu da reddeder
+    const y = await page.request.post(`/api/ogrenciler/${bekleyen.id}/paketler`, { headers: { Authorization: `Bearer ${token}` }, data: { paket_id: paket.id } });
+    expect(y.status()).toBe(403);
   });
 });

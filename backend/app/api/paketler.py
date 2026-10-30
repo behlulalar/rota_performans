@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
 from app.db import get_session
-from app.deps import rol_gerekli
+from app.deps import rol_gerekli, yalniz_yonetici
+from app.maskele import tutar_gizle
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import Ogrenci, OgrenciDurum
 from app.models.paket import Odeme, OgrenciPaketi, OgrenciPaketiDurum, Paket
@@ -27,6 +28,7 @@ ogrenci_router = APIRouter(prefix="/api/ogrenciler", tags=["paketler"])
 ogrenci_paketi_router = APIRouter(prefix="/api/ogrenci-paketleri", tags=["paketler"])
 
 Yonetici = Depends(rol_gerekli(Rol.admin))
+FinansYazma = Depends(yalniz_yonetici)
 
 IKI_HANE = Decimal("0.01")
 
@@ -49,20 +51,20 @@ def ay_ekle(tarih: date, ay: int) -> date:
 @router.get("", response_model=list[PaketYanit])
 async def listele(
     aktif: bool | None = Query(default=None),
-    _: Kullanici = Yonetici,
+    kullanici: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
     sorgu = select(Paket).order_by(Paket.aktif.desc(), Paket.sure_ay, Paket.ad, Paket.id)
     if aktif is not None:
         sorgu = sorgu.where(Paket.aktif.is_(aktif))
-    return list((await session.execute(sorgu)).scalars())
+    return tutar_gizle(kullanici, [PaketYanit.model_validate(p) for p in (await session.execute(sorgu)).scalars()])
 
 
 @router.post("", response_model=PaketYanit, status_code=status.HTTP_201_CREATED)
 async def olustur(
     govde: PaketOlustur,
     request: Request,
-    yonetici: Kullanici = Yonetici,
+    yonetici: Kullanici = FinansYazma,
     session: AsyncSession = Depends(get_session),
 ):
     paket = Paket(
@@ -85,7 +87,7 @@ async def guncelle(
     paket_id: uuid.UUID,
     govde: PaketGuncelle,
     request: Request,
-    yonetici: Kullanici = Yonetici,
+    yonetici: Kullanici = FinansYazma,
     session: AsyncSession = Depends(get_session),
 ):
     paket = (
@@ -156,12 +158,12 @@ async def _yanitlar(session: AsyncSession, kosul) -> list[OgrenciPaketiYanit]:
 
 @ogrenci_router.get("/{ogrenci_id}/paketler", response_model=list[OgrenciPaketiYanit])
 async def ogrenci_paketleri(
-    ogrenci_id: uuid.UUID, _: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)
+    ogrenci_id: uuid.UUID, kullanici: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)
 ):
     ogrenci = await session.get(Ogrenci, ogrenci_id)
     if ogrenci is None or ogrenci.sentetik:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Öğrenci bulunamadı")
-    return await _yanitlar(session, OgrenciPaketi.ogrenci_id == ogrenci_id)
+    return tutar_gizle(kullanici, await _yanitlar(session, OgrenciPaketi.ogrenci_id == ogrenci_id))
 
 
 @ogrenci_router.post(
@@ -171,7 +173,7 @@ async def paket_ata(
     ogrenci_id: uuid.UUID,
     govde: PaketAta,
     request: Request,
-    yonetici: Kullanici = Yonetici,
+    yonetici: Kullanici = FinansYazma,
     session: AsyncSession = Depends(get_session),
 ):
     # Öğrenci satırı kilitlenir: eşzamanlı iki atama "tek bekleyen paket" kuralını aşamasın.
@@ -236,7 +238,7 @@ async def paket_ata(
 async def iptal(
     ogrenci_paketi_id: uuid.UUID,
     request: Request,
-    yonetici: Kullanici = Yonetici,
+    yonetici: Kullanici = FinansYazma,
     session: AsyncSession = Depends(get_session),
 ):
     op = (

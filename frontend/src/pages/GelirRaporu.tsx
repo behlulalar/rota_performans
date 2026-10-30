@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { gelirCsvIndir, gelirRaporuGetir, YONTEM_ETIKET, type GelirRaporu as Rapor } from "../api/rapor";
+import FinansNotu, { useTutarGizli } from "../components/FinansNotu";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { hataMesaji } from "../lib/dogrulama";
@@ -9,7 +10,7 @@ import { dugme, rozetBasari, rozetHata, rozetNotr } from "../lib/stil";
 
 const ayAdi = (yil: number, ay: number) => new Date(yil, ay - 1, 1).toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
 const kisaAy = (ay: number) => new Date(2000, ay - 1, 1).toLocaleDateString("tr-TR", { month: "short" });
-const sayi = (d: string | number) => Number(d) || 0;
+const sayi = (d: string | number | null) => Number(d) || 0;
 const yuzdeYaz = (d: number | string) => `%${sayi(d).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`;
 
 const kpiKutu = "bg-yuzey border border-cizgi rounded-[14px] p-5 min-w-0";
@@ -88,6 +89,7 @@ export default function GelirRaporu() {
   const [hata, setHata] = useState<string | null>(null);
   const [deneme, setDeneme] = useState(0);
   const [gunSecili, setGunSecili] = useState<string | null>(null);
+  const gizli = useTutarGizli();
   const [csvDurum, setCsvDurum] = useState<{ yukleniyor: boolean; hata: string | null }>({ yukleniyor: false, hata: null });
 
   useEffect(() => {
@@ -149,6 +151,7 @@ export default function GelirRaporu() {
   return (
     <div className="space-y-6">
       <SayfaBasligi baslik="Gelir raporu" aciklama={`${ayMetni} · tahsilat, bekleyen alacak ve düzeltmeler`} />
+      <FinansNotu />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1">
@@ -156,12 +159,14 @@ export default function GelirRaporu() {
           <span className="num min-w-40 text-center font-medium capitalize" aria-live="polite" data-testid="donem-adi">{ayMetni}</span>
           <button className={dugme} onClick={() => git(1)} disabled={gelecekte} aria-label="Sonraki ay">›</button>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <button className={dugme} onClick={csv} disabled={!veri || csvDurum.yukleniyor}>
-            {csvDurum.yukleniyor ? "İndiriliyor…" : "CSV indir (seçili ay)"}
-          </button>
-          {csvDurum.hata && <p role="alert" className="text-[13px] text-hata">{csvDurum.hata}</p>}
-        </div>
+        {!gizli && (
+          <div className="flex flex-col items-end gap-1">
+            <button className={dugme} onClick={csv} disabled={!veri || csvDurum.yukleniyor}>
+              {csvDurum.yukleniyor ? "İndiriliyor…" : "CSV indir (seçili ay)"}
+            </button>
+            {csvDurum.hata && <p role="alert" className="text-[13px] text-hata">{csvDurum.hata}</p>}
+          </div>
+        )}
       </div>
 
       {hata && (
@@ -179,7 +184,7 @@ export default function GelirRaporu() {
             <div className={kpiKutu} data-testid="kpi-tahsilat">
               <div className={kpiEtiket}>Toplam tahsilat</div>
               <div className={`${kpiDeger} text-altin-metin`}>{paraBicimle(veri.ozet.toplam_tahsilat)}</div>
-              <div className="mt-2"><Degisim r={veri} /></div>
+              {!gizli && <div className="mt-2"><Degisim r={veri} /></div>}
               {veri.ozet.degisim_yuzde !== null && <div className="num text-xs text-metin-soluk mt-1.5">Önceki ay: {paraBicimle(veri.ozet.onceki_ay_tahsilat)}</div>}
             </div>
             <div className={kpiKutu} data-testid="kpi-adet">
@@ -206,77 +211,85 @@ export default function GelirRaporu() {
             </div>
           </div>
 
-          <Kart baslik="Son 12 ay tahsilat" aciklama="Bir aya tıklayarak o aya geçin">
-            <CubukGrafik
-              cubuklar={aylikCubuklar}
-              secili={`${donem.yil}-${donem.ay}`}
-              onSec={(k) => { const [y, a] = k.split("-").map(Number); setDonem({ yil: y, ay: a }); }}
-              okuma={(c) => c.metin}
-            />
-            <table className="sr-only" aria-label="Son 12 ay tahsilat tablosu">
-              <thead><tr><th>Ay</th><th>Tutar</th><th>Ödeme adedi</th></tr></thead>
-              <tbody>{veri.aylik_seri.map((a) => <tr key={`${a.yil}-${a.ay}`}><td>{ayAdi(a.yil, a.ay)}</td><td>{paraBicimle(a.tutar)}</td><td>{a.adet}</td></tr>)}</tbody>
-            </table>
-          </Kart>
-
-          {bos ? (
+          {gizli ? (
             <Kart>
-              <p className="text-center text-metin-soluk py-6" data-testid="bos-donem">Bu ayda tahsilat yok ({ayMetni}).</p>
+              <p className="text-center text-metin-soluk py-6" data-testid="tutar-gizli">Teknik destek hesabında tutarlar gizlidir.</p>
             </Kart>
           ) : (
             <>
-              <Kart
-                baslik="Günlük tahsilat"
-                aciklama={gunSeciliKayit ? <span className="num">{gunSeciliKayit.tarih.slice(8, 10)} {ayMetni}: {paraBicimle(gunSeciliKayit.tutar)} · {gunSeciliKayit.adet} ödeme</span> : `${ayMetni} · bir güne dokunarak tutarını görün`}
-              >
-                <div className="pt-4">
-                  <CubukGrafik cubuklar={gunlukCubuklar} secili={gunSecili} onSec={(k) => setGunSecili((s) => (s === k ? null : k))} />
-                </div>
-                <table className="sr-only" aria-label="Günlük tahsilat tablosu">
-                  <thead><tr><th>Tarih</th><th>Tutar</th><th>Ödeme adedi</th></tr></thead>
-                  <tbody>{veri.gunluk.map((g) => <tr key={g.tarih}><td>{g.tarih}</td><td>{paraBicimle(g.tutar)}</td><td>{g.adet}</td></tr>)}</tbody>
-                </table>
-              </Kart>
+            <Kart baslik="Son 12 ay tahsilat" aciklama="Bir aya tıklayarak o aya geçin">
+              <CubukGrafik
+                cubuklar={aylikCubuklar}
+                secili={`${donem.yil}-${donem.ay}`}
+                onSec={(k) => { const [y, a] = k.split("-").map(Number); setDonem({ yil: y, ay: a }); }}
+                okuma={(c) => c.metin}
+              />
+              <table className="sr-only" aria-label="Son 12 ay tahsilat tablosu">
+                <thead><tr><th>Ay</th><th>Tutar</th><th>Ödeme adedi</th></tr></thead>
+                <tbody>{veri.aylik_seri.map((a) => <tr key={`${a.yil}-${a.ay}`}><td>{ayAdi(a.yil, a.ay)}</td><td>{paraBicimle(a.tutar)}</td><td>{a.adet}</td></tr>)}</tbody>
+              </table>
+            </Kart>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Kart baslik="Yönteme göre dağılım">
-                  <ul className="space-y-3" data-testid="yontem-dagilimi">
-                    {veri.yontem_dagilimi.map((d) => (
-                      <li key={d.yontem} className="text-[13px]">
-                        <div className="flex justify-between gap-2">
-                          <span>{YONTEM_ETIKET[d.yontem]} <span className="text-metin-soluk">({d.adet})</span></span>
-                          <span className="num">{paraBicimle(d.tutar)} <span className="text-metin-soluk">· {yuzdeYaz(d.yuzde)}</span></span>
-                        </div>
-                        <div className="h-2 rounded-full bg-yuzey-yuksek mt-1.5" role="img" aria-label={`${YONTEM_ETIKET[d.yontem]} ${yuzdeYaz(d.yuzde)}`}>
-                          <div className="h-full rounded-full bg-altin" style={{ width: `${Math.min(100, Math.max(2, sayi(d.yuzde)))}%` }} />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </Kart>
-                <Kart baslik="Pakete göre dağılım" bosluksuz>
-                  <div className="border-t border-cizgi" data-testid="paket-dagilimi">
-                    {veri.paket_dagilimi.length === 0 ? (
-                      <p className="text-sm text-metin-soluk px-6 py-4">Paket verisi yok.</p>
-                    ) : (() => {
-                      const enBuyuk = Math.max(1, ...veri.paket_dagilimi.map((p) => sayi(p.tutar)));
-                      return (
-                        <ul>
-                          {veri.paket_dagilimi.map((p) => (
-                            <li key={p.paket_adi} className="px-6 py-3 border-t border-cizgi first:border-t-0 text-[13px]">
-                              <div className="flex justify-between gap-3">
-                                <span className="min-w-0 break-words">{p.paket_adi} <span className="text-metin-soluk">({p.adet})</span></span>
-                                <span className="num shrink-0">{paraBicimle(p.tutar)}</span>
-                              </div>
-                              <div className="h-1.5 rounded-full bg-yuzey-yuksek mt-1.5"><div className="h-full rounded-full bg-altin" style={{ width: `${Math.max(2, (sayi(p.tutar) / enBuyuk) * 100)}%` }} /></div>
-                            </li>
-                          ))}
-                        </ul>
-                      );
-                    })()}
+            {bos ? (
+              <Kart>
+                <p className="text-center text-metin-soluk py-6" data-testid="bos-donem">Bu ayda tahsilat yok ({ayMetni}).</p>
+              </Kart>
+            ) : (
+              <>
+                <Kart
+                  baslik="Günlük tahsilat"
+                  aciklama={gunSeciliKayit ? <span className="num">{gunSeciliKayit.tarih.slice(8, 10)} {ayMetni}: {paraBicimle(gunSeciliKayit.tutar)} · {gunSeciliKayit.adet} ödeme</span> : `${ayMetni} · bir güne dokunarak tutarını görün`}
+                >
+                  <div className="pt-4">
+                    <CubukGrafik cubuklar={gunlukCubuklar} secili={gunSecili} onSec={(k) => setGunSecili((s) => (s === k ? null : k))} />
                   </div>
+                  <table className="sr-only" aria-label="Günlük tahsilat tablosu">
+                    <thead><tr><th>Tarih</th><th>Tutar</th><th>Ödeme adedi</th></tr></thead>
+                    <tbody>{veri.gunluk.map((g) => <tr key={g.tarih}><td>{g.tarih}</td><td>{paraBicimle(g.tutar)}</td><td>{g.adet}</td></tr>)}</tbody>
+                  </table>
                 </Kart>
-              </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Kart baslik="Yönteme göre dağılım">
+                    <ul className="space-y-3" data-testid="yontem-dagilimi">
+                      {veri.yontem_dagilimi.map((d) => (
+                        <li key={d.yontem} className="text-[13px]">
+                          <div className="flex justify-between gap-2">
+                            <span>{YONTEM_ETIKET[d.yontem]} <span className="text-metin-soluk">({d.adet})</span></span>
+                            <span className="num">{paraBicimle(d.tutar)} <span className="text-metin-soluk">· {yuzdeYaz(d.yuzde)}</span></span>
+                          </div>
+                          <div className="h-2 rounded-full bg-yuzey-yuksek mt-1.5" role="img" aria-label={`${YONTEM_ETIKET[d.yontem]} ${yuzdeYaz(d.yuzde)}`}>
+                            <div className="h-full rounded-full bg-altin" style={{ width: `${Math.min(100, Math.max(2, sayi(d.yuzde)))}%` }} />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </Kart>
+                  <Kart baslik="Pakete göre dağılım" bosluksuz>
+                    <div className="border-t border-cizgi" data-testid="paket-dagilimi">
+                      {veri.paket_dagilimi.length === 0 ? (
+                        <p className="text-sm text-metin-soluk px-6 py-4">Paket verisi yok.</p>
+                      ) : (() => {
+                        const enBuyuk = Math.max(1, ...veri.paket_dagilimi.map((p) => sayi(p.tutar)));
+                        return (
+                          <ul>
+                            {veri.paket_dagilimi.map((p) => (
+                              <li key={p.paket_adi} className="px-6 py-3 border-t border-cizgi first:border-t-0 text-[13px]">
+                                <div className="flex justify-between gap-3">
+                                  <span className="min-w-0 break-words">{p.paket_adi} <span className="text-metin-soluk">({p.adet})</span></span>
+                                  <span className="num shrink-0">{paraBicimle(p.tutar)}</span>
+                                </div>
+                                <div className="h-1.5 rounded-full bg-yuzey-yuksek mt-1.5"><div className="h-full rounded-full bg-altin" style={{ width: `${Math.max(2, (sayi(p.tutar) / enBuyuk) * 100)}%` }} /></div>
+                              </li>
+                            ))}
+                          </ul>
+                        );
+                      })()}
+                    </div>
+                  </Kart>
+                </div>
+              </>
+            )}
             </>
           )}
         </div>

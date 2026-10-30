@@ -3,6 +3,8 @@ from datetime import date, time
 
 from pydantic import BaseModel
 
+from app.schemas.paket import GizliTutar
+
 
 class OgrenciSayilari(BaseModel):
     aktif: int
@@ -37,7 +39,7 @@ class AntrenorSayisi(BaseModel):
 
 class BekleyenOdeme(BaseModel):
     adet: int
-    toplam_tutar: str
+    toplam_tutar: GizliTutar
 
 
 class SonKayit(BaseModel):

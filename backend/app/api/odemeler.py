@@ -12,7 +12,8 @@ from app import audit
 from app.api.paketler import _yanitlar
 from app.config import settings
 from app.db import get_session
-from app.deps import rol_gerekli
+from app.deps import rol_gerekli, yalniz_yonetici
+from app.maskele import tutar_gizle
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import Ogrenci
 from app.models.paket import Odeme, OdemeYontemi, OgrenciPaketi, OgrenciPaketiDurum, Paket
@@ -34,6 +35,7 @@ ogrenci_paketi_router = APIRouter(prefix="/api/ogrenci-paketleri", tags=["odemel
 router = APIRouter(prefix="/api/odemeler", tags=["odemeler"])
 
 Yonetici = Depends(rol_gerekli(Rol.admin))
+FinansYazma = Depends(yalniz_yonetici)
 
 
 def _ip(request: Request) -> str:
@@ -45,7 +47,7 @@ async def odeme_al(
     ogrenci_paketi_id: uuid.UUID,
     govde: OdemeAl,
     request: Request,
-    yonetici: Kullanici = Yonetici,
+    yonetici: Kullanici = FinansYazma,
     session: AsyncSession = Depends(get_session),
 ):
     # Paket satırı kilitlenir: eşzamanlı iki ödeme tek yükleme yazabilsin.
@@ -98,7 +100,7 @@ async def odeme_iptal(
     odeme_id: uuid.UUID,
     govde: OdemeIptal,
     request: Request,
-    yonetici: Kullanici = Yonetici,
+    yonetici: Kullanici = FinansYazma,
     session: AsyncSession = Depends(get_session),
 ):
     paket_id = (
@@ -150,7 +152,7 @@ def _ay_araligi() -> tuple[date, date]:
 
 
 @router.get("/bekleyenler", response_model=list[BekleyenPaket])
-async def bekleyenler(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
+async def bekleyenler(kullanici: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
     satirlar = await session.execute(
         select(OgrenciPaketi, Paket.ad, Ogrenci.id, Ogrenci.ad, Ogrenci.soyad)
         .join(Paket, Paket.id == OgrenciPaketi.paket_id)
@@ -168,7 +170,7 @@ async def bekleyenler(_: Kullanici = Yonetici, session: AsyncSession = Depends(g
                 uygulanan_fiyat=op.uygulanan_fiyat, atama_tarihi=atama, bekleme_gun=max((bugun_ - atama).days, 0),
             )
         )
-    return sonuc
+    return tutar_gizle(kullanici, sonuc)
 
 
 @router.get("", response_model=OdemeListe)
@@ -180,7 +182,7 @@ async def listele(
     iptal_dahil: bool = Query(default=True),
     sayfa: int = Query(default=1, ge=1),
     boyut: int = Query(default=50, ge=1, le=200),
-    _: Kullanici = Yonetici,
+    kullanici: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
     ay_bas, ay_son = _ay_araligi()
@@ -250,4 +252,6 @@ async def listele(
         )
         for o, paket_adi, o_id, ad, soyad, k_ad, k_giris in satirlar.all()
     ]
-    return OdemeListe(kayitlar=kayitlar, toplam=toplam, sayfa=sayfa, boyut=boyut, ozet=ozet)
+    return tutar_gizle(
+        kullanici, OdemeListe(kayitlar=kayitlar, toplam=toplam, sayfa=sayfa, boyut=boyut, ozet=ozet)
+    )

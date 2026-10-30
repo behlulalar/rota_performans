@@ -10,6 +10,7 @@ import DolulukCubugu from "../components/DolulukCubugu";
 import OgrenciFoto from "../components/OgrenciFoto";
 import ResitGecisi from "../components/ResitGecisi";
 import { hataMesaji } from "../lib/dogrulama";
+import { paraBicimle } from "../lib/para";
 import { programOzeti, saat } from "../lib/program";
 import { bilgiKutusu, birincilDugme, dugme, listeSatiri, rozetBasari, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
 import { bugun } from "../lib/tarih";
@@ -346,7 +347,7 @@ function Ozet({ v, bugunSayi, bugunOgrenci }: { v: GenelBakisVerisi; bugunSayi: 
       <OzetKarti etiket="Aktif antrenör" deger={v.antrenor.aktif} />
       <OzetKarti
         etiket="Bekleyen ödeme"
-        deger={PARA.format(Number(v.bekleyen_odeme.toplam_tutar))}
+        deger={v.bekleyen_odeme.toplam_tutar === null ? paraBicimle(null) : PARA.format(Number(v.bekleyen_odeme.toplam_tutar))}
         ipucu={`${v.bekleyen_odeme.adet} kayıt`}
         ton={v.bekleyen_odeme.adet > 0 ? "uyari" : "normal"}
       />

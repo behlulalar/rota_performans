@@ -17,11 +17,11 @@ router = APIRouter(prefix="/api/denetim", tags=["denetim"])
 
 Destek = Depends(rol_gerekli(Rol.destek))
 
-_GIZLI_ANAHTARLAR = ("sifre", "token")
+_GIZLI_ANAHTARLAR = ("sifre", "token", "tutar", "fiyat")
 
 
 def _temizle(deger):
-    """Detaydaki parola/belirteç benzeri anahtarları (iç içe olanlar dahil) savunma amaçlı atar."""
+    """Detaydaki parola/belirteç ve tutar/fiyat anahtarlarını (iç içe olanlar dahil) atar; destek tutarları görmez."""
     if isinstance(deger, dict):
         return {k: _temizle(v) for k, v in deger.items() if not any(g in str(k).lower() for g in _GIZLI_ANAHTARLAR)}
     if isinstance(deger, list):
