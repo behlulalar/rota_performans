@@ -15,7 +15,7 @@ from app import audit, ders_hakki, kimlik
 from app import telefon as telefon_modulu
 from app.db import get_session
 from app.depolama import depolama
-from app.deps import rol_gerekli
+from app.deps import kimlik_yetkisi, rol_gerekli
 from app.api.antrenorler import _giris_hazirla, _oturumlari_iptal_et, cakisma_denetle, gecici_sifre_uret
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import (
@@ -609,7 +609,7 @@ async def aktif_et(
 
 @router.get("/{ogrenci_id}/kimlik", response_model=KimlikYanit)
 async def kimlik_getir(
-    ogrenci_id: uuid.UUID, request: Request, yonetici: Kullanici = Yonetici,
+    ogrenci_id: uuid.UUID, request: Request, yonetici: Kullanici = Depends(kimlik_yetkisi),
     session: AsyncSession = Depends(get_session),
 ):
     ogrenci = await _ogrenci_al(session, ogrenci_id)

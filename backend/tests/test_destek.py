@@ -18,6 +18,7 @@ from app.security import erisim_belirteci_uret
 from tests.conftest import SIFRE, destek_baslik, destek_olustur, kullanici_olustur
 from tests.test_bildirim import ortam
 from tests.test_bildirim_yonetimi import ekle as bildirim_ekle
+from tests.test_ogrenciler import olustur as ogrenci_olustur
 from tests.test_odemeler import bekleyen_paket, ode
 from tests.test_paketler import giris, paket_olustur
 
@@ -557,3 +558,16 @@ async def test_denetim_kaydinda_destek_tutar_gormez(istemci):
     assert "tutar" not in detay and "yontem" in detay
     y = await istemci.get("/api/denetim", params={"islem": "ogrenci_paketi_atandi"}, headers=destek)
     assert all("uygulanan_fiyat" not in k["detay"] and "liste_fiyati" not in k["detay"] for k in y.json()["items"])
+
+
+async def test_destek_tam_kimlik_numarasini_goremez(istemci):
+    admin = await giris(istemci, "yonetici@kulup.com", Rol.admin)
+    oid = (await ogrenci_olustur(istemci, admin))["id"]
+    destek = await destek_baslik(istemci)
+    y = await istemci.get(f"/api/ogrenciler/{oid}", headers=destek)
+    assert y.status_code == 200 and y.json()["kimlik_maskeli"]
+    y = await istemci.get(f"/api/ogrenciler/{oid}/kimlik", headers=destek)
+    assert y.status_code == 403 and y.json()["detail"] == "Teknik destek hesabı kimlik numarasını göremez"
+    async with SessionLocal() as s:
+        assert not (await s.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "kimlik_goruntulendi"))).scalars().all()
+    assert (await istemci.get(f"/api/ogrenciler/{oid}/kimlik", headers=admin)).status_code == 200

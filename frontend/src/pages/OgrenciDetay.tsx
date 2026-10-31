@@ -17,6 +17,7 @@ import SayfaBasligi from "../components/SayfaBasligi";
 import { bilgiKutusu, dugme, girdi, rozetBasari, rozetBirincil, rozetNotr, secimKutusu, tehlikeKutusu, uyariKutusu } from "../lib/stil";
 import WhatsAppDugmesi from "../components/WhatsAppDugmesi";
 import { useOnay } from "../components/OnayPenceresi";
+import { useAuth } from "../auth/AuthProvider";
 
 const RIZA_ADI: Record<RizaTur, string> = {
   aydinlatma: "KVKK aydınlatma",
@@ -27,6 +28,7 @@ const RIZA_ADI: Record<RizaTur, string> = {
 
 export default function OgrenciDetay() {
   const onayla = useOnay();
+  const { kullanici } = useAuth();
   const { id } = useParams();
   const konum = useLocation();
   const git = useNavigate();
@@ -225,7 +227,7 @@ export default function OgrenciDetay() {
             <dt className="text-metin-soluk">{o.kimlik_tur === "tc" ? "T.C. kimlik no" : "Pasaport no"}</dt>
             <dd className="flex flex-wrap items-center gap-3">
               <span className="num">{kimlik ?? o.kimlik_maskeli ?? "—"}</span>
-              {o.kimlik_maskeli && !kimlik && (
+              {o.kimlik_maskeli && !kimlik && kullanici?.rol !== "destek" && (
                 <button className={`${dugme} !min-h-9 !px-3`} disabled={mesgul} onClick={() => void kimlikGoster()}>Tam numarayı göster</button>
               )}
             </dd>

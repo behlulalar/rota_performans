@@ -73,3 +73,10 @@ async def yalniz_yonetici(kullanici: Kullanici = Depends(rol_gerekli(Rol.admin))
     if kullanici.rol == Rol.destek:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Teknik destek hesabı finansal işlem yapamaz")
     return kullanici
+
+
+async def kimlik_yetkisi(kullanici: Kullanici = Depends(rol_gerekli(Rol.admin))) -> Kullanici:
+    """Tam kimlik numarası (KVKK): teknik destek yalnız maskeli numarayı görür."""
+    if kullanici.rol == Rol.destek:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Teknik destek hesabı kimlik numarasını göremez")
+    return kullanici
