@@ -5,6 +5,8 @@ os.environ["ENV"] = "test"
 os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 os.environ["REDIS_URL"] = os.environ["TEST_REDIS_URL"]
 os.environ["COOKIE_SECURE"] = "true"
+# Testler gerçek WhatsApp (Evolution) servisine gitmez; gerekeni test_whatsapp sahte sunucuyla açar.
+os.environ["EVOLUTION_URL"] = ""
 
 import asyncio  # noqa: E402
 

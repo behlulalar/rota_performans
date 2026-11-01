@@ -39,6 +39,8 @@ Bilinen sınır: yoklama düzeltilince yalnız devamsızlık bildirimi iptal edi
 
 Kulübe ait, kişisel kullanılmayan ayrı bir WhatsApp numarası kullanılacak.
 
+**Bağlantı (hazır, 1 Kasım 2026):** Yönetici veya teknik destek Ayarlar > WhatsApp bağlantısı kartından QR okutarak numarayı bağlar, durumu görür ve bağlantıyı keser (denetim kaydına yazılır). Evolution API `docker-compose.yml` içinde `evolution` servisi olarak çalışır (sürüm sabit: v2.3.7, ayrı `evolution` veritabanı). Ayarlar: `EVOLUTION_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE`. Aşağıdaki gönderim kuralları henüz yazılmadı.
+
 **Kime:**
 - Yalnız WhatsApp izni (rıza) olan birincil iletişim kişileri.
 - Aynı numaraya tek mesaj (kardeşler birleşir).

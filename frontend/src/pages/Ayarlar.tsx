@@ -6,6 +6,7 @@ import { hatirlananiKaydet, hatirlananiOku } from "../lib/hatirla";
 import { useAuth } from "../auth/AuthProvider";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
+import WhatsAppBaglantisi from "../components/WhatsAppBaglantisi";
 import YaziBoyutuSecici from "../components/YaziBoyutuSecici";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import { hataMesaji, yeniSifreHatasi } from "../lib/dogrulama";
@@ -262,6 +263,7 @@ export default function Ayarlar() {
       <div className="grid gap-4 lg:grid-cols-2 items-start">
         {veri && <KulupKarti veri={veri} onKaydet={setVeri} />}
         {veri && <BildirimKarti veri={veri} onKaydet={setVeri} />}
+        <WhatsAppBaglantisi />
         <HesapKarti />
         <GorunumKarti />
       </div>

@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     vapid_public_key: str = ""
     vapid_private_key: str = ""
     vapid_subject: str = ""  # mailto:kulup@ornek.com
+    # WhatsApp (Evolution API). URL ve anahtar doluysa bağlantı ekranı açılır.
+    evolution_url: str = ""
+    evolution_api_key: str = ""
+    evolution_instance: str = "rota"
 
     # Sürüm bilgisi (derleme sırasında ortamdan verilir; yoksa destek ekranı "geliştirme" gösterir).
     app_surum: str = ""
@@ -40,6 +44,10 @@ class Settings(BaseSettings):
     @property
     def push_etkin(self) -> bool:
         return bool(self.vapid_public_key and self.vapid_private_key and self.vapid_subject)
+
+    @property
+    def whatsapp_etkin(self) -> bool:
+        return bool(self.evolution_url and self.evolution_api_key)
 
     @property
     def cors_origin_list(self) -> list[str]:

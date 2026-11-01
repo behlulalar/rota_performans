@@ -56,6 +56,35 @@ services:
       redis:
         condition: service_healthy
 
+  # WhatsApp bağlantısı (Evolution API). Yalnız backend konuşur; port yalnız yerelde, hata ayıklama için açık.
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7
+    restart: unless-stopped
+    environment:
+      SERVER_URL: http://evolution:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-rota-dev-evolution-anahtari}
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://rota:rota_dev_sifre@db:5432/evolution?schema=evolution_api
+      DATABASE_CONNECTION_CLIENT_NAME: rota
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_LOCAL_ENABLED: "false"
+      CONFIG_SESSION_PHONE_CLIENT: Rota Performans
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      QRCODE_LIMIT: "30"
+      QRCODE_COLOR: "#000000"
+      LOG_LEVEL: ERROR,WARN
+    ports:
+      - "127.0.0.1:8180:8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   frontend:
     image: node:22-alpine
     working_dir: /app
@@ -72,4 +101,5 @@ services:
 
 volumes:
   dbdata:
+  evolution_instances:
   frontend_node_modules:

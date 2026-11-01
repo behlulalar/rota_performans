@@ -20,6 +20,7 @@ from app.api import (
     raporlar,
     saglik,
     veli,
+    whatsapp,
 )
 from app.config import settings
 
@@ -72,3 +73,4 @@ app.include_router(duyurular.router)
 app.include_router(denetim.router)
 app.include_router(destek.router)
 app.include_router(ayarlar.router)
+app.include_router(whatsapp.router)

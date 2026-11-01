@@ -104,7 +104,7 @@ async def sistem_durumu(
         isci=isci,
         bildirim_kuyrugu=kuyruk,
         push_yapilandirildi=settings.push_etkin,
-        whatsapp_yapilandirildi=False,  # WhatsApp gönderimi henüz yapılandırılabilir değil
+        whatsapp_yapilandirildi=settings.whatsapp_etkin,
     )
 
 
