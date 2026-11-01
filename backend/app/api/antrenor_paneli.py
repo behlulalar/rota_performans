@@ -1,4 +1,4 @@
-"""Antrenör paneli: bugünün dersleri ve kendi profili. Yalnız antrenör rolü; yöneticinin kendi ekranları vardır."""
+"""Antrenör paneli: bugünün dersleri, kendi öğrencilerinin devamı ve kendi profili. Yalnız antrenör rolü; yöneticinin kendi ekranları vardır."""
 from datetime import timedelta
 from zoneinfo import ZoneInfo
 
@@ -10,10 +10,11 @@ from app import audit
 from app import telefon as telefon_modulu
 from app.api.oturumlar import _antrenor_kosulu, _kendi_antrenor_kaydi, _ozetler
 from app.config import settings
+from app.devam import grup_devamlari
 from app.db import get_session
 from app.deps import rol_gerekli
 from app.models.kullanici import Kullanici, Rol
-from app.models.program import DersOturumu, OturumDurum, TelafiPlani
+from app.models.program import DersOturumu, Grup, OturumDurum, TelafiPlani
 from app.models.yoklama import Yoklama
 from app.oturumlar import bugun, simdi, yoklama_acilis_zamani
 from app.schemas.antrenor_paneli import (
@@ -23,6 +24,7 @@ from app.schemas.antrenor_paneli import (
     BugunOzet,
     BugunYanit,
 )
+from app.schemas.devam import GrupDevami
 from app.schemas.oturum import OturumOzet
 
 router = APIRouter(prefix="/api/antrenor", tags=["antrenor-paneli"])
@@ -119,6 +121,16 @@ async def bugun_dersleri(kullanici: Kullanici = Antrenor_, session: AsyncSession
 async def _profil(session: AsyncSession, kullanici: Kullanici) -> AntrenorProfil:
     antrenor = await _kendi_antrenor_kaydi(session, kullanici)
     return AntrenorProfil(ad_soyad=antrenor.ad_soyad, telefon=antrenor.telefon, giris=kullanici.giris)
+
+
+@router.get("/ogrencilerim", response_model=list[GrupDevami])
+async def ogrencilerim(kullanici: Kullanici = Antrenor_, session: AsyncSession = Depends(get_session)):
+    """Antrenörün sorumlu olduğu aktif grupların öğrencileri ve devam özetleri."""
+    antrenor = await _kendi_antrenor_kaydi(session, kullanici)
+    gruplar = (
+        await session.execute(select(Grup).where(Grup.antrenor_id == antrenor.id, Grup.aktif.is_(True)).order_by(Grup.ad))
+    ).scalars().all()
+    return await grup_devamlari(session, list(gruplar), bugun())
 
 
 @router.get("/profil", response_model=AntrenorProfil)

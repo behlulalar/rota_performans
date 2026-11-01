@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { grupGetir, grupGuncelle, ogrenciCikar, ogrenciEkle, type GrupDetay as Detay } from "../api/grup";
 import { ogrencileriGetir, type OgrenciOzet } from "../api/ogrenci";
+import { grupDevamGetir, type DevamOzeti } from "../api/devam";
+import { DevamKisa } from "../components/DevamOzeti";
 import DolulukCubugu from "../components/DolulukCubugu";
 import OgrenciFoto from "../components/OgrenciFoto";
 import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
@@ -33,6 +35,14 @@ export default function GrupDetay() {
       iptal = true;
     };
   }, [id]);
+
+  // Üye listesi değişince (ekle/çıkar) devam özetleri yeniden alınır.
+  const [devam, setDevam] = useState<Map<string, DevamOzeti>>(new Map());
+  const uyeAnahtari = g?.ogrenciler.map((o) => o.id).join(",") ?? "";
+  useEffect(() => {
+    if (!id) return;
+    grupDevamGetir(id).then((v) => setDevam(new Map(v.ogrenciler.map((s) => [s.ogrenci_id, s.devam]))), () => {});
+  }, [id, uyeAnahtari]);
 
   useEffect(() => {
     const q = arama.trim();
@@ -142,6 +152,7 @@ export default function GrupDetay() {
                 <div className="min-w-0 flex-1">
                   <Link to={`/ogrenciler/${o.id}`} className="font-medium hover:text-altin-metin">{o.ad} {o.soyad}</Link>
                   <div className="num text-xs text-metin-soluk">{o.yas} yaş · Katılım: {tarihBicimle(o.katilim_baslangic)}</div>
+                  {devam.get(o.id) && <div className="mt-1"><DevamKisa d={devam.get(o.id)!} /></div>}
                 </div>
                 <button className={dugme} disabled={mesgul} onClick={() => void cikar(o.id, `${o.ad} ${o.soyad}`)}>Gruptan çıkar</button>
               </li>

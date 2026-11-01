@@ -8,7 +8,7 @@ test.describe("Yoklama", () => {
 
     await arayuzdenGiris(page, o.antrenor.giris, o.antrenor.sifre);
     await expect(page).toHaveURL(/\/bugun$/);
-    await expect(page.getByRole("link", { name: "Öğrenciler" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Öğrenciler", exact: true })).toHaveCount(0);
     await page.getByRole("navigation", { name: "Ana menü" }).getByRole("link", { name: "Takvim" }).click();
     await expect(page).toHaveURL(/\/takvim$/);
 

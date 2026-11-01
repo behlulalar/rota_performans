@@ -82,6 +82,7 @@ export const ANTRENOR_MENUSU: MenuBolumu[] = [
     ogeler: [
       { ad: "Bugün", simge: "bugun", yol: "/bugun" },
       TAKVIM,
+      { ad: "Öğrencilerim", simge: "grup", yol: "/ogrencilerim" },
       { ad: "Profilim", simge: "kayit", yol: "/profilim" },
     ],
   },

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import audit, ders_hakki, kimlik
 from app import telefon as telefon_modulu
 from app.db import get_session
+from app.devam import devam_ozetleri
 from app.depolama import depolama
 from app.deps import kimlik_yetkisi, rol_gerekli
 from app.api.antrenorler import _giris_hazirla, _oturumlari_iptal_et, cakisma_denetle, gecici_sifre_uret
@@ -48,6 +49,8 @@ from app.schemas.ogrenci import (
 )
 from app.schemas.antrenor import SifreSifirlaYanit
 from app.schemas.oturum import DersHakkiYanit, DuzeltmeGirdi, HareketOturum, HareketYanit
+from app.oturumlar import bugun as kulup_bugunu
+from app.schemas.devam import DevamOzeti
 from app.security import sifre_ozeti
 
 router = APIRouter(prefix="/api/ogrenciler", tags=["ogrenciler"])
@@ -622,6 +625,13 @@ async def kimlik_getir(
     )
     await session.commit()
     return KimlikYanit(kimlik_no=no)
+
+
+
+@router.get("/{ogrenci_id}/devam", response_model=DevamOzeti)
+async def devam_getir(ogrenci_id: uuid.UUID, _: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
+    await _ogrenci_al(session, ogrenci_id)
+    return (await devam_ozetleri(session, [ogrenci_id], kulup_bugunu()))[ogrenci_id]
 
 
 def _foto_isle(veri: bytes) -> tuple[bytes, bytes]:

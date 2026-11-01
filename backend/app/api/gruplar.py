@@ -8,12 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
 from app.db import get_session
+from app.devam import grup_devamlari
 from app.deps import rol_gerekli
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import Ogrenci, OgrenciDurum
 from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
 from app.models.yoklama import Yoklama
 from app.oturumlar import URETIM_GUN, bugun, oturumlari_uret
+from app.schemas.devam import GrupDevami
 from app.schemas.grup import (
     GrupAntrenor,
     GrupDetay,
@@ -183,6 +185,12 @@ async def olustur(
 async def getir(grup_id: uuid.UUID, _: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
     await _grup_al(session, grup_id)
     return await _detay(session, grup_id)
+
+
+@router.get("/{grup_id}/devam", response_model=GrupDevami)
+async def devam(grup_id: uuid.UUID, _: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
+    grup = await _grup_al(session, grup_id)
+    return (await grup_devamlari(session, [grup], bugun()))[0]
 
 
 @router.patch("/{grup_id}", response_model=GrupDetay)

@@ -5,6 +5,8 @@ import { aktifEt, fotoSil, fotoYukle, hesapAc, hesapKaldir, hesapSifreSifirla, k
 import { gruplariGetir, ogrenciEkle, type GrupOzet } from "../api/grup";
 import GeciciSifreKutusu from "../components/GeciciSifreKutusu";
 import DersHakki from "../components/DersHakki";
+import DevamOzeti from "../components/DevamOzeti";
+import { ogrenciDevamGetir, type DevamOzeti as DevamVeri } from "../api/devam";
 import OgrenciPaketleri from "../components/OgrenciPaketleri";
 import ResitGecisi from "../components/ResitGecisi";
 import DurumRozeti from "../components/DurumRozeti";
@@ -29,6 +31,7 @@ const RIZA_ADI: Record<RizaTur, string> = {
 export default function OgrenciDetay() {
   const onayla = useOnay();
   const { kullanici } = useAuth();
+  const [devam, setDevam] = useState<DevamVeri | null>(null);
   const { id } = useParams();
   const konum = useLocation();
   const git = useNavigate();
@@ -47,6 +50,11 @@ export default function OgrenciDetay() {
   const [sifre, setSifre] = useState<{ baslik: string; deger: string; giris?: string; telefon?: string | null } | null>(null);
   const [hesapBilgi, setHesapBilgi] = useState<string | null>(null);
   const [resitAcik, setResitAcik] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    ogrenciDevamGetir(id).then(setDevam, () => {});
+  }, [id, hakSurum]);
 
   useEffect(() => {
     if (!id) return;
@@ -234,6 +242,10 @@ export default function OgrenciDetay() {
             <dt className="text-metin-soluk">Kayıt tarihi</dt><dd className="num">{tarihBicimle(o.kayit_tarihi)}</dd>
           </dl>
         </div>
+      </Kart>
+
+      <Kart baslik="Devam özeti" aciklama="Yoklaması alınmış derslere göre">
+        {devam ? <DevamOzeti d={devam} /> : <p className="text-sm text-metin-soluk">Yükleniyor…</p>}
       </Kart>
 
       <DersHakki key={hakSurum} ogrenci={o} onYenile={setO} />

@@ -30,6 +30,7 @@ import OdemeListe from "./pages/OdemeListe";
 import PaketListe from "./pages/PaketListe";
 import AntrenorBugun from "./pages/AntrenorBugun";
 import AntrenorProfil from "./pages/AntrenorProfil";
+import AntrenorOgrencilerim from "./pages/AntrenorOgrencilerim";
 import AntrenorYerlesim from "./components/AntrenorYerlesim";
 import Takvim from "./pages/Takvim";
 import VeliAna from "./pages/VeliAna";
@@ -116,6 +117,7 @@ export default function App() {
           <Route path="/" element={<KorumaliRota />} />
           <Route element={<AntrenorRota />}>
             <Route path="/bugun" element={<AntrenorBugun />} />
+            <Route path="/ogrencilerim" element={<AntrenorOgrencilerim />} />
             <Route path="/profilim" element={<AntrenorProfil />} />
           </Route>
           <Route element={<TakvimRota />}>
