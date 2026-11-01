@@ -17,7 +17,7 @@ export type GelirRaporu = {
     ucretsiz_paket_adedi: number;
   };
   bekleyen: { adet: number; tutar: string | null; gecikmis_adet: number; gecikmis_tutar: string | null };
-  yontem_dagilimi: { yontem: OdemeYontemi; tutar: string | null; adet: number; yuzde: number | string }[];
+  yontem_dagilimi: { yontem: OdemeYontemi; tutar: string | null; adet: number; yuzde: number | string | null }[];
   paket_dagilimi: { paket_adi: string; tutar: string | null; adet: number }[];
   gunluk: { tarih: string; tutar: string | null; adet: number }[];
   aylik_seri: { yil: number; ay: number; tutar: string | null; adet: number }[];

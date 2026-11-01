@@ -38,7 +38,7 @@ class GelirYontem(BaseModel):
     yontem: OdemeYontemi
     tutar: GizliTutar
     adet: int
-    yuzde: float
+    yuzde: Annotated[float | None, GIZLI_TUTAR]
 
 
 class GelirPaket(BaseModel):

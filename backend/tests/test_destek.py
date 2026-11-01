@@ -571,3 +571,14 @@ async def test_destek_tam_kimlik_numarasini_goremez(istemci):
     async with SessionLocal() as s:
         assert not (await s.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "kimlik_goruntulendi"))).scalars().all()
     assert (await istemci.get(f"/api/ogrenciler/{oid}/kimlik", headers=admin)).status_code == 200
+
+
+async def test_destek_odeme_yontemi_oranlarini_goremez(istemci):
+    admin = await giris(istemci, "yonetici@kulup.com", Rol.admin)
+    await _finans_verisi(istemci, admin)
+    destek = await destek_baslik(istemci)
+    y = await istemci.get("/api/raporlar/gelir", headers=destek)
+    assert y.status_code == 200 and y.json()["yontem_dagilimi"]
+    assert all(d["yuzde"] is None and d["adet"] >= 1 for d in y.json()["yontem_dagilimi"])
+    y = await istemci.get("/api/raporlar/gelir", headers=admin)
+    assert all(d["yuzde"] is not None for d in y.json()["yontem_dagilimi"])

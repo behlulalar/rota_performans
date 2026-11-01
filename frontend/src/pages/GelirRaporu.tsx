@@ -11,7 +11,7 @@ import { dugme, rozetBasari, rozetHata, rozetNotr } from "../lib/stil";
 const ayAdi = (yil: number, ay: number) => new Date(yil, ay - 1, 1).toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
 const kisaAy = (ay: number) => new Date(2000, ay - 1, 1).toLocaleDateString("tr-TR", { month: "short" });
 const sayi = (d: string | number | null) => Number(d) || 0;
-const yuzdeYaz = (d: number | string) => `%${sayi(d).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`;
+const yuzdeYaz = (d: number | string | null) => `%${sayi(d ?? 0).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`;
 
 const kpiKutu = "bg-yuzey border border-cizgi rounded-[14px] p-5 min-w-0";
 const kpiEtiket = "text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk";
@@ -259,7 +259,7 @@ export default function GelirRaporu() {
                             <span className="num">{paraBicimle(d.tutar)} <span className="text-metin-soluk">· {yuzdeYaz(d.yuzde)}</span></span>
                           </div>
                           <div className="h-2 rounded-full bg-yuzey-yuksek mt-1.5" role="img" aria-label={`${YONTEM_ETIKET[d.yontem]} ${yuzdeYaz(d.yuzde)}`}>
-                            <div className="h-full rounded-full bg-altin" style={{ width: `${Math.min(100, Math.max(2, sayi(d.yuzde)))}%` }} />
+                            <div className="h-full rounded-full bg-altin" style={{ width: `${Math.min(100, Math.max(2, sayi(d.yuzde ?? 0)))}%` }} />
                           </div>
                         </li>
                       ))}
