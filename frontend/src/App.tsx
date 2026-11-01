@@ -35,6 +35,7 @@ import Takvim from "./pages/Takvim";
 import VeliAna from "./pages/VeliAna";
 import VeliCocuk from "./pages/VeliCocuk";
 import VeliProfil from "./pages/VeliProfil";
+import VeliIletisim from "./pages/VeliIletisim";
 import VeliYerlesim from "./components/VeliYerlesim";
 import Yoklama from "./pages/Yoklama";
 
@@ -125,6 +126,7 @@ export default function App() {
             <Route path="/panel" element={<VeliAna />} />
             <Route path="/panel/cocuk/:id" element={<VeliCocuk />} />
             <Route path="/profil" element={<VeliProfil />} />
+            <Route path="/iletisim" element={<VeliIletisim />} />
           </Route>
           <Route element={<YoneticiRota />}>
             <Route path="/genel-bakis" element={<GenelBakis />} />

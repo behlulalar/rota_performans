@@ -10,6 +10,15 @@ class AyarYaniti(BaseModel):
     azaldi_esigi: int
 
 
+class KulupIletisim(BaseModel):
+    """Velilerin "Bize ulaşın" sayfası: ayarların yalnız iletişim kısmı."""
+
+    ad: str
+    telefon: str | None
+    eposta: str | None
+    adres: str | None
+
+
 class AyarGuncelle(BaseModel):
     """Kısmi güncelleme: gönderilmeyen alan değişmez. Boş telefon/e-posta/adres değeri siler."""
 

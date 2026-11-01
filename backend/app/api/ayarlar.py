@@ -1,4 +1,5 @@
-"""Kulüp ayarları (yalnız yönetici): kulüp bilgileri ve bildirim süreleri. Tek satır, yoksa varsayılanlar."""
+"""Kulüp ayarları (yönetici): kulüp bilgileri ve bildirim süreleri. Tek satır, yoksa varsayılanlar.
+İletişim bilgileri her giriş yapmış kullanıcıya açıktır (velinin "Bize ulaşın" sayfası)."""
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -8,10 +9,10 @@ from app import audit
 from app import telefon as telefon_modulu
 from app.bildirim import AZALDI_ESIGI, GERI_ALMA_SURESI
 from app.db import get_session
-from app.deps import rol_gerekli
+from app.deps import aktif_kullanici, rol_gerekli
 from app.models.ayarlar import KulupAyari
 from app.models.kullanici import Kullanici, Rol
-from app.schemas.ayarlar import AyarGuncelle, AyarYaniti
+from app.schemas.ayarlar import AyarGuncelle, AyarYaniti, KulupIletisim
 
 router = APIRouter(prefix="/api/ayarlar", tags=["ayarlar"])
 
@@ -36,6 +37,11 @@ def _yanit(a: KulupAyari | None) -> AyarYaniti:
 
 @router.get("", response_model=AyarYaniti)
 async def getir(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
+    return _yanit(await session.get(KulupAyari, 1))
+
+
+@router.get("/iletisim", response_model=KulupIletisim)
+async def iletisim(_: Kullanici = Depends(aktif_kullanici), session: AsyncSession = Depends(get_session)):
     return _yanit(await session.get(KulupAyari, 1))
 
 

@@ -12,3 +12,6 @@ export type Ayarlar = {
 export const ayarlariGetir = () => api<Ayarlar>("/api/ayarlar");
 export const ayarlariGuncelle = (g: Partial<Ayarlar>) =>
   api<Ayarlar>("/api/ayarlar", { method: "PUT", body: JSON.stringify(g) });
+
+export type KulupIletisim = Pick<Ayarlar, "ad" | "telefon" | "eposta" | "adres">;
+export const iletisimGetir = () => api<KulupIletisim>("/api/ayarlar/iletisim");

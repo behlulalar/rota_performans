@@ -109,6 +109,7 @@ export const VELI_MENUSU: MenuBolumu[] = [
     ogeler: [
       { ad: "Ana sayfa", simge: "genel", yol: "/panel" },
       { ad: "Profil", simge: "kayit", yol: "/profil" },
+      { ad: "Bize ulaşın", simge: "telefon", yol: "/iletisim" },
     ],
   },
 ];

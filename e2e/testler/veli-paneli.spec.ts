@@ -128,4 +128,40 @@ test.describe("Veli paneli", () => {
     await page.goto("/ogrenciler");
     await expect(page).toHaveURL(/\/panel\/cocuk\//);
   });
+  test("veli Bize ulaşın sayfasında kulübü arar, yazar ve haritada bulur", async ({ page }) => {
+    const token = await yoneticiApiGirisi(page);
+    const kulup = await page.request.put("/api/ayarlar", {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { telefon: "0532 123 45 67", eposta: "bilgi@rotaperformans.com", adres: "Atatürk Cad. No:1, Çankaya / Ankara" },
+    });
+    expect(kulup.status(), await kulup.text()).toBe(200);
+    const ogr = await ogrenciOlusturAPI(page, token, "Iletisim");
+    const gecici = await veliHesabiAc(page, token, ogr.id);
+
+    await page.context().clearCookies();
+    await arayuzdenGiris(page, telefonBosluklu(ogr.telefon), gecici);
+    await zorunluSifreyiBelirle(page, gecici);
+
+    await page.getByRole("link", { name: "Bize ulaşın" }).first().click();
+    await expect(page).toHaveURL(/\/iletisim$/);
+    await expect(page.getByRole("heading", { name: "Bize ulaşın" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Telefon/ })).toHaveAttribute("href", "tel:+905321234567");
+    await expect(page.getByRole("link", { name: /WhatsApp/ })).toHaveAttribute("href", "https://wa.me/905321234567");
+    await expect(page.getByRole("link", { name: /E-posta/ })).toHaveAttribute("href", "mailto:bilgi@rotaperformans.com");
+    await expect(page.getByRole("link", { name: /Adres/ })).toHaveAttribute("href", /google\.com\/maps.*Ankara/);
+    await expect(page.getByText("+90 532 123 45 67").first()).toBeVisible();
+
+    const klasor = process.env.EKRAN_KLASORU;
+    if (klasor) {
+      for (const [ad, en, boy] of [["masaustu", 1280, 800], ["telefon", 390, 844]] as const) {
+        await page.setViewportSize({ width: en, height: boy });
+        for (const tema of ["light", "dark"] as const) {
+          await page.evaluate((t) => localStorage.setItem("rota-tema-2", t), tema);
+          await page.reload();
+          await expect(page.getByRole("heading", { name: "Bize ulaşın" })).toBeVisible();
+          await page.screenshot({ path: `${klasor}/iletisim-${ad}-${tema}.png` });
+        }
+      }
+    }
+  });
 });

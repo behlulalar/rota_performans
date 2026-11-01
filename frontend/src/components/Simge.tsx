@@ -22,6 +22,10 @@ const YOLLAR = {
   denetim: "M4 2.5h10v13H4zM6.5 6h5M6.5 9h5M6.5 12h3",
   durum: "M2 9h3.2l2-5.5 3.2 11 2-5.5H16",
   odeme: "M2.5 5h13v9h-13zM2.5 8h13M5 11.5h3",
+  telefon: "M4 2.5h2.5l1.2 3.2-1.6 1.1a8 8 0 0 0 4.1 4.1l1.1-1.6 3.2 1.2V13a1.5 1.5 0 0 1-1.6 1.5A11 11 0 0 1 2.5 4.1 1.5 1.5 0 0 1 4 2.5z",
+  eposta: "M2.5 4.5h13v9h-13zM2.5 5l6.5 5 6.5-5",
+  ileri: "M7 4.5 11.5 9 7 13.5",
+  konum: "M9 16s5-4.6 5-8.5a5 5 0 0 0-10 0C4 11.4 9 16 9 16zM9 9.3a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6z",
 } as const;
 
 export type SimgeAdi = keyof typeof YOLLAR;

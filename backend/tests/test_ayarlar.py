@@ -88,3 +88,13 @@ async def test_varsayilan_esik_ayarsiz_calisir():
     async with SessionLocal() as s:
         assert await s.get(KulupAyari, 1) is None
         assert await bsvc.ayarlari_oku(s) == (bsvc.GERI_ALMA_SURESI, bsvc.AZALDI_ESIGI)
+
+
+async def test_iletisim_her_girisli_kullaniciya_acik(istemci, yonetici):
+    await istemci.put(URL, headers=yonetici, json={"telefon": "0532 123 45 67", "eposta": "bilgi@kulup.com", "adres": "Ankara"})
+    beklenen = {"ad": "Rota Performans Akademi", "telefon": "+905321234567", "eposta": "bilgi@kulup.com", "adres": "Ankara"}
+    for rol, eposta in ((Rol.antrenor, "a@kulup.com"), (Rol.veli, "v@kulup.com")):
+        baslik = await giris(istemci, eposta, rol)
+        r = await istemci.get(f"{URL}/iletisim", headers=baslik)
+        assert r.status_code == 200 and r.json() == beklenen
+    assert (await istemci.get(f"{URL}/iletisim")).status_code == 401
