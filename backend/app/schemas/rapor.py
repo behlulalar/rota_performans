@@ -16,10 +16,18 @@ class RaporDonem(BaseModel):
 
 
 class GelirOzeti(BaseModel):
+    """`toplam_tahsilat` yalnız öğrenci ödemeleri; `net_gelir` = tahsilat + manuel gelir − manuel gider.
+    `onceki_ay_net` ve `degisim_yuzde` net gelire göredir."""
+
     toplam_tahsilat: GizliTutar
     odeme_adedi: int
     ortalama_odeme: GizliTutar
+    manuel_gelir: GizliTutar
+    manuel_gider: GizliTutar
+    manuel_adedi: int
+    net_gelir: GizliTutar
     onceki_ay_tahsilat: GizliTutar
+    onceki_ay_net: GizliTutar
     degisim_yuzde: Annotated[float | None, GIZLI_TUTAR]
     iptal_edilen_tutar: GizliTutar
     iptal_adedi: int
@@ -48,12 +56,16 @@ class GelirPaket(BaseModel):
 
 
 class GelirGun(BaseModel):
+    """`tutar` o günün net geliri (ödemeler + manuel gelir − manuel gider)."""
+
     tarih: date
     tutar: GizliTutar
     adet: int
 
 
 class GelirAy(BaseModel):
+    """`tutar` o ayın net geliri."""
+
     yil: int
     ay: int
     tutar: GizliTutar

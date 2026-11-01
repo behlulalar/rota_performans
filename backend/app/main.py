@@ -11,6 +11,7 @@ from app.api import (
     antrenorler,
     yoneticiler,
     auth,
+    manuel_kayitlar,
     genel_bakis,
     gruplar,
     odemeler,
@@ -74,3 +75,4 @@ app.include_router(denetim.router)
 app.include_router(destek.router)
 app.include_router(ayarlar.router)
 app.include_router(whatsapp.router)
+app.include_router(manuel_kayitlar.router)

@@ -95,8 +95,9 @@ async def test_bos_donem(istemci, yonetici):
     j = r.json()
     assert j["donem"] == {"yil": 2026, "ay": 2, "baslangic": "2026-02-01", "bitis": "2026-02-28"}
     assert j["ozet"] == {
-        "toplam_tahsilat": "0.00", "odeme_adedi": 0, "ortalama_odeme": "0.00", "onceki_ay_tahsilat": "0.00",
-        "degisim_yuzde": None, "iptal_edilen_tutar": "0.00", "iptal_adedi": 0, "indirim_toplami": "0.00",
+        "toplam_tahsilat": "0.00", "odeme_adedi": 0, "ortalama_odeme": "0.00", "manuel_gelir": "0.00",
+        "manuel_gider": "0.00", "manuel_adedi": 0, "net_gelir": "0.00", "onceki_ay_tahsilat": "0.00",
+        "onceki_ay_net": "0.00", "degisim_yuzde": None, "iptal_edilen_tutar": "0.00", "iptal_adedi": 0, "indirim_toplami": "0.00",
         "ucretsiz_paket_adedi": 0,
     }
     assert j["bekleyen"] == {"adet": 0, "tutar": "0.00", "gecikmis_adet": 0, "gecikmis_tutar": "0.00"}

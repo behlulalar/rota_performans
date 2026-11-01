@@ -9,7 +9,12 @@ export type GelirRaporu = {
     toplam_tahsilat: string | null;
     odeme_adedi: number;
     ortalama_odeme: string | null;
+    manuel_gelir: string | null;
+    manuel_gider: string | null;
+    manuel_adedi: number;
+    net_gelir: string | null;
     onceki_ay_tahsilat: string | null;
+    onceki_ay_net: string | null;
     degisim_yuzde: number | string | null;
     iptal_edilen_tutar: string | null;
     iptal_adedi: number;

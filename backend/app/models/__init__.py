@@ -3,6 +3,7 @@ from app.models.base import Base
 from app.models.bildirim import Bildirim, BildirimDurum, BildirimKanal, BildirimTercihi, PushAbonelik
 from app.models.duyuru import Duyuru, DuyuruHedefTuru
 from app.models.kullanici import DenetimKaydi, Kullanici, Oturum, Rol
+from app.models.manuel_kayit import ManuelKayit, ManuelKayitTuru
 from app.models.ogrenci import (
     Cinsiyet,
     IletisimKisisi,
@@ -37,6 +38,8 @@ __all__ = [
     "IletisimRolu",
     "KimlikTur",
     "KulupAyari",
+    "ManuelKayit",
+    "ManuelKayitTuru",
     "Kullanici",
     "Odeme",
     "OdemeYontemi",

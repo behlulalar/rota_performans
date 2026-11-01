@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { gelirCsvIndir, gelirRaporuGetir, YONTEM_ETIKET, type GelirRaporu as Rapor } from "../api/rapor";
 import FinansNotu, { useTutarGizli } from "../components/FinansNotu";
 import Kart from "../components/Kart";
+import ManuelKayitlar from "../components/ManuelKayitlar";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { hataMesaji } from "../lib/dogrulama";
 import { paraBicimle } from "../lib/para";
@@ -144,13 +145,13 @@ export default function GelirRaporu() {
     };
   }), [veri, donem]);
 
-  const bos = !!veri && veri.ozet.odeme_adedi === 0;
+  const bos = !!veri && veri.ozet.odeme_adedi === 0 && veri.ozet.manuel_adedi === 0;
   const ayMetni = ayAdi(donem.yil, donem.ay);
   const gunSeciliKayit = veri?.gunluk.find((g) => g.tarih === gunSecili);
 
   return (
     <div className="space-y-6">
-      <SayfaBasligi baslik="Gelir raporu" aciklama={`${ayMetni} · tahsilat, bekleyen alacak ve düzeltmeler`} />
+      <SayfaBasligi baslik="Gelir raporu" aciklama={`${ayMetni} · net gelir, tahsilat, manuel gelir/gider ve bekleyen alacak`} />
       <FinansNotu />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -181,16 +182,21 @@ export default function GelirRaporu() {
       ) : (
         <div className={`space-y-6 ${yukleniyor ? "opacity-60" : ""}`} aria-busy={yukleniyor}>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className={kpiKutu} data-testid="kpi-tahsilat">
-              <div className={kpiEtiket}>Toplam tahsilat</div>
-              <div className={`${kpiDeger} text-altin-metin`}>{paraBicimle(veri.ozet.toplam_tahsilat)}</div>
+            <div className={`${kpiKutu} sm:col-span-2 xl:col-span-1`} data-testid="kpi-net">
+              <div className={kpiEtiket}>Net gelir</div>
+              <div className={`${kpiDeger} ${sayi(veri.ozet.net_gelir) < 0 ? "text-hata" : "text-altin-metin"}`}>{paraBicimle(veri.ozet.net_gelir)}</div>
               {!gizli && <div className="mt-2"><Degisim r={veri} /></div>}
-              {veri.ozet.degisim_yuzde !== null && <div className="num text-xs text-metin-soluk mt-1.5">Önceki ay: {paraBicimle(veri.ozet.onceki_ay_tahsilat)}</div>}
+              {veri.ozet.degisim_yuzde !== null && <div className="num text-xs text-metin-soluk mt-1.5">Önceki ay: {paraBicimle(veri.ozet.onceki_ay_net)}</div>}
+              <dl className="mt-3 pt-3 border-t border-cizgi space-y-1 text-[13px]">
+                <div className="flex justify-between gap-2"><dt className="text-metin-soluk">Öğrenci ödemeleri</dt><dd className="num">{paraBicimle(veri.ozet.toplam_tahsilat)}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-metin-soluk">Manuel gelir</dt><dd className="num text-basari">+{paraBicimle(veri.ozet.manuel_gelir)}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-metin-soluk">Manuel gider</dt><dd className="num text-hata">−{paraBicimle(veri.ozet.manuel_gider)}</dd></div>
+              </dl>
             </div>
-            <div className={kpiKutu} data-testid="kpi-adet">
-              <div className={kpiEtiket}>Ödeme adedi</div>
-              <div className={kpiDeger}>{veri.ozet.odeme_adedi}</div>
-              <div className="num text-xs text-metin-soluk mt-1">Ortalama ödeme: {paraBicimle(veri.ozet.ortalama_odeme)}</div>
+            <div className={kpiKutu} data-testid="kpi-tahsilat">
+              <div className={kpiEtiket}>Öğrenci ödemeleri</div>
+              <div className={kpiDeger}>{paraBicimle(veri.ozet.toplam_tahsilat)}</div>
+              <div className="num text-xs text-metin-soluk mt-1" data-testid="kpi-adet">{veri.ozet.odeme_adedi} ödeme · ortalama {paraBicimle(veri.ozet.ortalama_odeme)}</div>
             </div>
             <div className={kpiKutu} data-testid="kpi-bekleyen">
               <div className={kpiEtiket}>Bekleyen alacak</div>
@@ -217,27 +223,27 @@ export default function GelirRaporu() {
             </Kart>
           ) : (
             <>
-            <Kart baslik="Son 12 ay tahsilat" aciklama="Bir aya tıklayarak o aya geçin">
+            <Kart baslik="Son 12 ay net gelir" aciklama="Bir aya tıklayarak o aya geçin">
               <CubukGrafik
                 cubuklar={aylikCubuklar}
                 secili={`${donem.yil}-${donem.ay}`}
                 onSec={(k) => { const [y, a] = k.split("-").map(Number); setDonem({ yil: y, ay: a }); }}
                 okuma={(c) => c.metin}
               />
-              <table className="sr-only" aria-label="Son 12 ay tahsilat tablosu">
-                <thead><tr><th>Ay</th><th>Tutar</th><th>Ödeme adedi</th></tr></thead>
+              <table className="sr-only" aria-label="Son 12 ay net gelir tablosu">
+                <thead><tr><th>Ay</th><th>Net gelir</th><th>Ödeme adedi</th></tr></thead>
                 <tbody>{veri.aylik_seri.map((a) => <tr key={`${a.yil}-${a.ay}`}><td>{ayAdi(a.yil, a.ay)}</td><td>{paraBicimle(a.tutar)}</td><td>{a.adet}</td></tr>)}</tbody>
               </table>
             </Kart>
 
             {bos ? (
               <Kart>
-                <p className="text-center text-metin-soluk py-6" data-testid="bos-donem">Bu ayda tahsilat yok ({ayMetni}).</p>
+                <p className="text-center text-metin-soluk py-6" data-testid="bos-donem">Bu ayda tahsilat veya manuel kayıt yok ({ayMetni}).</p>
               </Kart>
             ) : (
               <>
                 <Kart
-                  baslik="Günlük tahsilat"
+                  baslik="Günlük net gelir"
                   aciklama={gunSeciliKayit ? <span className="num">{gunSeciliKayit.tarih.slice(8, 10)} {ayMetni}: {paraBicimle(gunSeciliKayit.tutar)} · {gunSeciliKayit.adet} ödeme</span> : `${ayMetni} · bir güne dokunarak tutarını görün`}
                 >
                   <div className="pt-4">
@@ -292,6 +298,7 @@ export default function GelirRaporu() {
             )}
             </>
           )}
+          <ManuelKayitlar yil={donem.yil} ay={donem.ay} gizli={gizli} onDegisti={() => setDeneme((n) => n + 1)} />
         </div>
       )}
     </div>

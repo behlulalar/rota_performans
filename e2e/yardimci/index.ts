@@ -304,7 +304,7 @@ export async function odemeAlAPI(page: Page, token: string, ogrenciPaketiId: str
 export async function gelirRaporuAPI(page: Page, token: string, yil: number, ay: number) {
   const yanit = await page.request.get(`/api/raporlar/gelir?yil=${yil}&ay=${ay}`, { headers: { Authorization: `Bearer ${token}` } });
   expect(yanit.status(), await yanit.text()).toBe(200);
-  return (await yanit.json()) as { ozet: { toplam_tahsilat: string; odeme_adedi: number } };
+  return (await yanit.json()) as { ozet: { toplam_tahsilat: string; odeme_adedi: number; net_gelir: string } };
 }
 
 // --- Teknik destek (şifre + iki adımlı doğrulama) ---
