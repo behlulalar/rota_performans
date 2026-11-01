@@ -1,5 +1,5 @@
 import {
-  arayuzdenGiris, expect, odemeAlAPI, ogrenciOlusturAPI, paketAtaAPI, paketOlusturAPI, telefonBosluklu, test,
+  arayuzdenGiris, benzersiz, expect, odemeAlAPI, ogrenciOlusturAPI, paketAtaAPI, paketOlusturAPI, telefonBosluklu, test,
   yoneticiApiGirisi, zorunluSifreyiBelirle,
 } from "../yardimci";
 
@@ -182,5 +182,51 @@ test.describe("Veli paneli", () => {
         }
       }
     }
+  });
+  test("yaklaşan dersler haftalara ayrılır, ilk iki hafta açık, gerisi düğmeyle açılır", async ({ page }) => {
+    const token = await yoneticiApiGirisi(page);
+    const yetki = { Authorization: `Bearer ${token}` };
+    const k = benzersiz();
+    const a = await page.request.post("/api/antrenorler", { headers: yetki, data: { ad_soyad: `Antrenor ${k}`, giris: `antrenor.${k}@example.com` } });
+    expect(a.status(), await a.text()).toBe(201);
+    const antrenorId = ((await a.json()) as { antrenor: { id: string } }).antrenor.id;
+    const program = [1, 3, 5, 6].map((gun) => ({ gun, baslangic: "17:00", bitis: "18:00" }));
+    const g = await page.request.post("/api/gruplar", { headers: yetki, data: { ad: `Yarış ${k}`, antrenor_id: antrenorId, kontenjan: 10, program } });
+    expect(g.status(), await g.text()).toBe(201);
+    const grupId = ((await g.json()) as { id: string }).id;
+    const ogr = await ogrenciOlusturAPI(page, token, "Yaklasan");
+    expect((await page.request.post(`/api/gruplar/${grupId}/ogrenciler`, { headers: yetki, data: { ogrenci_id: ogr.id } })).ok()).toBeTruthy();
+    const gun = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const bas = new Date();
+    const bit = new Date(bas.getFullYear(), bas.getMonth(), bas.getDate() + 28);
+    const u = await page.request.post("/api/oturumlar/uret", { headers: yetki, data: { baslangic: gun(bas), bitis: gun(bit) } });
+    expect(u.ok(), await u.text()).toBeTruthy();
+    const gecici = await veliHesabiAc(page, token, ogr.id);
+
+    await page.context().clearCookies();
+    await arayuzdenGiris(page, telefonBosluklu(ogr.telefon), gecici);
+    await zorunluSifreyiBelirle(page, gecici);
+    await expect(page).toHaveURL(/\/panel\/cocuk\//);
+
+    const panel = page.getByRole("tabpanel");
+    await expect(panel.getByRole("heading", { name: "Gelecek hafta" })).toBeVisible();
+    const dugme = panel.getByRole("button", { name: /Sonraki haftaları göster \(\d+ ders\)/ });
+    await expect(dugme).toBeVisible();
+    const once = await panel.getByRole("listitem").count();
+    expect(once).toBeLessThanOrEqual(8);
+    const klasor = process.env.EKRAN_KLASORU;
+    for (const [ad, en, boy] of [["masaustu", 1280, 900], ["telefon", 390, 844]] as const) {
+      if (!klasor) break;
+      await page.setViewportSize({ width: en, height: boy });
+      for (const tema of ["light", "dark"] as const) {
+        await page.evaluate((t) => localStorage.setItem("rota-tema-2", t), tema);
+        await page.reload();
+        await expect(dugme).toBeVisible();
+        await page.screenshot({ path: `${klasor}/yaklasan-${ad}-${tema}.png`, fullPage: true });
+      }
+    }
+    await dugme.click();
+    expect(await panel.getByRole("listitem").count()).toBeGreaterThan(once);
+    await expect(panel.getByRole("button", { name: "Daha az göster" })).toBeVisible();
   });
 });

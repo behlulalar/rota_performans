@@ -11,7 +11,7 @@ import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
 import { paraBicimle } from "../lib/para";
 import { GUNLER, saat } from "../lib/program";
 import { dugme, listeSatiri, rozetBasari, rozetBirincil, rozetHata, rozetNotr, rozetUyari, uyariKutusu, hataKutusu } from "../lib/stil";
-import { tarihCoz } from "../lib/tarih";
+import { gunEkle, haftaBasi, kisaTarih, tarihCoz, yyyyAyGun } from "../lib/tarih";
 import { dersMetni } from "./VeliAna";
 
 const TUR_ETIKET: Record<HakTur, string> = {
@@ -67,6 +67,65 @@ function DersSatiri({ d, yoklamaGoster = false }: { d: VeliDers; yoklamaGoster?:
           ))}
       </div>
     </li>
+  );
+}
+
+/** Yaklaşan ders: solda gün kutusu (gün adı + sayı), sağda saat; grup adı yalnız birden çok grup varsa yazılır. */
+function YaklasanSatir({ d, grupGoster }: { d: VeliDers; grupGoster: boolean }) {
+  const t = tarihCoz(d.tarih);
+  return (
+    <li className={`${listeSatiri} py-2.5 flex items-center gap-3.5`}>
+      <div className="w-11 shrink-0 text-center leading-none">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-metin-soluk">{t.toLocaleDateString("tr-TR", { weekday: "short" })}</div>
+        <div className="num font-display text-[20px] mt-1">{t.getDate()}</div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="num text-sm font-medium">{saat(d.baslangic)}–{saat(d.bitis)}</div>
+        {grupGoster && <div className="text-[13px] text-metin-soluk truncate">{d.grup_ad}</div>}
+      </div>
+      {d.telafi_mi && <span className={rozetBirincil}>Telafi</span>}
+    </li>
+  );
+}
+
+const ILK_HAFTA_SAYISI = 2;
+
+/** Dersleri haftalara ayırır; ilk iki hafta açık, gerisi düğmeyle açılır. */
+function YaklasanDersler({ dersler }: { dersler: VeliDers[] }) {
+  const [hepsi, setHepsi] = useState(false);
+  const buHafta = yyyyAyGun(haftaBasi(new Date()));
+  const grupGoster = new Set(dersler.map((d) => d.grup_ad)).size > 1;
+  const haftalar = new Map<string, VeliDers[]>();
+  for (const d of dersler) {
+    const h = yyyyAyGun(haftaBasi(tarihCoz(d.tarih)));
+    haftalar.set(h, [...(haftalar.get(h) ?? []), d]);
+  }
+  const liste = [...haftalar.entries()];
+  const gorunen = hepsi ? liste : liste.slice(0, ILK_HAFTA_SAYISI);
+  const gizliDers = liste.slice(ILK_HAFTA_SAYISI).reduce((n, [, ds]) => n + ds.length, 0);
+  const haftaAdi = (h: string) => {
+    if (h === buHafta) return "Bu hafta";
+    if (h === yyyyAyGun(gunEkle(tarihCoz(buHafta), 7))) return "Gelecek hafta";
+    const bas = tarihCoz(h);
+    return `${kisaTarih(bas)} – ${kisaTarih(gunEkle(bas, 6))}`;
+  };
+  return (
+    <div className="px-6 pb-4">
+      {gorunen.map(([h, ds]) => (
+        <section key={h} className="mt-2 first:mt-0">
+          <h3 className="pt-3 pb-1 flex items-baseline justify-between text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk">
+            <span>{haftaAdi(h)}</span>
+            <span className="num normal-case tracking-normal font-normal">{ds.length} ders</span>
+          </h3>
+          <ul>{ds.map((d) => <YaklasanSatir key={d.oturum_id} d={d} grupGoster={grupGoster || d.telafi_mi} />)}</ul>
+        </section>
+      ))}
+      {gizliDers > 0 && (
+        <button type="button" className={`${dugme} w-full mt-3`} onClick={() => setHepsi((v) => !v)} aria-expanded={hepsi}>
+          {hepsi ? "Daha az göster" : `Sonraki haftaları göster (${gizliDers} ders)`}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -226,11 +285,7 @@ export default function VeliCocuk() {
             {c.yaklasan_dersler.length === 0 ? (
               <p className="px-6 pb-6 text-sm text-metin-soluk">Planlanmış yaklaşan ders yok.</p>
             ) : (
-              <ul className="px-6 pb-3">
-                {c.yaklasan_dersler.map((d) => (
-                  <DersSatiri key={d.oturum_id} d={d} />
-                ))}
-              </ul>
+              <YaklasanDersler dersler={c.yaklasan_dersler} />
             )}
           </Kart>
         )}
