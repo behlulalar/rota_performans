@@ -16,7 +16,7 @@ async def test_satir_yokken_varsayilanlar(istemci, yonetici):
     r = await istemci.get(URL, headers=yonetici)
     assert r.status_code == 200
     assert r.json() == {
-        "ad": "Rota Performans Akademi", "telefon": None, "eposta": None, "adres": None,
+        "ad": "Rota Performans Akademi", "telefon": None, "eposta": None, "adres": None, "instagram": None,
         "geri_alma_dakika": 3, "azaldi_esigi": 2,
     }
 
@@ -30,7 +30,7 @@ async def test_kismi_ve_tam_guncelleme(istemci, yonetici):
         "ad": " Yeni Ad ", "telefon": "", "eposta": "bilgi@kulup.com", "adres": "Ankara", "azaldi_esigi": 4,
     })
     j = r.json()
-    assert j == {"ad": "Yeni Ad", "telefon": None, "eposta": "bilgi@kulup.com", "adres": "Ankara",
+    assert j == {"ad": "Yeni Ad", "telefon": None, "eposta": "bilgi@kulup.com", "adres": "Ankara", "instagram": None,
                  "geri_alma_dakika": 7, "azaldi_esigi": 4}
     assert (await istemci.get(URL, headers=yonetici)).json() == j
 
@@ -92,9 +92,23 @@ async def test_varsayilan_esik_ayarsiz_calisir():
 
 async def test_iletisim_her_girisli_kullaniciya_acik(istemci, yonetici):
     await istemci.put(URL, headers=yonetici, json={"telefon": "0532 123 45 67", "eposta": "bilgi@kulup.com", "adres": "Ankara"})
-    beklenen = {"ad": "Rota Performans Akademi", "telefon": "+905321234567", "eposta": "bilgi@kulup.com", "adres": "Ankara"}
+    beklenen = {"ad": "Rota Performans Akademi", "telefon": "+905321234567", "eposta": "bilgi@kulup.com", "adres": "Ankara",
+                "instagram": None}
     for rol, eposta in ((Rol.antrenor, "a@kulup.com"), (Rol.veli, "v@kulup.com")):
         baslik = await giris(istemci, eposta, rol)
         r = await istemci.get(f"{URL}/iletisim", headers=baslik)
         assert r.status_code == 200 and r.json() == beklenen
     assert (await istemci.get(f"{URL}/iletisim")).status_code == 401
+
+
+async def test_instagram_normalize_ve_tanitim(istemci, yonetici):
+    assert (await istemci.get(f"{URL}/tanitim")).json() == {"ad": "Rota Performans Akademi", "instagram": None}
+    for girdi in ("rotaperformans", "@rotaperformans", "https://www.instagram.com/rotaperformans/?hl=tr", "instagram.com/rotaperformans"):
+        r = await istemci.put(URL, headers=yonetici, json={"instagram": girdi})
+        assert r.status_code == 200 and r.json()["instagram"] == "rotaperformans", girdi
+    for girdi in ("rota performans", "https://example.com/rota", "a" * 31):
+        assert (await istemci.put(URL, headers=yonetici, json={"instagram": girdi})).status_code == 422, girdi
+    # Oturumsuz uç yalnız ad ve Instagram'ı verir.
+    await istemci.put(URL, headers=yonetici, json={"telefon": "0532 123 45 67"})
+    assert (await istemci.get(f"{URL}/tanitim")).json() == {"ad": "Rota Performans Akademi", "instagram": "rotaperformans"}
+    assert (await istemci.put(URL, headers=yonetici, json={"instagram": ""})).json()["instagram"] is None

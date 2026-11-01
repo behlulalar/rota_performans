@@ -1,7 +1,9 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { tanitimGetir } from "../api/ayarlar";
 import BeniHatirla from "../components/BeniHatirla";
+import InstagramTakip from "../components/InstagramTakip";
 import Karsilama from "../components/Karsilama";
 import { ApiHata } from "../lib/api";
 import { PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
@@ -42,6 +44,11 @@ export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
   };
   const [hatirlanan, setHatirlanan] = useState(panelHesabi);
   const [beniHatirla, setBeniHatirla] = useState(() => (panelHesabi() ? true : varsayilanHatirla()));
+  // Instagram yalnız veli girişinde gösterilir; yüklenemezse sessizce gizli kalır.
+  const [instagram, setInstagram] = useState<string | null>(null);
+  useEffect(() => {
+    if (panel === "veli") tanitimGetir().then((t) => setInstagram(t.instagram), () => {});
+  }, [panel]);
 
   // Başka panelin hesabıyla açık oturum varken bu panelin giriş sayfası form gösterir (hesap değiştirmek için).
   if (kullanici && rolPaneli(kullanici.rol) === panel) return <Navigate to="/" replace />;
@@ -69,7 +76,7 @@ export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
   }
 
   return (
-    <Karsilama baslik={BASLIK[panel].karsilama} aciklama={BASLIK[panel].ipucu}>
+    <Karsilama baslik={BASLIK[panel].karsilama} aciklama={BASLIK[panel].ipucu} alt={<InstagramTakip kullanici={instagram} sade />}>
       <div>
         <h2 className="mb-3 font-display text-[19px]">{BASLIK[panel].baslik}</h2>
         {hatirlanan ? (

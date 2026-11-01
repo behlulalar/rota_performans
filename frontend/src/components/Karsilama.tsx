@@ -6,10 +6,13 @@ import TemaDugmesi from "./TemaDugmesi";
 export default function Karsilama({
   baslik,
   aciklama,
+  alt,
   children,
 }: {
   baslik: ReactNode;
   aciklama?: ReactNode;
+  /** Karşılama metninin altında (ör. Instagram bağlantısı). */
+  alt?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -23,6 +26,7 @@ export default function Karsilama({
         <div>
           <h1 className="font-display text-[34px] md:text-[48px] leading-[1.05] text-balance">{baslik}</h1>
           {aciklama && <p className="mt-3 text-[15px] md:text-[16px] text-metin-soluk max-w-sm">{aciklama}</p>}
+          {alt && <div className="mt-6">{alt}</div>}
         </div>
         <div>{children}</div>
       </main>

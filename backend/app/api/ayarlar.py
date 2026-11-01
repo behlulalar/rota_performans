@@ -1,5 +1,5 @@
 """Kulüp ayarları (yönetici): kulüp bilgileri ve bildirim süreleri. Tek satır, yoksa varsayılanlar.
-İletişim bilgileri her giriş yapmış kullanıcıya açıktır (velinin "Bize ulaşın" sayfası)."""
+İletişim bilgileri her giriş yapmış kullanıcıya, kulüp adı ve Instagram giriş sayfasına açıktır."""
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -12,7 +12,7 @@ from app.db import get_session
 from app.deps import aktif_kullanici, rol_gerekli
 from app.models.ayarlar import KulupAyari
 from app.models.kullanici import Kullanici, Rol
-from app.schemas.ayarlar import AyarGuncelle, AyarYaniti, KulupIletisim
+from app.schemas.ayarlar import AyarGuncelle, AyarYaniti, KulupIletisim, KulupTanitim
 
 router = APIRouter(prefix="/api/ayarlar", tags=["ayarlar"])
 
@@ -20,6 +20,8 @@ Yonetici = Depends(rol_gerekli(Rol.admin))
 
 VARSAYILAN_AD = "Rota Performans Akademi"
 EPOSTA_DESENI = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# "@kulup", "kulup" veya "https://www.instagram.com/kulup/?hl=tr" -> "kulup"
+INSTAGRAM_DESENI = re.compile(r"^(?:(?:https?://)?(?:www\.)?instagram\.com/)?@?([A-Za-z0-9._]{1,30})/?(?:\?.*)?$")
 
 
 def _hata422(mesaj: str) -> HTTPException:
@@ -29,7 +31,7 @@ def _hata422(mesaj: str) -> HTTPException:
 def _yanit(a: KulupAyari | None) -> AyarYaniti:
     if a is None:
         return AyarYaniti(
-            ad=VARSAYILAN_AD, telefon=None, eposta=None, adres=None,
+            ad=VARSAYILAN_AD, telefon=None, eposta=None, adres=None, instagram=None,
             geri_alma_dakika=int(GERI_ALMA_SURESI.total_seconds() // 60), azaldi_esigi=AZALDI_ESIGI,
         )
     return AyarYaniti.model_validate(a, from_attributes=True)
@@ -42,6 +44,11 @@ async def getir(_: Kullanici = Yonetici, session: AsyncSession = Depends(get_ses
 
 @router.get("/iletisim", response_model=KulupIletisim)
 async def iletisim(_: Kullanici = Depends(aktif_kullanici), session: AsyncSession = Depends(get_session)):
+    return _yanit(await session.get(KulupAyari, 1))
+
+
+@router.get("/tanitim", response_model=KulupTanitim)
+async def tanitim(session: AsyncSession = Depends(get_session)):
     return _yanit(await session.get(KulupAyari, 1))
 
 
@@ -74,6 +81,12 @@ async def guncelle(
         gelen["eposta"] = e or None
     if "adres" in gelen:
         gelen["adres"] = (gelen["adres"] or "").strip() or None
+    if "instagram" in gelen:
+        i = (gelen["instagram"] or "").strip()
+        eslesme = INSTAGRAM_DESENI.match(i)
+        if i and not eslesme:
+            raise _hata422("Geçerli bir Instagram kullanıcı adı veya bağlantısı girin")
+        gelen["instagram"] = eslesme.group(1) if eslesme else None
 
     satir = await session.get(KulupAyari, 1)
     if satir is None:

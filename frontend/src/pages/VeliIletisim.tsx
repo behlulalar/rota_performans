@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { iletisimGetir, type KulupIletisim } from "../api/ayarlar";
+import InstagramTakip from "../components/InstagramTakip";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import Simge, { type SimgeAdi } from "../components/Simge";
@@ -37,14 +38,14 @@ export default function VeliIletisim() {
   }, []);
 
   const whatsapp = whatsappAdresi(k?.telefon);
-  const bos = k && !k.telefon && !k.eposta && !k.adres;
+  const bos = k && !k.telefon && !k.eposta && !k.adres && !k.instagram;
 
   return (
     <>
       <SayfaBasligi baslik="Bize ulaşın" aciklama={k ? k.ad : undefined} />
       {hata && <div className={hataKutusu}>{hata}</div>}
       {bos && <Kart><p className="text-sm text-metin-soluk">Kulüp iletişim bilgileri henüz eklenmedi.</p></Kart>}
-      {k && !bos && (
+      {k && !bos && (k.telefon || k.eposta || k.adres) && (
         <Kart bosluksuz sinif="max-w-xl">
           {k.telefon && <Satir simge={simge("telefon")} etiket="Telefon · Aramak için dokunun" deger={bicimle(k.telefon)} href={`tel:+90${rakamlaraCevir(k.telefon)}`} />}
           {whatsapp && <Satir simge={<WhatsAppSimgesi />} etiket="WhatsApp · Mesaj yazın" deger={bicimle(k.telefon)} href={whatsapp} yeniSekme />}
@@ -59,6 +60,11 @@ export default function VeliIletisim() {
             />
           )}
         </Kart>
+      )}
+      {k?.instagram && (
+        <div className="mt-6 max-w-xl">
+          <InstagramTakip kullanici={k.instagram} />
+        </div>
       )}
     </>
   );

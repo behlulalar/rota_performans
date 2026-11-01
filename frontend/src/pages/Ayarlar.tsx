@@ -49,6 +49,7 @@ function KulupKarti({ veri, onKaydet }: { veri: AyarVeri; onKaydet: (a: AyarVeri
   const [telefon, setTelefon] = useState(rakamlaraCevir(veri.telefon));
   const [eposta, setEposta] = useState(veri.eposta ?? "");
   const [adres, setAdres] = useState(veri.adres ?? "");
+  const [instagram, setInstagram] = useState(veri.instagram ?? "");
   const k = useKayit();
 
   function gonder(e: FormEvent) {
@@ -57,7 +58,7 @@ function KulupKarti({ veri, onKaydet }: { veri: AyarVeri; onKaydet: (a: AyarVeri
     if (telefon && !gecerliMi(telefon)) return k.setHata(TELEFON_HATA + ".");
     k.calistir(async () => {
       const a = await ayarlariGuncelle({
-        ad: ad.trim(), telefon: apiyeCevir(telefon) ?? "", eposta: eposta.trim(), adres: adres.trim(),
+        ad: ad.trim(), telefon: apiyeCevir(telefon) ?? "", eposta: eposta.trim(), adres: adres.trim(), instagram: instagram.trim(),
       });
       onKaydet(a);
     });
@@ -74,6 +75,9 @@ function KulupKarti({ veri, onKaydet }: { veri: AyarVeri; onKaydet: (a: AyarVeri
           <input className={girdi} type="email" autoComplete="off" value={eposta} maxLength={254} onChange={(e) => setEposta(e.target.value)} /></label>
         <label className="block"><span className={etiket}>Adres (isteğe bağlı)</span>
           <textarea className={`${girdi} min-h-20`} value={adres} maxLength={500} onChange={(e) => setAdres(e.target.value)} /></label>
+        <label className="block"><span className={etiket}>Instagram (isteğe bağlı)</span>
+          <input className={girdi} autoComplete="off" placeholder="kullanıcı adı veya profil bağlantısı" value={instagram} maxLength={200} onChange={(e) => setInstagram(e.target.value)} />
+          <span className="mt-1 block text-[12px] text-metin-soluk">Veli panelinde ve veli giriş sayfasında "Bizi takip edin" olarak görünür.</span></label>
         <Sonuc hata={k.hata} tamam={k.tamam} mesaj="Kulüp bilgileri kaydedildi." />
         <button type="submit" disabled={k.mesgul} className={birincilDugme}>
           {k.mesgul ? "Kaydediliyor…" : "Kulüp bilgilerini kaydet"}

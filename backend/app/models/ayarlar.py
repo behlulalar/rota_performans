@@ -21,6 +21,7 @@ class KulupAyari(Base):
     telefon: Mapped[str | None] = mapped_column(String(20))
     eposta: Mapped[str | None] = mapped_column(String(254))
     adres: Mapped[str | None] = mapped_column(String(500))
+    instagram: Mapped[str | None] = mapped_column(String(30))  # kullanıcı adı, @ olmadan
     geri_alma_dakika: Mapped[int] = mapped_column(Integer, default=3, server_default=text("3"))
     azaldi_esigi: Mapped[int] = mapped_column(Integer, default=2, server_default=text("2"))
     guncelleme: Mapped[datetime] = mapped_column(
