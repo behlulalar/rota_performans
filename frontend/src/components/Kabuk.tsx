@@ -121,7 +121,7 @@ export default function Kabuk({
               className="size-full object-cover scale-110 blur-[6px] opacity-100"
             />
             {/* Zemin rengiyle örtü: yazılar her iki temada da rahat okunur. */}
-            <div className="absolute inset-0 bg-zemin/[0.86]" />
+            <div className="absolute inset-0 bg-zemin/80" />
           </div>
         )}
         {/* Siyah marka çubuğu */}
