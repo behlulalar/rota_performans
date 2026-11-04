@@ -45,12 +45,20 @@ async def _olusturan(session: AsyncSession, k: ManuelKayit) -> str | None:
 async def listele(
     yil: int | None = Query(default=None, ge=2000, le=2100),
     ay: int | None = Query(default=None, ge=1, le=12),
+    baslangic: date | None = Query(default=None),
+    bitis: date | None = Query(default=None),
     kullanici: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
-    t = bugun()
-    yil, ay = yil or t.year, ay or t.month
-    bas, son = date(yil, ay, 1), date(yil, ay, calendar.monthrange(yil, ay)[1])
+    """`baslangic` ve `bitis` birlikte verilirse o aralık (en çok 366 gün), yoksa yıl+ay ayı."""
+    if baslangic and bitis:
+        if bitis < baslangic or (bitis - baslangic).days + 1 > 366:
+            raise HTTPException(422, "Tarih aralığı geçersiz (en fazla 366 gün)")
+        bas, son = baslangic, bitis
+    else:
+        t = bugun()
+        yil, ay = yil or t.year, ay or t.month
+        bas, son = date(yil, ay, 1), date(yil, ay, calendar.monthrange(yil, ay)[1])
     satirlar = (
         await session.execute(
             select(ManuelKayit, Kullanici.ad_soyad, Kullanici.giris)

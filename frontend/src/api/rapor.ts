@@ -28,8 +28,13 @@ export type GelirRaporu = {
   aylik_seri: { yil: number; ay: number; tutar: string | null; adet: number }[];
 };
 
-export const gelirRaporuGetir = (yil: number, ay: number) =>
-  api<GelirRaporu>(`/api/raporlar/gelir?${new URLSearchParams({ yil: String(yil), ay: String(ay) })}`);
+export type Kapsam = "ay" | "yil" | "gun";
+
+/** Kapsam `gun` ise `gun` (YYYY-MM-DD) kullanılır; `yil` ise yalnız yıl; `ay` ise yıl ve ay. */
+export const gelirRaporuGetir = (yil: number, ay: number, kapsam: Kapsam = "ay", gun?: string) =>
+  api<GelirRaporu>(
+    `/api/raporlar/gelir?${new URLSearchParams({ yil: String(yil), ay: String(ay), kapsam, ...(gun ? { gun } : {}) })}`,
+  );
 
 /** CSV'yi yetkili istekle blob olarak indirir ve tarayıcıdan kaydettirir. Dosya adını döner. */
 export async function gelirCsvIndir(baslangic: string, bitis: string): Promise<string> {

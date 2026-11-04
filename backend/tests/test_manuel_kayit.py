@@ -84,3 +84,15 @@ async def test_yetki_ve_destek_maskesi(istemci, yonetici):
     assert (await istemci.post(f"{URL}/{liste[0]['id']}/iptal", json={"neden": "abc"}, headers=destek)).status_code == 403
     o = (await istemci.get("/api/raporlar/gelir?yil=2026&ay=3", headers=destek)).json()["ozet"]
     assert o["manuel_gelir"] is None and o["net_gelir"] is None and o["manuel_adedi"] == 1
+
+
+async def test_listele_tarih_araligi(istemci, yonetici):
+    await istemci.post(URL, json=kayit(tarih="2026-01-10", aciklama="Ocak"), headers=yonetici)
+    await istemci.post(URL, json=kayit(tarih="2026-03-10", aciklama="Mart"), headers=yonetici)
+    await istemci.post(URL, json=kayit(tarih="2027-01-01", aciklama="Sonraki yıl"), headers=yonetici)
+    r = await istemci.get(f"{URL}?baslangic=2026-01-01&bitis=2026-12-31", headers=yonetici)
+    assert [k["aciklama"] for k in r.json()] == ["Mart", "Ocak"]
+    gun = await istemci.get(f"{URL}?baslangic=2026-03-10&bitis=2026-03-10", headers=yonetici)
+    assert [k["aciklama"] for k in gun.json()] == ["Mart"]
+    assert (await istemci.get(f"{URL}?baslangic=2026-03-10&bitis=2026-03-09", headers=yonetici)).status_code == 422
+    assert (await istemci.get(f"{URL}?baslangic=2025-01-01&bitis=2026-01-02", headers=yonetici)).status_code == 422
