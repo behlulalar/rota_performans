@@ -24,7 +24,7 @@ docker compose exec backend alembic upgrade head
 
 ### Yönetici hesabı oluşturma
 ```bash
-docker compose exec backend python -m app.cli admin-olustur ornek@kulup.com
+docker compose exec backend python -m app.cli admin-olustur +905320000000
 ```
 Şifre en az 12 karakter olmalı ve komut satırından sorulur, geçmişe yazılmaz.
 

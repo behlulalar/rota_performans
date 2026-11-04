@@ -32,6 +32,33 @@ def test_normalize_reddeder(girdi):
         telefon.normalize(girdi)
 
 
+@pytest.mark.parametrize(
+    "girdi, beklenen",
+    [
+        ("+49 151 2345 6789", "+4915123456789"),
+        ("+44 (7700) 900123", "+447700900123"),
+        ("+1 202 555 0123", "+12025550123"),
+        ("+994 50 123 45 67", "+994501234567"),
+        ("+31612345678", "+31612345678"),
+    ],
+)
+def test_normalize_yurt_disi(girdi, beklenen):
+    assert telefon.normalize(girdi) == beklenen
+    assert telefon.giris_icin(girdi) == beklenen
+
+
+@pytest.mark.parametrize("girdi", ["+0123456789", "+1234567", "+1234567890123456", "+49 abc", "+"])
+def test_normalize_yurt_disi_reddeder(girdi):
+    with pytest.raises(ValueError):
+        telefon.normalize(girdi)
+
+
+def test_yurt_disi_numara_artik_turkiye_gibi_tamamlanmaz():
+    # "+" yoksa yalnız Türkiye biçimleri geçerli; 11 haneli yabancı numara 0 ile başlamıyorsa reddedilir.
+    with pytest.raises(ValueError):
+        telefon.normalize("49151234567")
+
+
 def test_giris_icin():
     assert telefon.giris_icin("0532 123 45 67") == KANONIK
     assert telefon.giris_icin("abc") is None
@@ -43,3 +70,4 @@ def test_normalize_giris():
         assert normalize_giris(g) == KANONIK
     assert normalize_giris(" Ali@Kulup.com ") == "ali@kulup.com"
     assert normalize_giris("12 34") == "1234"  # çözümlenemeyen: eski davranış
+    assert normalize_giris("+49 151 2345 6789") == "+4915123456789"

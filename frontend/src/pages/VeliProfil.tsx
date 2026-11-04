@@ -15,12 +15,12 @@ import YaziBoyutuSecici from "../components/YaziBoyutuSecici";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import SifreKarti from "../components/SifreKarti";
 import { hataMesaji } from "../lib/dogrulama";
-import { apiyeCevir, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
+import { apiyeCevir, gecerliMi, numaraCoz, TELEFON_HATA } from "../lib/telefon";
 import { basariKutusu, birincilDugme, dugme, girdi } from "../lib/stil";
 
 function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil) => void }) {
   const [ad, setAd] = useState(profil.ad_soyad ?? "");
-  const [telefon, setTelefon] = useState(rakamlaraCevir(profil.telefon));
+  const [telefon, setTelefon] = useState(numaraCoz(profil.telefon));
   const [hata, setHata] = useState<string | null>(null);
   const [tamam, setTamam] = useState(false);
   const [mesgul, setMesgul] = useState(false);

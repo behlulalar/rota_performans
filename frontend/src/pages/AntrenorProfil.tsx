@@ -8,13 +8,13 @@ import TelefonGirdisi from "../components/TelefonGirdisi";
 import YaziBoyutuSecici from "../components/YaziBoyutuSecici";
 import { hataMesaji } from "../lib/dogrulama";
 import { basariKutusu, birincilDugme, girdi } from "../lib/stil";
-import { apiyeCevir, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
+import { apiyeCevir, gecerliMi, numaraCoz, TELEFON_HATA } from "../lib/telefon";
 
 function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil) => void }) {
   // Üst çubuktaki ad güncellensin diye kullanıcı sunucudan yeniden okunur.
   const { sifreDegistirildi: kullaniciyiYenile } = useAuth();
   const [ad, setAd] = useState(profil.ad_soyad);
-  const [telefon, setTelefon] = useState(rakamlaraCevir(profil.telefon));
+  const [telefon, setTelefon] = useState(numaraCoz(profil.telefon));
   const [hata, setHata] = useState<string | null>(null);
   const [tamam, setTamam] = useState(false);
   const [mesgul, setMesgul] = useState(false);
