@@ -118,6 +118,7 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [ ] WhatsApp kuyruğu, ban korumaları, geri alma penceresi
 - [x] Bildirimler yalnızca birincil iletişim kişisine
 - [x] PWA kurulumu (manifest, simge, ana ekrana ekleme yönlendirmesi)
+- [x] PWA tamamlama: tüm panellerde kurulum yönlendirmesi, bekleyen sürüm için "Yeni sürüm hazır / Yenile" bildirimi, manifest (kısayollar, mağaza ekran görüntüleri, her yönlendirme), iOS/çentik güvenli alanları, tablet için yönetici gezinmesi 1024 px, giriş sayfaları ortalı yerleşim
 
 ### Faz 5: Test, güvenlik ve yayına alma (27 Kas – 30 Kas)
 - [ ] Yetki testleri, yük denemesi (ör. 300 eşzamanlı kullanıcı)

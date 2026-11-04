@@ -2,14 +2,21 @@
  * - Sayfa gezintileri: önce ağ, bağlantı yoksa /offline.html.
  * - Statik dosyalar (/assets/, simgeler, manifest): önce önbellek.
  * - /api/ ve diğer her şey: hiç dokunulmaz (önbelleğe alınmaz).
+ * - Güncelleme: yeni sürüm bekler, kullanıcı onaylayınca (SKIP_WAITING) etkinleşir.
  */
-const SURUM = "v2";
+const SURUM = "v3";
 const ONBELLEK = `rota-statik-${SURUM}`;
 const OFFLINE_SAYFA = "/offline.html";
 const ON_YUKLEME = [OFFLINE_SAYFA, "/icon-192.png", "/manifest.webmanifest"];
 
+// Yeni sürüm hemen devreye girmez (açık bir formu/yoklamayı bozmasın): uygulama "Yenile" düğmesiyle
+// SKIP_WAITING mesajı gönderince etkinleşir. İlk kurulumda zaten bekleyen sürüm yoktur.
 self.addEventListener("install", (olay) => {
-  olay.waitUntil(caches.open(ONBELLEK).then((c) => c.addAll(ON_YUKLEME)).then(() => self.skipWaiting()));
+  olay.waitUntil(caches.open(ONBELLEK).then((c) => c.addAll(ON_YUKLEME)));
+});
+
+self.addEventListener("message", (olay) => {
+  if (olay.data && olay.data.tip === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (olay) => {

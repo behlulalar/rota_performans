@@ -8,7 +8,7 @@ import TelefonGirdisi from "../components/TelefonGirdisi";
 import Karsilama from "../components/Karsilama";
 import { ApiHata } from "../lib/api";
 import { PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
-import { gecerliMi } from "../lib/telefon";
+import { gecerliMi, otomatikOdak } from "../lib/telefon";
 import { girisiBicimle, hatirlananiOku, hatirlananiSil, varsayilanHatirla } from "../lib/hatirla";
 import { bilgiKutusu, birincilDugme, girdi } from "../lib/stil";
 
@@ -82,7 +82,7 @@ export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
       arkaPlan
     >
       <div>
-        <h2 className="mb-3 font-display text-[19px]">{BASLIK[panel].baslik}</h2>
+        <h2 className="mb-3 font-display text-[19px] text-center lg:text-left">{BASLIK[panel].baslik}</h2>
         {hatirlanan ? (
           <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[16px] p-6 space-y-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.35)]" noValidate>
             {oturumSuresiDoldu && (
@@ -134,7 +134,7 @@ export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
           <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[16px] p-6 space-y-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.35)]" noValidate>
             <div>
               <span id="giris-telefon-etiketi" className="text-[13px] text-metin-soluk">Telefon numarası</span>
-              <TelefonGirdisi value={giris} onChange={setGiris} aria-labelledby="giris-telefon-etiketi" autoFocus />
+              <TelefonGirdisi value={giris} onChange={setGiris} aria-labelledby="giris-telefon-etiketi" autoFocus={otomatikOdak()} />
             </div>
 
             <label className="block">

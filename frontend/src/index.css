@@ -76,12 +76,27 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Alt sekme çubuğu varken (mobil) sayfa içi sabit öğeler çubuğun üstünde durur. */
+/* Cihaz güvenli alanları (çentik, ana ekran çubuğu, iOS durum çubuğu): ana ekrana eklenmiş uygulamada
+   üst çubuk durum çubuğunun altında kalmaz, yatay modda içerik çentiğe girmez. */
+:root {
+  --sa-ust: env(safe-area-inset-top, 0px);
+  --sa-sol: env(safe-area-inset-left, 0px);
+  --sa-sag: env(safe-area-inset-right, 0px);
+  --ust-yuk: calc(3.5rem + var(--sa-ust));
+}
+
+/* Alt sekme çubuğu varken (mobil) sayfa içi sabit öğeler çubuğun üstünde durur.
+   Üst menülü yerleşimde sekmeler 768 px'te, sol menülü (yönetici) yerleşimde 1024 px'te kaybolur. */
 .sekmeli-kabuk {
   --sekme-yuk: calc(3.5rem + env(safe-area-inset-bottom));
 }
 @media (min-width: 768px) {
-  .sekmeli-kabuk {
+  .sekmeli-kabuk:not(.sekmeli-kabuk-lg) {
+    --sekme-yuk: 0px;
+  }
+}
+@media (min-width: 1024px) {
+  .sekmeli-kabuk-lg {
     --sekme-yuk: 0px;
   }
 }

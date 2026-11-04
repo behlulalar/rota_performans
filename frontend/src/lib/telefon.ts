@@ -98,6 +98,15 @@ export function bicimle(apiDegeri: string | null | undefined): string {
   return `+${kod} ${ulusal.replace(/(\d{3})(?=\d)/g, "$1 ")}`;
 }
 
+/** Otomatik odak yalnızca fare/imleç olan cihazlarda: dokunmatik cihazda klavye ekranı kaydırıp sayfayı bozmasın. */
+export const otomatikOdak = (): boolean => {
+  try {
+    return window.matchMedia("(pointer: fine)").matches;
+  } catch {
+    return false;
+  }
+};
+
 export const TELEFON_HATA = "Geçerli bir telefon numarası girin (Türkiye için 10 hane)";
 
 /** Şifre mesajı için numara: giriş bilgisi telefonsa o, değilse yedek (iletişim) telefonu. */

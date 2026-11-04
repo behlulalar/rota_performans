@@ -6,7 +6,7 @@ import { useAuth } from "../auth/AuthProvider";
 import BeniHatirla from "../components/BeniHatirla";
 import Karsilama from "../components/Karsilama";
 import TelefonGirdisi from "../components/TelefonGirdisi";
-import { gecerliMi, numaraCoz } from "../lib/telefon";
+import { gecerliMi, numaraCoz, otomatikOdak } from "../lib/telefon";
 import { ApiHata } from "../lib/api";
 import { hataMesaji } from "../lib/dogrulama";
 import { hatirlananiOku, varsayilanHatirla } from "../lib/hatirla";
@@ -164,13 +164,13 @@ export default function DestekGiris() {
   return (
     <Karsilama baslik="Teknik destek." aciklama={ACIKLAMA[adim.ad]} arkaPlan>
       <div>
-        <h2 className="mb-3 font-display text-[19px]">Teknik destek girişi</h2>
+        <h2 className="mb-3 font-display text-[19px] text-center lg:text-left">Teknik destek girişi</h2>
 
         {adim.ad === "sifre" && (
           <form onSubmit={sifreGonder} className={KART} noValidate>
             <div>
               <span id="giris-telefon-etiketi" className="text-[13px] text-metin-soluk">Telefon numarası</span>
-              <TelefonGirdisi value={giris} onChange={setGiris} aria-labelledby="giris-telefon-etiketi" autoFocus />
+              <TelefonGirdisi value={giris} onChange={setGiris} aria-labelledby="giris-telefon-etiketi" autoFocus={otomatikOdak()} />
             </div>
             <label className="block">
               <span className="text-[13px] text-metin-soluk">Şifre</span>

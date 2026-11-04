@@ -43,7 +43,7 @@ function Yukleniyor() {
   return (
     <div role="status" aria-label="Yükleniyor" className="space-y-4">
       <Iskelet sinif="h-24 w-full" />
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+      <div className="flex flex-wrap justify-center gap-4 [&>*]:w-[calc(50%-0.5rem)] md:[&>*]:w-[calc(33.333%-0.667rem)] xl:[&>*]:w-[calc(20%-0.8rem)]">
         {Array.from({ length: 5 }, (_, i) => (
           <Iskelet key={i} sinif="h-[110px]" />
         ))}
@@ -341,7 +341,7 @@ function Ozet({ v, bugunSayi, bugunOgrenci }: { v: GenelBakisVerisi; bugunSayi: 
   const g = v.gruplar;
   const oran = g.toplam_kontenjan > 0 ? Math.round((g.dolu / g.toplam_kontenjan) * 100) : 0;
   return (
-    <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-5 mb-4">
+    <div className="flex flex-wrap justify-center gap-4 [&>*]:w-[calc(50%-0.5rem)] md:[&>*]:w-[calc(33.333%-0.667rem)] xl:[&>*]:w-[calc(20%-0.8rem)] mb-4">
       <OzetKarti etiket="Aktif öğrenci" deger={v.ogrenci.aktif} ipucu={`+${v.ogrenci.bu_ay_kayit} bu ay`} />
       <OzetKarti etiket="Grup doluluğu" deger={`%${oran}`} ipucu={`${g.toplam_kontenjan} kontenjan`} ton="altin" />
       <OzetKarti etiket="Aktif antrenör" deger={v.antrenor.aktif} />

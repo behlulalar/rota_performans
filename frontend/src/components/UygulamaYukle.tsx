@@ -32,7 +32,7 @@ function iosSafariMi(): boolean {
   return ios && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
 }
 
-/** Veli panelinde "Ana ekrana ekle" yönlendirmesi: kapatılabilir, kapatılınca hatırlanır. */
+/** Panellerde (veli, antrenör, yönetici) "Ana ekrana ekle" yönlendirmesi: kapatılabilir, kapatılınca hatırlanır. */
 export default function UygulamaYukle() {
   const [kapali, setKapali] = useState(() => kapaliMi() || kuruluMu());
   const [olay, setOlay] = useState<YuklemeOlayi | null>(null);

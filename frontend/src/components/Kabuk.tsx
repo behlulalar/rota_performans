@@ -11,6 +11,38 @@ import TemaDugmesi from "./TemaDugmesi";
 
 const MENU_ANAHTARI = "rota-menu-gizli";
 
+/**
+ * Gezinme kesme noktası: üst menülü yerleşimde (veli, antrenör) 768 px'ten, sol menülü yönetici yerleşiminde
+ * 1024 px'ten itibaren masaüstü gezinmesi açılır; daha dar ekranlarda (telefon, dikey tablet) üst çubuk +
+ * çekmece + alt sekmeler kullanılır. Tailwind sınıfları tam yazılmalı (birleştirilerek üretilemez).
+ */
+const BP = {
+  md: {
+    menuDugmesi: "hidden md:grid",
+    markaAdi: "hidden md:block",
+    sayfaAdi: "md:hidden",
+    masaustuSag: "hidden md:flex",
+    mobilSag: "md:hidden",
+    yanMenu: "hidden md:block",
+    cekmece: "md:hidden",
+    sekmeler: "md:hidden",
+    sekmeSinifi: "sekmeli-kabuk",
+    altBosluk: "md:pb-8",
+  },
+  lg: {
+    menuDugmesi: "hidden lg:grid",
+    markaAdi: "hidden lg:block",
+    sayfaAdi: "lg:hidden",
+    masaustuSag: "hidden lg:flex",
+    mobilSag: "lg:hidden",
+    yanMenu: "hidden lg:block",
+    cekmece: "lg:hidden",
+    sekmeler: "lg:hidden",
+    sekmeSinifi: "sekmeli-kabuk sekmeli-kabuk-lg",
+    altBosluk: "lg:pb-8",
+  },
+} as const;
+
 function PasifOge({ o }: { o: MenuOgesi }) {
   return (
     <div
@@ -110,13 +142,14 @@ export default function Kabuk({
   }, [cekmece]);
 
   const sayfaAdi = aktifOge(menu, pathname)?.ad ?? "Rota Performans";
+  const bp = yerlesim === "yan" ? BP.lg : BP.md;
 
   return (
     <BolumBaglami.Provider value={rotaBolumu.ad}>
-      <div className={`relative isolate min-h-[calc(100dvh/var(--olcek,1))] flex flex-col ${sekmeler ? "sekmeli-kabuk" : ""}`}>
+      <div className={`relative isolate min-h-[calc(100dvh/var(--olcek,1))] flex flex-col ${sekmeler ? bp.sekmeSinifi : ""}`}>
         {arkaPlan && <ArkaPlan />}
         {/* Siyah marka çubuğu */}
-        <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center gap-3 px-4 md:px-6 bg-serit text-white">
+        <header className="sticky top-0 z-30 h-[var(--ust-yuk)] pt-[var(--sa-ust)] shrink-0 flex items-center gap-3 pl-[max(1rem,var(--sa-sol))] pr-[max(1rem,var(--sa-sag))] md:pl-[max(1.5rem,var(--sa-sol))] md:pr-[max(1.5rem,var(--sa-sag))] bg-serit text-white">
           {yerlesim === "yan" && (
             <button
               type="button"
@@ -124,14 +157,14 @@ export default function Kabuk({
               aria-label={menuGizli ? "Menüyü göster" : "Menüyü gizle"}
               aria-expanded={!menuGizli}
               aria-controls="yan-menu"
-              className="hidden md:grid place-items-center size-10 -ml-2 rounded-[10px] text-serit-ikon hover:text-altin transition-colors"
+              className={`${bp.menuDugmesi} place-items-center size-10 -ml-2 rounded-[10px] text-serit-ikon hover:text-altin transition-colors`}
             >
               <Simge ad="menu" />
             </button>
           )}
           <Logo />
-          <span className="hidden md:block font-display text-[17px] leading-none mr-2">Rota Performans</span>
-          <span className="md:hidden flex-1 min-w-0 font-display text-[18px] leading-none truncate">{sayfaAdi}</span>
+          <span className={`${bp.markaAdi} font-display text-[17px] leading-none mr-2`}>Rota Performans</span>
+          <span className={`${bp.sayfaAdi} flex-1 min-w-0 font-display text-[18px] leading-none truncate`}>{sayfaAdi}</span>
 
           {yerlesim === "ust" && (
             <nav aria-label="Ana menü" className="hidden md:flex items-center gap-1 ml-2">
@@ -152,7 +185,7 @@ export default function Kabuk({
             </nav>
           )}
 
-          <div className="hidden md:flex items-center gap-3 ml-auto">
+          <div className={`${bp.masaustuSag} items-center gap-3 ml-auto`}>
             <YaziBoyutuDugmesi />
             <TemaDugmesi gorunum="serit" />
             <span className="max-w-[16rem] truncate text-[13px] text-serit-ikon" title={kullanici?.giris}>
@@ -169,7 +202,7 @@ export default function Kabuk({
             </button>
           </div>
 
-          <div className="md:hidden flex items-center">
+          <div className={`${bp.mobilSag} flex items-center`}>
             <YaziBoyutuDugmesi />
             <TemaDugmesi gorunum="serit" />
             <button
@@ -189,7 +222,7 @@ export default function Kabuk({
             <aside
               id="yan-menu"
               aria-label="Menü"
-              className="hidden md:block w-[232px] shrink-0 sticky top-14 h-[calc(100dvh/var(--olcek,1)-3.5rem)] overflow-y-auto bg-menu border-r border-cizgi p-3 space-y-5"
+              className={`${bp.yanMenu} w-[232px] shrink-0 sticky top-[var(--ust-yuk)] h-[calc(100dvh/var(--olcek,1)-var(--ust-yuk))] overflow-y-auto bg-menu border-r border-cizgi p-3 space-y-5`}
             >
               {menu.map((b) => (
                 <div key={b.anahtar}>
@@ -201,8 +234,8 @@ export default function Kabuk({
           )}
 
           <main
-            className={`flex-1 min-w-0 px-4 md:px-8 pt-6 md:py-8 ${yerlesim === "ust" ? "max-w-6xl mx-auto w-full" : "max-w-[1800px]"} ${
-              sekmeler ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8" : "pb-8"
+            className={`flex-1 min-w-0 pl-[max(1rem,var(--sa-sol))] pr-[max(1rem,var(--sa-sag))] md:pl-[max(2rem,var(--sa-sol))] md:pr-[max(2rem,var(--sa-sag))] pt-6 md:py-8 ${yerlesim === "ust" ? "max-w-6xl mx-auto w-full" : "max-w-[1800px]"} ${
+              sekmeler ? `pb-[calc(5.5rem+env(safe-area-inset-bottom))] ${bp.altBosluk}` : "pb-8"
             }`}
           >
             {ustIcerik}
@@ -212,7 +245,7 @@ export default function Kabuk({
 
         {/* Mobil çekmece */}
         {cekmece && (
-          <div className={`md:hidden fixed inset-x-0 top-14 z-20 ${sekmeler ? "bottom-[calc(3.5rem+env(safe-area-inset-bottom))]" : "bottom-0"}`}>
+          <div className={`${bp.cekmece} fixed inset-x-0 top-[var(--ust-yuk)] z-20 ${sekmeler ? "bottom-[calc(3.5rem+env(safe-area-inset-bottom))]" : "bottom-0"}`}>
             <button
               type="button"
               tabIndex={-1}
@@ -254,7 +287,7 @@ export default function Kabuk({
         {sekmeler && (
           <nav
             aria-label="Hızlı sekmeler"
-            className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-menu border-t border-cizgi pb-[env(safe-area-inset-bottom)]"
+            className={`${bp.sekmeler} fixed inset-x-0 bottom-0 z-40 bg-menu border-t border-cizgi pb-[env(safe-area-inset-bottom)]`}
           >
             <ul className="flex">
               {sekmeler.map((o) => {
