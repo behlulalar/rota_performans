@@ -1,7 +1,7 @@
 """Yönetim komutları.
 
 Örnek:
-    docker compose run --rm backend python -m app.cli admin-olustur ornek@kulup.com
+    docker compose run --rm backend python -m app.cli admin-olustur +905320000000
 """
 import argparse
 import asyncio
@@ -20,7 +20,7 @@ from app.security import normalize_giris, sifre_ozeti
 
 MIN_SIFRE_UZUNLUK = 12
 # E2E test destek hesabı (yalnız e2e-tohum; üretimde kullanılmaz). Ortamdan geçersiz kılınabilir.
-E2E_DESTEK_GIRIS = "destek@rota.test"
+E2E_DESTEK_GIRIS = "+905559990002"
 E2E_DESTEK_SIFRE = "Destek-test-sifre-123"
 
 
@@ -56,7 +56,7 @@ def _giris_dogrula(giris: str) -> str | None:
             print(f"Geçersiz e-posta adresi: {hata}", file=sys.stderr)
             return None
     elif telefon.giris_icin(giris) is None:
-        print("Giriş bir e-posta adresi veya +90 ardından 10 haneli telefon numarası olmalı.", file=sys.stderr)
+        print("Giriş bir e-posta adresi veya geçerli bir telefon numarası olmalı (Türkiye için +90 ardından 10 hane).", file=sys.stderr)
         return None
     return giris
 

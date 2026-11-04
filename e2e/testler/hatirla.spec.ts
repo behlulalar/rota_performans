@@ -1,11 +1,11 @@
-import { arayuzdenGiris, expect, test, YONETICI_GIRIS, YONETICI_SIFRE } from "../yardimci";
+import { arayuzdenGiris, expect, telefonGorunen, test, YONETICI_GIRIS, YONETICI_SIFRE } from "../yardimci";
 import type { Page } from "@playwright/test";
 
 const GUN_MS = 86_400_000;
 
 async function hatirlaIsaretliGiris(page: Page): Promise<void> {
   await page.goto("/yonetici-giris");
-  await page.getByLabel("Telefon veya e-posta").fill(YONETICI_GIRIS);
+  await page.getByLabel("Telefon numarası").fill(YONETICI_GIRIS);
   await page.getByLabel("Şifre", { exact: true }).fill(YONETICI_SIFRE);
   await page.getByLabel("Beni hatırla").check();
   await page.getByRole("button", { name: "Giriş yap", exact: true }).click();
@@ -32,8 +32,8 @@ test.describe("Beni hatırla", () => {
     await expect(page.getByText("Tekrar hoş geldiniz")).toBeVisible();
     // Kendi çıkışında "oturum süreniz doldu" uyarısı çıkmamalı (yalnız gerçek süre dolumunda).
     await expect(page.getByText("Oturum süreniz doldu")).toHaveCount(0);
-    await expect(page.getByLabel("Telefon veya e-posta")).toHaveCount(0);
-    await expect(page.getByText(YONETICI_GIRIS, { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Telefon numarası")).toHaveCount(0);
+    await expect(page.getByText(telefonGorunen(YONETICI_GIRIS), { exact: true })).toBeVisible();
     await expect(page.getByLabel("Beni hatırla")).toBeChecked();
 
     await page.getByLabel("Şifre", { exact: true }).fill(YONETICI_SIFRE);
@@ -48,7 +48,7 @@ test.describe("Beni hatırla", () => {
     await expect(page.getByText("Tekrar hoş geldiniz")).toBeVisible();
 
     await page.getByRole("button", { name: "Başka hesapla giriş yap" }).click();
-    await expect(page.getByLabel("Telefon veya e-posta")).toBeVisible();
+    await expect(page.getByLabel("Telefon numarası")).toBeVisible();
     await expect(page.getByText("Tekrar hoş geldiniz")).toHaveCount(0);
     await expect(page.getByLabel("Beni hatırla")).not.toBeChecked();
     expect(await page.evaluate(() => localStorage.getItem("rota-hatirla"))).toBeNull();
@@ -64,7 +64,7 @@ test.describe("Beni hatırla", () => {
 
     await page.getByRole("button", { name: "Çıkış" }).click();
     await expect(page).toHaveURL(/\/yonetici-giris$/);
-    await expect(page.getByLabel("Telefon veya e-posta")).toBeVisible();
+    await expect(page.getByLabel("Telefon numarası")).toBeVisible();
     await expect(page.getByText("Tekrar hoş geldiniz")).toHaveCount(0);
   });
 

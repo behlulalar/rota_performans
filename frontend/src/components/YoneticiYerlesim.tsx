@@ -4,5 +4,11 @@ import Kabuk from "./Kabuk";
 
 export default function YoneticiYerlesim() {
   const { kullanici } = useAuth();
-  return <Kabuk menu={kullanici?.rol === "destek" ? DESTEK_MENUSU : YONETICI_MENUSU} sekmeler={YONETICI_SEKMELERI} />;
+  return (
+    <Kabuk
+      menu={kullanici?.rol === "destek" ? DESTEK_MENUSU : YONETICI_MENUSU}
+      sekmeler={YONETICI_SEKMELERI}
+      arkaPlan
+    />
+  );
 }

@@ -5,7 +5,7 @@ import { basariKutusu, birincilDugme, girdi } from "../lib/stil";
 import Kart from "./Kart";
 
 /** Oturum açmış herkesin kendi şifresini değiştirdiği kart (veli ve antrenör profili ortak kullanır). */
-export default function SifreKarti() {
+export default function SifreKarti({ tamGenislik = false }: { tamGenislik?: boolean }) {
   const [mevcut, setMevcut] = useState("");
   const [yeni, setYeni] = useState("");
   const [tekrar, setTekrar] = useState("");
@@ -35,7 +35,7 @@ export default function SifreKarti() {
 
   return (
     <Kart baslik="Şifre değiştir" aciklama="Başka cihazlardaki oturumlar kapatılır">
-      <form onSubmit={gonder} noValidate className="space-y-4 max-w-md">
+      <form onSubmit={gonder} noValidate className={`space-y-4 ${tamGenislik ? "" : "max-w-md"}`}>
         <label className="block">
           <span className="text-[13px] text-metin-soluk">Mevcut şifre</span>
           <input className={girdi} type="password" value={mevcut} onChange={(e) => setMevcut(e.target.value)} autoComplete="current-password" />
