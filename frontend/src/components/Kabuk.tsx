@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { aktifBolum, aktifOge, ogeAktifMi, type MenuBolumu, type MenuOgesi } from "../lib/menu";
+import ArkaPlan from "./ArkaPlan";
 import Logo from "./Logo";
 import { BolumBaglami } from "./SayfaBasligi";
 import Simge from "./Simge";
@@ -67,8 +68,8 @@ export default function Kabuk({
   ustIcerik,
   arkaPlan,
 }: {
-  /** İçerik alanının arkasında gösterilecek bulanık görsel (isteğe bağlı). */
-  arkaPlan?: string;
+  /** İçerik alanının arkasında bulanık havuz görseli gösterir. */
+  arkaPlan?: boolean;
   menu: MenuBolumu[];
   sekmeler?: MenuOgesi[];
   yerlesim?: "yan" | "ust";
@@ -113,17 +114,7 @@ export default function Kabuk({
   return (
     <BolumBaglami.Provider value={rotaBolumu.ad}>
       <div className={`relative isolate min-h-[calc(100dvh/var(--olcek,1))] flex flex-col ${sekmeler ? "sekmeli-kabuk" : ""}`}>
-        {arkaPlan && (
-          <div aria-hidden="true" className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-            <img
-              src={arkaPlan}
-              alt=""
-              className="size-full object-cover scale-110 blur-[6px] opacity-100"
-            />
-            {/* Zemin rengiyle örtü: yazılar her iki temada da rahat okunur. */}
-            <div className="absolute inset-0 bg-zemin/80" />
-          </div>
-        )}
+        {arkaPlan && <ArkaPlan />}
         {/* Siyah marka çubuğu */}
         <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center gap-3 px-4 md:px-6 bg-serit text-white">
           {yerlesim === "yan" && (

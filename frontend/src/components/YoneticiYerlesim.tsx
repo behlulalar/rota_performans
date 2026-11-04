@@ -1,5 +1,4 @@
 import { useAuth } from "../auth/AuthProvider";
-import havuz from "../assets/havuz-arka-plan.webp";
 import { DESTEK_MENUSU, YONETICI_MENUSU, YONETICI_SEKMELERI } from "../lib/menu";
 import Kabuk from "./Kabuk";
 
@@ -9,7 +8,7 @@ export default function YoneticiYerlesim() {
     <Kabuk
       menu={kullanici?.rol === "destek" ? DESTEK_MENUSU : YONETICI_MENUSU}
       sekmeler={YONETICI_SEKMELERI}
-      arkaPlan={havuz}
+      arkaPlan
     />
   );
 }

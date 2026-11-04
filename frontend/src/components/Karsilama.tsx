@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import ArkaPlan from "./ArkaPlan";
 import Logo from "./Logo";
 import TemaDugmesi from "./TemaDugmesi";
 
@@ -7,16 +8,20 @@ export default function Karsilama({
   baslik,
   aciklama,
   alt,
+  arkaPlan = false,
   children,
 }: {
   baslik: ReactNode;
   aciklama?: ReactNode;
   /** Karşılama metninin altında (ör. Instagram bağlantısı). */
   alt?: ReactNode;
+  /** Arkada bulanık havuz görseli gösterir. */
+  arkaPlan?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-[calc(100dvh/var(--olcek,1))] flex flex-col">
+    <div className="relative isolate min-h-[calc(100dvh/var(--olcek,1))] flex flex-col">
+      {arkaPlan && <ArkaPlan />}
       <header className="h-14 shrink-0 flex items-center gap-3 px-4 md:px-6 bg-serit text-white">
         <Logo />
         <span className="flex-1 font-display text-[17px] leading-none">Rota Performans Akademi</span>
