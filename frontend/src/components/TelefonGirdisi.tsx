@@ -67,20 +67,30 @@ export default function TelefonGirdisi({
         placeholder={turkiye ? "5XX XXX XX XX" : "Numara"}
         value={ulusal}
         onChange={degisti}
-        className="num min-w-0 flex-1 bg-transparent px-3 min-h-11 py-1.5 text-sm outline-none focus-visible:outline-none"
+        className="num min-w-0 flex-1 bg-transparent px-3 min-h-[calc(2.75rem-2px)] py-1.5 text-sm"
+        // Odak çerçevesi dış kutuda (focus-within) gösterilir; genel :focus-visible kuralını ezmek için satır içi.
+        style={{ outline: "none" }}
       />
-      <select
-        aria-label="Ülke kodu"
-        value={kod}
-        onChange={ulkeDegisti}
-        className="order-first num shrink-0 bg-transparent pl-3 pr-7 bg-[position:right_0.45rem_center] bg-[length:0.9rem] text-sm text-metin-orta outline-none focus-visible:outline-none cursor-pointer border-r border-cizgi min-h-11 rounded-l-[10px]"
-      >
-        {secenekler.map((u) => (
-          <option key={u.kod} value={u.kod} title={u.ad}>
-            +{u.kod} {u.iso}
-          </option>
-        ))}
-      </select>
+      {/* Ülke kodu: görünen kısım yalnız "+90"; asıl <select> şeffaf biçimde üstüne biner (liste ülke adlarını gösterir). */}
+      <div className="order-first relative shrink-0 flex items-center gap-1 pl-3 pr-2.5 border-r border-cizgi rounded-l-[10px] hover:bg-yuzey-yuksek/50">
+        <span aria-hidden="true" className="num text-sm text-metin-orta">+{kod}</span>
+        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-metin-soluk">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+        <select
+          aria-label="Ülke kodu"
+          value={kod}
+          onChange={ulkeDegisti}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-sm"
+          style={{ backgroundImage: "none", paddingRight: 0 }}
+        >
+          {secenekler.map((u) => (
+            <option key={u.kod} value={u.kod}>
+              +{u.kod} {u.ad}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
