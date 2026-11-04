@@ -77,7 +77,7 @@ export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
 
   return (
     <Karsilama baslik={BASLIK[panel].karsilama} aciklama={BASLIK[panel].ipucu} alt={<InstagramTakip kullanici={instagram} sade />}
-      arkaPlan={panel === "veli"}
+      arkaPlan
     >
       <div>
         <h2 className="mb-3 font-display text-[19px]">{BASLIK[panel].baslik}</h2>

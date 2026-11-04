@@ -160,7 +160,7 @@ export default function DestekGiris() {
   );
 
   return (
-    <Karsilama baslik="Teknik destek." aciklama={ACIKLAMA[adim.ad]}>
+    <Karsilama baslik="Teknik destek." aciklama={ACIKLAMA[adim.ad]} arkaPlan>
       <div>
         <h2 className="mb-3 font-display text-[19px]">Teknik destek girişi</h2>
 
