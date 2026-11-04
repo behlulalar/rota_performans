@@ -3,6 +3,7 @@ import csv
 import io
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -92,15 +93,28 @@ def _yuzde(parca: Decimal, butun: Decimal) -> float:
 async def gelir_raporu(
     yil: int | None = Query(default=None, ge=2000, le=2100),
     ay: int | None = Query(default=None, ge=1, le=12),
+    kapsam: Literal["ay", "yil", "gun"] = Query(default="ay"),
+    gun: date | None = Query(default=None),
     kullanici: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
+    """Kapsam: `ay` (yil+ay), `yil` (yil) veya `gun` (gun). Önceki dönem aynı türden bir önceki dönemdir
+    (önceki ay / yıl / gün); `onceki_ay_*` alanları kapsamdan bağımsız olarak onu taşır."""
     t = bugun()
     yil = yil if yil is not None else t.year
     ay = ay if ay is not None else t.month
-    bas, son = _ay_basi(yil, ay), _ay_sonu(yil, ay)
-    onceki_yil, onceki_ay = _ay_kaydir(yil, ay, -1)
-    onceki_bas, onceki_son = _ay_basi(onceki_yil, onceki_ay), _ay_sonu(onceki_yil, onceki_ay)
+    if kapsam == "gun":
+        g = gun or t
+        yil, ay = g.year, g.month
+        bas = son = g
+        onceki_bas = onceki_son = g - timedelta(days=1)
+    elif kapsam == "yil":
+        bas, son = date(yil, 1, 1), date(yil, 12, 31)
+        onceki_bas, onceki_son = date(yil - 1, 1, 1), date(yil - 1, 12, 31)
+    else:
+        bas, son = _ay_basi(yil, ay), _ay_sonu(yil, ay)
+        onceki_yil, onceki_ay = _ay_kaydir(yil, ay, -1)
+        onceki_bas, onceki_son = _ay_basi(onceki_yil, onceki_ay), _ay_sonu(onceki_yil, onceki_ay)
     aktif = Odeme.iptal_zamani.is_(None)
     donemde = (Odeme.tarih >= bas) & (Odeme.tarih <= son)
     onceki_donemde = (Odeme.tarih >= onceki_bas) & (Odeme.tarih <= onceki_son)
@@ -220,18 +234,20 @@ async def gelir_raporu(
         ).all()
     )
     gunluk = []
-    for i in range((son - bas).days + 1):
+    for i in range(0 if kapsam == "yil" else (son - bas).days + 1):
         g = bas + timedelta(days=i)
         tu, a = gunluk_harita.get(g, (SIFIR, 0))
         gunluk.append(GelirGun(tarih=g, tutar=tu + Decimal(manuel_gun.get(g, 0)), adet=a))
 
     # Aylık seri: tek GROUP BY, boş aylar sıfırla doldurulur.
-    seri_yil, seri_ay = _ay_kaydir(yil, ay, -(SERI_AY - 1))
+    # Seri, dönemin bittiği ayda sona erer (yıl kapsamında Ocak–Aralık, gün kapsamında günün ayı).
+    seri_son = _ay_sonu(son.year, son.month)
+    seri_yil, seri_ay = _ay_kaydir(son.year, son.month, -(SERI_AY - 1))
     y_sut, a_sut = extract("year", Odeme.tarih), extract("month", Odeme.tarih)
     ay_satirlari = (
         await session.execute(
             _odeme_tabani(y_sut, a_sut, func.sum(Odeme.tutar), func.count())
-            .where(Odeme.tarih >= _ay_basi(seri_yil, seri_ay), Odeme.tarih <= son, aktif)
+            .where(Odeme.tarih >= _ay_basi(seri_yil, seri_ay), Odeme.tarih <= seri_son, aktif)
             .group_by(y_sut, a_sut)
         )
     ).all()
@@ -242,7 +258,7 @@ async def gelir_raporu(
         for y, a, tu in (
             await session.execute(
                 select(my_sut, ma_sut, func.sum(_manuel_isaretli()))
-                .where(m_aktif, ManuelKayit.tarih >= _ay_basi(seri_yil, seri_ay), ManuelKayit.tarih <= son)
+                .where(m_aktif, ManuelKayit.tarih >= _ay_basi(seri_yil, seri_ay), ManuelKayit.tarih <= seri_son)
                 .group_by(my_sut, ma_sut)
             )
         ).all()

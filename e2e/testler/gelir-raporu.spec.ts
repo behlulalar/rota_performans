@@ -107,4 +107,44 @@ test.describe("Gelir raporu", () => {
     await expect(satir).toContainText("İptal: Yanlış girildi");
     await expect(page.getByTestId("kpi-net")).toContainText(para(String(netOnce - 1500)));
   });
+
+  test("yıllık ve günlük kapsam: seçiciler çalışır, gelecek kapatılır, ay çubuğu aya geçirir", async ({ page }) => {
+    await yoneticiApiGirisi(page);
+    await page.goto("/gelir-raporu");
+    const simdi = new Date();
+    const donemAdi = page.getByTestId("donem-adi");
+    await expect(page.getByRole("button", { name: "Aylık" })).toHaveAttribute("aria-pressed", "true");
+
+    // Yıllık: yıl adı görünür, gelecek yıla gidilemez, önceki yıl çalışır; 12 aylık grafik o yılın aylarını gösterir.
+    await page.getByRole("button", { name: "Yıllık" }).click();
+    await expect(donemAdi).toHaveText(String(simdi.getFullYear()));
+    await expect(page.getByRole("button", { name: "Sonraki yıl" })).toBeDisabled();
+    await expect(page.getByRole("heading", { name: `${simdi.getFullYear()} yılı aylara göre net gelir` })).toBeVisible();
+    await expect(page.getByRole("button", { name: "CSV indir (seçili yıl)" })).toBeVisible();
+    await page.getByRole("button", { name: "Önceki yıl" }).click();
+    await expect(donemAdi).toHaveText(String(simdi.getFullYear() - 1));
+    await expect(page.getByRole("button", { name: "Sonraki yıl" })).toBeEnabled();
+    await page.getByLabel("Yıl seç").selectOption(String(simdi.getFullYear()));
+    await expect(donemAdi).toHaveText(String(simdi.getFullYear()));
+
+    // Yıllıkta bir aya tıklayınca Aylık kapsama geçilir.
+    await page.getByRole("button", { name: /^Ocak /i }).click();
+    await expect(page.getByRole("button", { name: "Aylık" })).toHaveAttribute("aria-pressed", "true");
+    await expect(donemAdi).toContainText(`Ocak ${simdi.getFullYear()}`);
+
+    // Günlük: tarih seçici bugünü gösterir, bugünden ilerisi seçilemez, bir gün geri gidilir.
+    await page.getByRole("button", { name: "Günlük" }).click();
+    const gun = page.getByLabel("Gün seç");
+    const yyyyAyGun = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    await expect(gun).toHaveAttribute("max", yyyyAyGun(simdi));
+    await page.getByLabel("Gün seç").fill("2026-03-10");
+    await expect(donemAdi).toHaveText("10 Mart 2026");
+    await expect(page.getByRole("button", { name: "CSV indir (seçili gün)" })).toBeVisible();
+    await page.getByRole("button", { name: "Önceki gün" }).click();
+    await expect(donemAdi).toHaveText("9 Mart 2026");
+    await expect(page.getByTestId("kpi-net")).toBeVisible();
+    // Aylığa dönünce günün ayı açılır.
+    await page.getByRole("button", { name: "Aylık" }).click();
+    await expect(donemAdi).toHaveText("Mart 2026", { ignoreCase: true });
+  });
 });

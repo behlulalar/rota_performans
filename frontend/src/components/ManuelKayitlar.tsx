@@ -7,12 +7,11 @@ import { birincilDugme, dugme, girdi, hataKutusu, listeSatiri, rozetNotr, secimK
 import { bugun } from "../lib/tarih";
 import Kart from "./Kart";
 
-const etiket = "text-[13px] text-metin-soluk";
+const etiket = "block text-[13px] text-metin-soluk";
 
-/** Kayıt formu: tarih varsayılanı seçili ay bu aysa bugün, değilse ayın son günü. */
-function KayitFormu({ yil, ay, onEklendi, onKapat }: { yil: number; ay: number; onEklendi: () => void; onKapat: () => void }) {
-  const ayinSonu = `${yil}-${String(ay).padStart(2, "0")}-${String(new Date(yil, ay, 0).getDate()).padStart(2, "0")}`;
-  const varsayilan = bugun() < ayinSonu ? bugun() : ayinSonu;
+/** Kayıt formu: tarih varsayılanı dönem bugünü içeriyorsa bugün, değilse dönemin son günü. */
+function KayitFormu({ bitis, onEklendi, onKapat }: { bitis: string; onEklendi: () => void; onKapat: () => void }) {
+  const varsayilan = bugun() < bitis ? bugun() : bitis;
   const [tur, setTur] = useState<ManuelKayitTuru>("gelir");
   const [tutar, setTutar] = useState("");
   const [tarih, setTarih] = useState(varsayilan);
@@ -64,7 +63,7 @@ function KayitFormu({ yil, ay, onEklendi, onKapat }: { yil: number; ay: number; 
         <label className="block"><span className={etiket}>Tarih</span>
           <input className={girdi} type="date" max={bugun()} value={tarih} onChange={(e) => setTarih(e.target.value)} /></label>
         <label className="block"><span className={etiket}>Yöntem</span>
-          <select className={secimKutusu} value={yontem} onChange={(e) => setYontem(e.target.value as OdemeYontemi)}>
+          <select className={`${secimKutusu} mt-1 w-full`} value={yontem} onChange={(e) => setYontem(e.target.value as OdemeYontemi)}>
             {(Object.keys(YONTEM_ETIKET) as OdemeYontemi[]).map((y) => <option key={y} value={y}>{YONTEM_ETIKET[y]}</option>)}
           </select></label>
       </div>
@@ -127,8 +126,10 @@ function Satir({ k, gizli, onIptal }: { k: ManuelKayit; gizli: boolean; onIptal:
   );
 }
 
-/** Gelir raporu > Manuel gelir ve giderler: seçili ayın kayıtları, ekleme ve iptal. */
-export default function ManuelKayitlar({ yil, ay, gizli, onDegisti }: { yil: number; ay: number; gizli: boolean; onDegisti: () => void }) {
+/** Gelir raporu > Manuel gelir ve giderler: seçili dönemin (gün, ay veya yıl) kayıtları, ekleme ve iptal. */
+export default function ManuelKayitlar({
+  baslangic, bitis, gizli, onDegisti,
+}: { baslangic: string; bitis: string; gizli: boolean; onDegisti: () => void }) {
   const [kayitlar, setKayitlar] = useState<ManuelKayit[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [formAcik, setFormAcik] = useState(false);
@@ -136,9 +137,9 @@ export default function ManuelKayitlar({ yil, ay, gizli, onDegisti }: { yil: num
 
   useEffect(() => {
     let iptal = false;
-    manuelKayitlariGetir(yil, ay).then((v) => !iptal && setKayitlar(v), (e) => !iptal && setHata(hataMesaji(e)));
+    manuelKayitlariGetir(baslangic, bitis).then((v) => !iptal && setKayitlar(v), (e) => !iptal && setHata(hataMesaji(e)));
     return () => { iptal = true; };
-  }, [yil, ay, surum]);
+  }, [baslangic, bitis, surum]);
 
   const yenile = () => {
     setSurum((n) => n + 1);
@@ -152,9 +153,9 @@ export default function ManuelKayitlar({ yil, ay, gizli, onDegisti }: { yil: num
       sag={!gizli && !formAcik && <button type="button" className={birincilDugme} onClick={() => setFormAcik(true)}>Kayıt ekle</button>}
       bosluksuz
     >
-      {formAcik && <KayitFormu yil={yil} ay={ay} onKapat={() => setFormAcik(false)} onEklendi={() => { setFormAcik(false); yenile(); }} />}
+      {formAcik && <KayitFormu bitis={bitis} onKapat={() => setFormAcik(false)} onEklendi={() => { setFormAcik(false); yenile(); }} />}
       {hata && <p role="alert" className={`${hataKutusu} mx-6 mb-4`}>{hata}</p>}
-      {kayitlar?.length === 0 && !formAcik && <p className="px-6 pb-6 text-sm text-metin-soluk">Bu ay manuel kayıt yok.</p>}
+      {kayitlar?.length === 0 && !formAcik && <p className="px-6 pb-6 text-sm text-metin-soluk">Bu dönemde manuel kayıt yok.</p>}
       {!!kayitlar?.length && <ul>{kayitlar.map((k) => <Satir key={k.id} k={k} gizli={gizli} onIptal={yenile} />)}</ul>}
     </Kart>
   );

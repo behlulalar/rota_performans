@@ -308,3 +308,37 @@ async def test_csv_366_gun_kabul(istemci, yonetici):
     assert r.status_code == 200
     r = await istemci.get("/api/raporlar/gelir.csv?baslangic=2028-01-01&bitis=2028-12-31", headers=yonetici)
     assert r.status_code == 200  # 366 gün (artık yıl)
+
+
+async def test_yil_kapsami(istemci, yonetici):
+    p = await paket_ekle("Aylık 8 Ders")
+    await odeme_ekle(p, "3400", date(2026, 1, 5))
+    await odeme_ekle(p, "3400", date(2026, 12, 31))
+    await odeme_ekle(p, "1000", date(2025, 6, 1))  # önceki yıl
+    await odeme_ekle(p, "500", date(2027, 1, 1))  # sonraki yıl
+    j = (await istemci.get("/api/raporlar/gelir?kapsam=yil&yil=2026", headers=yonetici)).json()
+    assert j["donem"]["baslangic"] == "2026-01-01" and j["donem"]["bitis"] == "2026-12-31"
+    assert j["ozet"]["toplam_tahsilat"] == "6800.00" and j["ozet"]["odeme_adedi"] == 2
+    assert j["ozet"]["onceki_ay_tahsilat"] == "1000.00"  # önceki dönem = önceki yıl
+    assert j["gunluk"] == []
+    assert [(a["yil"], a["ay"]) for a in j["aylik_seri"]] == [(2026, m) for m in range(1, 13)]
+    assert j["aylik_seri"][0]["tutar"] == "3400.00" and j["aylik_seri"][-1]["tutar"] == "3400.00"
+
+
+async def test_gun_kapsami(istemci, yonetici):
+    p = await paket_ekle("Aylık 8 Ders")
+    await odeme_ekle(p, "3400", date(2026, 3, 10))
+    await odeme_ekle(p, "1000", date(2026, 3, 10), OdemeYontemi.havale_eft)
+    await odeme_ekle(p, "700", date(2026, 3, 9))
+    await odeme_ekle(p, "900", date(2026, 3, 11))
+    j = (await istemci.get("/api/raporlar/gelir?kapsam=gun&gun=2026-03-10", headers=yonetici)).json()
+    assert j["donem"] == {"yil": 2026, "ay": 3, "baslangic": "2026-03-10", "bitis": "2026-03-10"}
+    assert j["ozet"]["toplam_tahsilat"] == "4400.00" and j["ozet"]["odeme_adedi"] == 2
+    assert j["ozet"]["onceki_ay_tahsilat"] == "700.00"  # önceki dönem = önceki gün
+    assert [(g["tarih"], g["tutar"]) for g in j["gunluk"]] == [("2026-03-10", "4400.00")]
+    assert len(j["aylik_seri"]) == 12 and (j["aylik_seri"][-1]["yil"], j["aylik_seri"][-1]["ay"]) == (2026, 3)
+    assert j["aylik_seri"][-1]["tutar"] == "6000.00"  # seri günün ayının tamamını kapsar
+
+
+async def test_gecersiz_kapsam(istemci, yonetici):
+    assert (await istemci.get("/api/raporlar/gelir?kapsam=hafta", headers=yonetici)).status_code == 422
