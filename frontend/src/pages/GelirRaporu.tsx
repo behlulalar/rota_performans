@@ -1,16 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { gelirCsvIndir, gelirRaporuGetir, YONTEM_ETIKET, type GelirRaporu as Rapor } from "../api/rapor";
+import { gelirCsvIndir, gelirRaporuGetir, YONTEM_ETIKET, type GelirRaporu as Rapor, type Kapsam } from "../api/rapor";
 import FinansNotu, { useTutarGizli } from "../components/FinansNotu";
 import Kart from "../components/Kart";
 import ManuelKayitlar from "../components/ManuelKayitlar";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { hataMesaji } from "../lib/dogrulama";
 import { paraBicimle } from "../lib/para";
-import { dugme, rozetBasari, rozetHata, rozetNotr } from "../lib/stil";
+import { dugme, rozetBasari, rozetHata, rozetNotr, secimKutusu } from "../lib/stil";
+import { bugun, gunEkle, tarihCoz, yyyyAyGun } from "../lib/tarih";
 
 const ayAdi = (yil: number, ay: number) => new Date(yil, ay - 1, 1).toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
 const kisaAy = (ay: number) => new Date(2000, ay - 1, 1).toLocaleDateString("tr-TR", { month: "short" });
+const gunAdi = (g: string) => tarihCoz(g).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+const AY_ADLARI = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString("tr-TR", { month: "long" }));
+const KAPSAMLAR: { anahtar: Kapsam; ad: string }[] = [
+  { anahtar: "gun", ad: "Günlük" },
+  { anahtar: "ay", ad: "Aylık" },
+  { anahtar: "yil", ad: "Yıllık" },
+];
+/** Önceki dönem adı ve "…e göre" eki: ay → önceki aya, yıl → önceki yıla, gün → önceki güne. */
+const ONCEKI: Record<Kapsam, { birim: string; ek: string }> = {
+  ay: { birim: "ay", ek: "aya" },
+  yil: { birim: "yıl", ek: "yıla" },
+  gun: { birim: "gün", ek: "güne" },
+};
 const sayi = (d: string | number | null) => Number(d) || 0;
 const yuzdeYaz = (d: number | string | null) => `%${sayi(d ?? 0).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}`;
 
@@ -70,21 +84,24 @@ function CubukGrafik({
   );
 }
 
-function Degisim({ r }: { r: Rapor }) {
+function Degisim({ r, kapsam }: { r: Rapor; kapsam: Kapsam }) {
+  const { birim, ek } = ONCEKI[kapsam];
   const d = r.ozet.degisim_yuzde;
-  if (d === null || d === undefined) return <span className={rozetNotr}>Önceki ay verisi yok</span>;
+  if (d === null || d === undefined) return <span className={rozetNotr}>Önceki {birim} verisi yok</span>;
   const n = sayi(d);
   const metin = `${Math.abs(n).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}%`;
-  if (n > 0) return <span className={rozetBasari}>▲ {metin} önceki aya göre</span>;
-  if (n < 0) return <span className={rozetHata}>▼ {metin} önceki aya göre</span>;
-  return <span className={rozetNotr}>= %0 önceki aya göre</span>;
+  if (n > 0) return <span className={rozetBasari}>▲ {metin} önceki {ek} göre</span>;
+  if (n < 0) return <span className={rozetHata}>▼ {metin} önceki {ek} göre</span>;
+  return <span className={rozetNotr}>= %0 önceki {ek} göre</span>;
 }
 
 export default function GelirRaporu() {
   const simdi = new Date();
   const buYil = simdi.getFullYear();
   const buAy = simdi.getMonth() + 1;
+  const [kapsam, setKapsam] = useState<Kapsam>("ay");
   const [donem, setDonem] = useState({ yil: buYil, ay: buAy });
+  const [gun, setGun] = useState(bugun());
   const [veri, setVeri] = useState<Rapor | null>(null);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [hata, setHata] = useState<string | null>(null);
@@ -98,20 +115,60 @@ export default function GelirRaporu() {
     setYukleniyor(true);
     setHata(null);
     setGunSecili(null);
-    gelirRaporuGetir(donem.yil, donem.ay)
+    gelirRaporuGetir(donem.yil, donem.ay, kapsam, gun)
       .then((v) => !iptal && setVeri(v))
       .catch((e) => !iptal && setHata(hataMesaji(e)))
       .finally(() => !iptal && setYukleniyor(false));
     return () => { iptal = true; };
-  }, [donem, deneme]);
+  }, [donem, kapsam, gun, deneme]);
 
-  const gelecekte = donem.yil > buYil || (donem.yil === buYil && donem.ay >= buAy);
+  const gelecekte =
+    kapsam === "gun" ? gun >= bugun()
+    : kapsam === "yil" ? donem.yil >= buYil
+    : donem.yil > buYil || (donem.yil === buYil && donem.ay >= buAy);
   const git = (fark: number) => {
-    const d = new Date(donem.yil, donem.ay - 1 + fark, 1);
-    const yeni = { yil: d.getFullYear(), ay: d.getMonth() + 1 };
-    if (yeni.yil > buYil || (yeni.yil === buYil && yeni.ay > buAy)) return;
-    setDonem(yeni);
+    if (kapsam === "gun") {
+      const yeni = yyyyAyGun(gunEkle(tarihCoz(gun), fark));
+      if (yeni <= bugun()) setGun(yeni);
+    } else if (kapsam === "yil") {
+      if (donem.yil + fark <= buYil) setDonem({ yil: donem.yil + fark, ay: donem.ay });
+    } else {
+      const d = new Date(donem.yil, donem.ay - 1 + fark, 1);
+      const yeni = { yil: d.getFullYear(), ay: d.getMonth() + 1 };
+      if (yeni.yil > buYil || (yeni.yil === buYil && yeni.ay > buAy)) return;
+      setDonem(yeni);
+    }
   };
+  /** Yıl veya ay seçilirken gelecekteki aya taşmaz. */
+  const donemSec = (yil: number, ay: number) => setDonem({ yil, ay: yil === buYil ? Math.min(ay, buAy) : ay });
+  const kapsamSec = (k: Kapsam) => {
+    if (k === kapsam) return;
+    if (k === "gun") {
+      // Seçili ay bu aysa bugüne, değilse o ayın son gününe git.
+      const sonGun = yyyyAyGun(new Date(donem.yil, donem.ay, 0));
+      setGun(donem.yil === buYil && donem.ay === buAy ? bugun() : sonGun);
+    } else if (kapsam === "gun") {
+      const d = tarihCoz(gun);
+      setDonem({ yil: d.getFullYear(), ay: d.getMonth() + 1 });
+    }
+    setKapsam(k);
+  };
+  const gunuAc = (tarih: string) => {
+    setGun(tarih);
+    setKapsam("gun");
+  };
+  const ayaGit = (yil: number, ay: number) => {
+    setDonem({ yil, ay });
+    setKapsam("ay");
+  };
+  const yilSecenekleri = Array.from({ length: 6 }, (_, i) => buYil - i);
+  if (!yilSecenekleri.includes(donem.yil)) yilSecenekleri.push(donem.yil);
+  yilSecenekleri.sort((a, b) => b - a);
+  const aralik = useMemo(() => {
+    if (kapsam === "gun") return { baslangic: gun, bitis: gun };
+    if (kapsam === "yil") return { baslangic: `${donem.yil}-01-01`, bitis: `${donem.yil}-12-31` };
+    return { baslangic: yyyyAyGun(new Date(donem.yil, donem.ay - 1, 1)), bitis: yyyyAyGun(new Date(donem.yil, donem.ay, 0)) };
+  }, [kapsam, donem, gun]);
 
   const csv = async () => {
     if (!veri) return;
@@ -129,9 +186,9 @@ export default function GelirRaporu() {
     deger: sayi(a.tutar),
     etiket: kisaAy(a.ay),
     metin: `${ayAdi(a.yil, a.ay)}: ${paraBicimle(a.tutar)} (${a.adet} ödeme)`,
-    vurgulu: a.yil === donem.yil && a.ay === donem.ay,
+    vurgulu: kapsam !== "yil" && a.yil === donem.yil && a.ay === donem.ay,
     etiketGoster: h.length <= 12 || i % 2 === 0,
-  })), [veri, donem]);
+  })), [veri, donem, kapsam]);
 
   const gunlukCubuklar = useMemo<Cubuk[]>(() => (veri?.gunluk ?? []).map((g) => {
     const gun = Number(g.tarih.slice(8, 10));
@@ -147,23 +204,64 @@ export default function GelirRaporu() {
 
   const bos = !!veri && veri.ozet.odeme_adedi === 0 && veri.ozet.manuel_adedi === 0;
   const ayMetni = ayAdi(donem.yil, donem.ay);
+  const donemMetni = kapsam === "gun" ? gunAdi(gun) : kapsam === "yil" ? String(donem.yil) : ayMetni;
+  const bosMetin = `Bu ${kapsam === "gun" ? "günde" : kapsam === "yil" ? "yılda" : "ayda"} tahsilat veya manuel kayıt yok (${donemMetni}).`;
   const gunSeciliKayit = veri?.gunluk.find((g) => g.tarih === gunSecili);
 
   return (
     <div className="space-y-6">
-      <SayfaBasligi baslik="Gelir raporu" aciklama={`${ayMetni} · net gelir, tahsilat, manuel gelir/gider ve bekleyen alacak`} />
+      <SayfaBasligi baslik="Gelir raporu" aciklama={`${donemMetni} · net gelir, tahsilat, manuel gelir/gider ve bekleyen alacak`} />
       <FinansNotu />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1">
-          <button className={dugme} onClick={() => git(-1)} aria-label="Önceki ay">‹</button>
-          <span className="num min-w-40 text-center font-medium capitalize" aria-live="polite" data-testid="donem-adi">{ayMetni}</span>
-          <button className={dugme} onClick={() => git(1)} disabled={gelecekte} aria-label="Sonraki ay">›</button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex gap-1" role="group" aria-label="Rapor kapsamı">
+            {KAPSAMLAR.map((k) => (
+              <button
+                key={k.anahtar}
+                type="button"
+                onClick={() => kapsamSec(k.anahtar)}
+                aria-pressed={kapsam === k.anahtar}
+                className={`${dugme} ${kapsam === k.anahtar ? "!bg-birincil !text-birincil-metin !border-birincil" : ""}`}
+              >
+                {k.ad}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <button className={dugme} onClick={() => git(-1)} aria-label={`Önceki ${ONCEKI[kapsam].birim}`}>‹</button>
+            <span className="num min-w-40 text-center font-medium capitalize" aria-live="polite" data-testid="donem-adi">{donemMetni}</span>
+            <button className={dugme} onClick={() => git(1)} disabled={gelecekte} aria-label={`Sonraki ${ONCEKI[kapsam].birim}`}>›</button>
+          </div>
+          <div className="flex items-center gap-2">
+            {kapsam === "gun" && (
+              <input
+                type="date"
+                aria-label="Gün seç"
+                className={secimKutusu}
+                max={bugun()}
+                value={gun}
+                onChange={(e) => e.target.value && e.target.value <= bugun() && setGun(e.target.value)}
+              />
+            )}
+            {kapsam === "ay" && (
+              <select aria-label="Ay seç" className={secimKutusu} value={donem.ay} onChange={(e) => donemSec(donem.yil, Number(e.target.value))}>
+                {AY_ADLARI.map((ad, i) => (
+                  <option key={ad} value={i + 1} disabled={donem.yil === buYil && i + 1 > buAy} className="capitalize">{ad}</option>
+                ))}
+              </select>
+            )}
+            {kapsam !== "gun" && (
+              <select aria-label="Yıl seç" className={secimKutusu} value={donem.yil} onChange={(e) => donemSec(Number(e.target.value), donem.ay)}>
+                {yilSecenekleri.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            )}
+          </div>
         </div>
         {!gizli && (
           <div className="flex flex-col items-end gap-1">
             <button className={dugme} onClick={csv} disabled={!veri || csvDurum.yukleniyor}>
-              {csvDurum.yukleniyor ? "İndiriliyor…" : "CSV indir (seçili ay)"}
+              {csvDurum.yukleniyor ? "İndiriliyor…" : `CSV indir (seçili ${ONCEKI[kapsam].birim})`}
             </button>
             {csvDurum.hata && <p role="alert" className="text-[13px] text-hata">{csvDurum.hata}</p>}
           </div>
@@ -185,8 +283,8 @@ export default function GelirRaporu() {
             <div className={`${kpiKutu} sm:col-span-2 xl:col-span-1`} data-testid="kpi-net">
               <div className={kpiEtiket}>Net gelir</div>
               <div className={`${kpiDeger} ${sayi(veri.ozet.net_gelir) < 0 ? "text-hata" : "text-altin-metin"}`}>{paraBicimle(veri.ozet.net_gelir)}</div>
-              {!gizli && <div className="mt-2"><Degisim r={veri} /></div>}
-              {veri.ozet.degisim_yuzde !== null && <div className="num text-xs text-metin-soluk mt-1.5">Önceki ay: {paraBicimle(veri.ozet.onceki_ay_net)}</div>}
+              {!gizli && <div className="mt-2"><Degisim r={veri} kapsam={kapsam} /></div>}
+              {veri.ozet.degisim_yuzde !== null && <div className="num text-xs text-metin-soluk mt-1.5">Önceki {ONCEKI[kapsam].birim}: {paraBicimle(veri.ozet.onceki_ay_net)}</div>}
               <dl className="mt-3 pt-3 border-t border-cizgi space-y-1 text-[13px]">
                 <div className="flex justify-between gap-2"><dt className="text-metin-soluk">Öğrenci ödemeleri</dt><dd className="num">{paraBicimle(veri.ozet.toplam_tahsilat)}</dd></div>
                 <div className="flex justify-between gap-2"><dt className="text-metin-soluk">Manuel gelir</dt><dd className="num text-basari">+{paraBicimle(veri.ozet.manuel_gelir)}</dd></div>
@@ -217,7 +315,7 @@ export default function GelirRaporu() {
             </div>
           </div>
 
-          <ManuelKayitlar yil={donem.yil} ay={donem.ay} gizli={gizli} onDegisti={() => setDeneme((n) => n + 1)} />
+          <ManuelKayitlar baslangic={aralik.baslangic} bitis={aralik.bitis} gizli={gizli} onDegisti={() => setDeneme((n) => n + 1)} />
 
           {gizli ? (
             <Kart>
@@ -225,11 +323,14 @@ export default function GelirRaporu() {
             </Kart>
           ) : (
             <>
-            <Kart baslik="Son 12 ay net gelir" aciklama="Bir aya tıklayarak o aya geçin">
+            <Kart
+              baslik={kapsam === "yil" ? `${donem.yil} yılı aylara göre net gelir` : "Son 12 ay net gelir"}
+              aciklama="Bir aya tıklayarak o aya geçin"
+            >
               <CubukGrafik
                 cubuklar={aylikCubuklar}
-                secili={`${donem.yil}-${donem.ay}`}
-                onSec={(k) => { const [y, a] = k.split("-").map(Number); setDonem({ yil: y, ay: a }); }}
+                secili={kapsam === "yil" ? null : `${donem.yil}-${donem.ay}`}
+                onSec={(k) => { const [y, a] = k.split("-").map(Number); ayaGit(y, a); }}
                 okuma={(c) => c.metin}
               />
               <table className="sr-only" aria-label="Son 12 ay net gelir tablosu">
@@ -240,12 +341,13 @@ export default function GelirRaporu() {
 
             {bos ? (
               <Kart>
-                <p className="text-center text-metin-soluk py-6" data-testid="bos-donem">Bu ayda tahsilat veya manuel kayıt yok ({ayMetni}).</p>
+                <p className="text-center text-metin-soluk py-6" data-testid="bos-donem">{bosMetin}</p>
               </Kart>
             ) : (
               <>
-                <Kart
+                {kapsam === "ay" && <Kart
                   baslik="Günlük net gelir"
+                  sag={gunSecili && <button type="button" className={dugme} onClick={() => gunuAc(gunSecili)}>Bu günün raporunu aç</button>}
                   aciklama={gunSeciliKayit ? <span className="num">{gunSeciliKayit.tarih.slice(8, 10)} {ayMetni}: {paraBicimle(gunSeciliKayit.tutar)} · {gunSeciliKayit.adet} ödeme</span> : `${ayMetni} · bir güne dokunarak tutarını görün`}
                 >
                   <div className="pt-4">
@@ -255,7 +357,7 @@ export default function GelirRaporu() {
                     <thead><tr><th>Tarih</th><th>Tutar</th><th>Ödeme adedi</th></tr></thead>
                     <tbody>{veri.gunluk.map((g) => <tr key={g.tarih}><td>{g.tarih}</td><td>{paraBicimle(g.tutar)}</td><td>{g.adet}</td></tr>)}</tbody>
                   </table>
-                </Kart>
+                </Kart>}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Kart baslik="Yönteme göre dağılım">

@@ -16,8 +16,8 @@ export type ManuelKayit = {
 };
 export type ManuelKayitGirdi = Pick<ManuelKayit, "tur" | "tarih" | "yontem" | "aciklama"> & { tutar: string };
 
-export const manuelKayitlariGetir = (yil: number, ay: number) =>
-  api<ManuelKayit[]>(`/api/manuel-kayitlar?${new URLSearchParams({ yil: String(yil), ay: String(ay) })}`);
+export const manuelKayitlariGetir = (baslangic: string, bitis: string) =>
+  api<ManuelKayit[]>(`/api/manuel-kayitlar?${new URLSearchParams({ baslangic, bitis })}`);
 export const manuelKayitEkle = (g: ManuelKayitGirdi) =>
   api<ManuelKayit>("/api/manuel-kayitlar", { method: "POST", body: JSON.stringify(g) });
 export const manuelKayitIptal = (id: string, neden: string) =>
