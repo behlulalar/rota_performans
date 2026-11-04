@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import TelefonGirdisi from "../components/TelefonGirdisi";
-import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA, telefonSec } from "../lib/telefon";
+import { apiyeCevir, bicimle, gecerliMi, numaraCoz, TELEFON_HATA, telefonSec } from "../lib/telefon";
 import {
   antrenorGuncelle,
   antrenorleriGetir,
@@ -230,7 +230,7 @@ function YeniAntrenor({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
 
 function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; onKapat: () => void; onKaydedildi: () => void }) {
   const [ad, setAd] = useState(antrenor.ad_soyad);
-  const [telefon, setTelefon] = useState(rakamlaraCevir(antrenor.telefon));
+  const [telefon, setTelefon] = useState(numaraCoz(antrenor.telefon));
   const [giris, setGiris] = useState(antrenor.giris ?? "");
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);

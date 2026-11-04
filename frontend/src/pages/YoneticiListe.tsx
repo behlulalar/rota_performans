@@ -12,7 +12,7 @@ import SayfaBasligi from "../components/SayfaBasligi";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import { hataMesaji } from "../lib/dogrulama";
 import { girisiBicimle } from "../lib/hatirla";
-import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
+import { apiyeCevir, bicimle, gecerliMi, numaraCoz, TELEFON_HATA } from "../lib/telefon";
 import { birincilDugme, dugme, girdi, rozetBasari, rozetBirincil, rozetNotr, satir, td, th } from "../lib/stil";
 
 const DESTEK_NOTU = "Teknik destek hesabı bu ekrandan değiştirilemez";
@@ -255,7 +255,7 @@ function YeniYonetici({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
 function Duzenle({ yonetici, onKapat, onKaydedildi }: { yonetici: YoneticiOzet; onKapat: () => void; onKaydedildi: () => void }) {
   const [ad, setAd] = useState(yonetici.ad_soyad ?? "");
   const [giris, setGiris] = useState(yonetici.giris);
-  const [telefon, setTelefon] = useState(rakamlaraCevir(yonetici.telefon));
+  const [telefon, setTelefon] = useState(numaraCoz(yonetici.telefon));
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
   const girisDegisti = !yonetici.ben && giris.trim().toLowerCase() !== yonetici.giris;

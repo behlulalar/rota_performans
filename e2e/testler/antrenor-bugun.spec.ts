@@ -64,7 +64,7 @@ test.describe("Antrenör: Bugün ve Profilim", () => {
     // Geçersiz telefon istemcide reddedilir.
     await page.getByLabel("Telefon").fill("123");
     await page.getByRole("button", { name: "Bilgileri kaydet" }).click();
-    await expect(page.getByRole("alert")).toContainText("Telefon 10 haneli olmalı");
+    await expect(page.getByRole("alert")).toContainText("Geçerli bir telefon numarası girin");
 
     // Görünüm kartı ve şifre kartı da bu sayfadadır.
     await expect(page.getByRole("heading", { name: "Görünüm" })).toBeVisible();

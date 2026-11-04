@@ -1,5 +1,5 @@
 _AYIRICILAR = " -()\t"
-_HATA = "Telefon numarası +90 ardından 10 haneden oluşmalı"
+_HATA = "Telefon numarası geçersiz: ülke kodu ardından numara girin (Türkiye için +90 ardından 10 haneden oluşmalı)"
 
 
 def sade(metin: str) -> str:
@@ -8,12 +8,24 @@ def sade(metin: str) -> str:
 
 
 def normalize(metin: str) -> str:
-    """Kanonik biçimi ("+90" + 10 hane) döndürür; geçersizse ValueError."""
+    """Kanonik biçimi ("+" + ülke kodu + numara) döndürür; geçersizse ValueError.
+
+    "+" ile başlayan numara uluslararası kabul edilir: Türkiye (+90) için tam 10 hane, diğer ülkeler için
+    ülke kodu dahil 8–15 hane (E.164). "+" yoksa Türkiye biçimleri (5XX…, 05XX…, 905XX…) geçerlidir.
+    """
     s = sade(metin)
-    if s.startswith("+"):
+    uluslararasi = s.startswith("+")
+    if uluslararasi:
         s = s[1:]
     if not (s.isascii() and s.isdigit()):
         raise ValueError(_HATA)
+    if uluslararasi:
+        if s.startswith("0"):
+            raise ValueError(_HATA)
+        gecerli = len(s) == 12 if s.startswith("90") else 8 <= len(s) <= 15
+        if not gecerli:
+            raise ValueError(_HATA)
+        return "+" + s
     if len(s) == 12 and s.startswith("90"):
         s = s[2:]
     elif len(s) == 11 and s.startswith("0"):

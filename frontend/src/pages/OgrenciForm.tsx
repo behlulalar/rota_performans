@@ -15,7 +15,7 @@ import { hataMesaji, ROL_ETIKET, tcGecerli, yasHesapla } from "../lib/dogrulama"
 import FotoKirpma from "../components/FotoKirpma";
 import Kart from "../components/Kart";
 import TelefonGirdisi from "../components/TelefonGirdisi";
-import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
+import { apiyeCevir, bicimle, gecerliMi, numaraCoz, TELEFON_HATA } from "../lib/telefon";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { birincilDugme, dugme, girdi, tehlikeKutusu } from "../lib/stil";
 
@@ -73,9 +73,9 @@ export default function OgrenciForm() {
         setBabaAdi(o.baba_adi ?? "");
         setDogum(o.dogum_tarihi);
         setCinsiyet(o.cinsiyet ?? "");
-        setTelefon(rakamlaraCevir(o.telefon));
+        setTelefon(numaraCoz(o.telefon));
         setKimlikTur(o.kimlik_tur);
-        setKisiler(o.iletisim_kisileri.map((k) => ({ anahtar: ++sayac, rol: k.rol, ad_soyad: k.ad_soyad, telefon: rakamlaraCevir(k.telefon), birincil: k.birincil })));
+        setKisiler(o.iletisim_kisileri.map((k) => ({ anahtar: ++sayac, rol: k.rol, ad_soyad: k.ad_soyad, telefon: numaraCoz(k.telefon), birincil: k.birincil })));
       })
       .catch((e) => !iptal && setGenelHata(hataMesaji(e)))
       .finally(() => !iptal && setYukleniyor(false));

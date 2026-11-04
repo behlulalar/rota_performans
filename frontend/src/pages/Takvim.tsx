@@ -154,7 +154,7 @@ export default function Takvim() {
       )}
 
       {oturumlar !== null && oturumlar.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 min-[1360px]:grid-cols-7 gap-2 items-start">
+        <div className="flex flex-wrap justify-center gap-2 items-start">
           {gunler.map((g, i) => {
             const s = yyyyAyGun(g);
             const liste = oturumlar
@@ -163,7 +163,11 @@ export default function Takvim() {
             const acik = !kapali.has(s);
             const buGun = s === bugunStr;
             return (
-              <section key={s} aria-label={`${GUNLER[i]} ${kisaTarih(g)}`} className="min-w-0">
+              <section
+                key={s}
+                aria-label={`${GUNLER[i]} ${kisaTarih(g)}`}
+                className="min-w-0 w-full md:w-[calc(50%-0.25rem)] lg:w-[calc(25%-0.375rem)] min-[1360px]:w-[calc(14.2857%-0.4286rem)]"
+              >
                 <button
                   type="button"
                   onClick={() => gunToggle(s)}

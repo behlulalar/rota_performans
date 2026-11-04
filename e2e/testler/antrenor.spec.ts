@@ -1,11 +1,11 @@
-import { benzersiz, expect, geciciSifreyleGiris, test, yoneticiApiGirisi } from "../yardimci";
+import { benzersiz, expect, geciciSifreyleGiris, test, yeniAntrenorGirisi, yoneticiApiGirisi } from "../yardimci";
 
 test.describe("Antrenör", () => {
   test("oluşturulur, geçici şifreyle girer ve yönetici menüsünü görmez", async ({ page }) => {
     await yoneticiApiGirisi(page);
     const k = benzersiz();
     const adSoyad = `Antrenor ${k}`;
-    const giris = `antrenor.${k}@example.com`;
+    const giris = yeniAntrenorGirisi();
 
     await page.goto("/antrenorler");
     await page.getByRole("button", { name: "Yeni antrenör" }).click();

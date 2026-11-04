@@ -1,3 +1,4 @@
+import { bicimle, gecerliMi, numaraCoz } from "./telefon";
 import type { Panel } from "./panel";
 
 // "Beni hatırla" tercihi ve hatırlanan hesap (yalnızca giriş bilgisi ve görünen ad; şifre asla saklanmaz).
@@ -79,8 +80,8 @@ export function varsayilanHatirla(): boolean {
   return uygulamaYuklu();
 }
 
-/** 05551112233 -> "0555 111 22 33"; e-posta olduğu gibi kalır. */
+/** "+905551112233" / "05551112233" -> "+90 555 111 22 33"; çözülemeyen (ör. eski e-posta girişi) olduğu gibi kalır. */
 export function girisiBicimle(giris: string): string {
-  const d = giris.replace(/\s/g, "");
-  return /^0\d{10}$/.test(d) ? `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7, 9)} ${d.slice(9)}` : giris;
+  const tam = numaraCoz(giris);
+  return !giris.includes("@") && gecerliMi(tam) ? bicimle(tam) : giris;
 }

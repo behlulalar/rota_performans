@@ -7,7 +7,7 @@ import { test as temel, expect, type APIResponse, type Page } from "@playwright/
 
 export { expect };
 
-export const YONETICI_GIRIS = process.env.E2E_ADMIN_GIRIS ?? "e2e.yonetici@example.com";
+export const YONETICI_GIRIS = process.env.E2E_ADMIN_GIRIS ?? "+905559990001";
 export const YONETICI_SIFRE = process.env.E2E_ADMIN_SIFRE ?? "e2e-yonetici-sifresi-123";
 
 // Uygulamanın onay penceresini (OnayPenceresi) her testte otomatik onaylar.
@@ -136,16 +136,25 @@ export async function yoneticiApiGirisi(page: Page): Promise<string> {
 export type Panel = "veli" | "antrenor" | "yonetici";
 const PANEL_YOLU: Record<Panel, string> = { veli: "/giris", antrenor: "/antrenor-giris", yonetici: "/yonetici-giris" };
 
-/** Giriş bilgisinden panel çıkarılır: e2e yöneticisi, "antrenor." ile başlayanlar antrenör, kalanı veli. */
+const antrenorGirisleri = new Set<string>();
+/** Testte oluşturulan antrenör girişini kaydeder; giriş yardımcısı o numarayı antrenör paneline yönlendirir. */
+export function antrenorGirisiKaydet(giris: string): string {
+  antrenorGirisleri.add(giris);
+  return giris;
+}
+/** Antrenör hesabı için benzersiz giriş (telefon). */
+export const yeniAntrenorGirisi = (): string => antrenorGirisiKaydet(`+90${telefonUret10()}`);
+
+/** Giriş bilgisinden panel çıkarılır: e2e yöneticisi, kayıtlı antrenör girişleri antrenör, kalanı veli. */
 function panelBul(giris: string): Panel {
   if (giris === YONETICI_GIRIS) return "yonetici";
-  return giris.startsWith("antrenor.") ? "antrenor" : "veli";
+  return antrenorGirisleri.has(giris) ? "antrenor" : "veli";
 }
 
 /** Arayüzden giriş formunu doldurur. Panel verilmezse giriş bilgisinden bulunur. */
 export async function arayuzdenGiris(page: Page, giris: string, sifre: string, panel: Panel = panelBul(giris)): Promise<void> {
   await page.goto(PANEL_YOLU[panel]);
-  await page.getByLabel("Telefon veya e-posta").fill(giris);
+  await page.getByLabel("Telefon numarası").fill(giris);
   await page.getByLabel("Şifre", { exact: true }).fill(sifre);
   await page.getByRole("button", { name: "Giriş yap", exact: true }).click();
   // Giriş hız sınırına (IP başına dakikada 20) takılırsa pencere dolunca yeniden dener.
@@ -217,7 +226,7 @@ export async function yoklamaOrtamiKur(page: Page): Promise<YoklamaOrtami> {
   const yetki = { Authorization: `Bearer ${token}` };
   const k = benzersiz();
   const adSoyad = `Antrenor ${k}`;
-  const giris = `antrenor.${k}@example.com`;
+  const giris = yeniAntrenorGirisi();
 
   const a = await page.request.post("/api/antrenorler", { headers: yetki, data: { ad_soyad: adSoyad, giris } });
   expect(a.status(), await a.text()).toBe(201);
@@ -309,7 +318,7 @@ export async function gelirRaporuAPI(page: Page, token: string, yil: number, ay:
 
 // --- Teknik destek (şifre + iki adımlı doğrulama) ---
 
-export const DESTEK_GIRIS = process.env.E2E_DESTEK_GIRIS ?? "destek@rota.test";
+export const DESTEK_GIRIS = process.env.E2E_DESTEK_GIRIS ?? "+905559990002";
 export const DESTEK_SIFRE = process.env.E2E_DESTEK_SIFRE ?? "Destek-test-sifre-123";
 
 const ADIM_SANIYE = 30;
@@ -378,7 +387,7 @@ export function destekKurtarmaKodu(): string {
 export async function destekArayuzdenGiris(page: Page, { bitir = true }: { bitir?: boolean } = {}): Promise<void> {
   destekSayfalari.add(page);
   await page.goto("/destek-giris");
-  await page.getByLabel("E-posta").fill(DESTEK_GIRIS);
+  await page.getByLabel("Telefon numarası").fill(DESTEK_GIRIS);
   await page.getByLabel("Şifre", { exact: true }).fill(DESTEK_SIFRE);
   await page.getByRole("button", { name: "Devam et" }).click();
   await expect(page.getByLabel("Doğrulama kodu")).toBeVisible();

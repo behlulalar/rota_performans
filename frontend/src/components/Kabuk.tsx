@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { aktifBolum, aktifOge, ogeAktifMi, type MenuBolumu, type MenuOgesi } from "../lib/menu";
+import ArkaPlan from "./ArkaPlan";
 import Logo from "./Logo";
 import { BolumBaglami } from "./SayfaBasligi";
 import Simge from "./Simge";
@@ -65,7 +66,10 @@ export default function Kabuk({
   sekmeler,
   yerlesim = "yan",
   ustIcerik,
+  arkaPlan,
 }: {
+  /** İçerik alanının arkasında bulanık havuz görseli gösterir. */
+  arkaPlan?: boolean;
   menu: MenuBolumu[];
   sekmeler?: MenuOgesi[];
   yerlesim?: "yan" | "ust";
@@ -109,7 +113,8 @@ export default function Kabuk({
 
   return (
     <BolumBaglami.Provider value={rotaBolumu.ad}>
-      <div className={`min-h-[calc(100dvh/var(--olcek,1))] flex flex-col ${sekmeler ? "sekmeli-kabuk" : ""}`}>
+      <div className={`relative isolate min-h-[calc(100dvh/var(--olcek,1))] flex flex-col ${sekmeler ? "sekmeli-kabuk" : ""}`}>
+        {arkaPlan && <ArkaPlan />}
         {/* Siyah marka çubuğu */}
         <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center gap-3 px-4 md:px-6 bg-serit text-white">
           {yerlesim === "yan" && (
