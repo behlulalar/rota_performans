@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir } from "../lib/telefon";
+import { apiyeCevir, bicimle, gecerliMi, numaraCoz } from "../lib/telefon";
 import { birincilDugme, dugme, uyariKutusu } from "../lib/stil";
 import { WhatsAppSimgesi } from "./WhatsAppDugmesi";
 
@@ -32,7 +32,7 @@ export default function GeciciSifreKutusu({
     }
   }
 
-  const rakamlar = rakamlaraCevir(telefon);
+  const rakamlar = numaraCoz(telefon);
   const whatsappLinki = gecerliMi(rakamlar)
     ? `https://wa.me/${(apiyeCevir(rakamlar) ?? "").slice(1)}?text=${encodeURIComponent(
         [

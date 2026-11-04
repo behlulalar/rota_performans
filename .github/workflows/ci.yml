@@ -105,7 +105,7 @@ jobs:
       COOKIE_SECURE: "false"
       DOSYA_DIZINI: /tmp/e2e-uploads
       # Gerçek veri korumayan, yalnızca CI için sabit test hesabı.
-      E2E_ADMIN_GIRIS: e2e.yonetici@example.com
+      E2E_ADMIN_GIRIS: "+905559990001"
       E2E_ADMIN_SIFRE: ci-e2e-yonetici-sifresi-123
       E2E_BASE_URL: http://127.0.0.1:5175
     steps:

@@ -53,7 +53,7 @@ test.describe("Giriş", () => {
     await expect(page.getByRole("heading", { name: "Genel bakış" })).toBeVisible();
     await page.goto("/giris");
     await expect(page.getByRole("heading", { name: "Veli / öğrenci girişi" })).toBeVisible();
-    await expect(page.getByLabel("Telefon veya e-posta")).toBeVisible();
+    await expect(page.getByLabel("Telefon numarası")).toBeVisible();
 
     await arayuzdenGiris(page, telefonBosluklu(ogr.telefon), gecici);
     await expect(page).toHaveURL(/\/sifre-degistir$/);

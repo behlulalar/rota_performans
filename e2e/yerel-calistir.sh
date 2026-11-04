@@ -9,7 +9,7 @@ set -euo pipefail
 KOK="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$KOK"
 
-export E2E_ADMIN_GIRIS="${E2E_ADMIN_GIRIS:-e2e.yonetici@example.com}"
+export E2E_ADMIN_GIRIS="${E2E_ADMIN_GIRIS:-+905559990001}"
 export E2E_ADMIN_SIFRE="${E2E_ADMIN_SIFRE:-e2e-yonetici-sifresi-123}"
 export E2E_BASE_URL="${E2E_BASE_URL:-http://127.0.0.1:5175}"
 

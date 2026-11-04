@@ -1,6 +1,6 @@
 import {
   arayuzdenGiris, destekApiGirisi, destekArayuzdenGiris, destekDurumuKaydet, destekKurtarmaKodlariniKaydet, destekKurtarmaKodu, DESTEK_GIRIS, DESTEK_SIFRE, destekKoduAl,
-  expect, odemeAlAPI, ogrenciOlusturAPI, paketAtaAPI, paketOlusturAPI, test, YONETICI_GIRIS, YONETICI_SIFRE, yoneticiApiGirisi,
+  expect, odemeAlAPI, ogrenciOlusturAPI, paketAtaAPI, paketOlusturAPI, telefonGorunen, test, YONETICI_GIRIS, YONETICI_SIFRE, yoneticiApiGirisi,
 } from "../yardimci";
 
 // Bu dosya ilk çalışır (playwright.config.ts): destek hesabının 2FA kurulumunu ilk senaryo yapar.
@@ -10,7 +10,7 @@ test.describe("Teknik destek", () => {
   test("destek-giris: şifre, QR kurulumu, kurtarma kodları ve panele giriş", async ({ page }) => {
     await page.goto("/destek-giris");
     await expect(page.getByRole("heading", { name: "Teknik destek girişi" })).toBeVisible();
-    await page.getByLabel("E-posta").fill(DESTEK_GIRIS);
+    await page.getByLabel("Telefon numarası").fill(DESTEK_GIRIS);
     await page.getByLabel("Şifre", { exact: true }).fill("yanlis-sifre-123");
     await page.getByRole("button", { name: "Devam et" }).click();
     await expect(page.getByRole("alert")).toContainText("hatalı");
@@ -69,7 +69,7 @@ test.describe("Teknik destek", () => {
     const kurtarma = destekKurtarmaKodu();
     for (const sonuc of ["gecer", "reddedilir"] as const) {
       await page.goto("/destek-giris");
-      await page.getByLabel("E-posta").fill(DESTEK_GIRIS);
+      await page.getByLabel("Telefon numarası").fill(DESTEK_GIRIS);
       await page.getByLabel("Şifre", { exact: true }).fill(DESTEK_SIFRE);
       await page.getByRole("button", { name: "Devam et" }).click();
       await page.getByRole("button", { name: "Kurtarma kodu kullan" }).click();
@@ -115,7 +115,7 @@ test.describe("Teknik destek", () => {
 
     // Rol filtresi: destek kendi satırını "siz" rozetiyle görür
     await page.getByRole("combobox", { name: "Rol filtresi" }).selectOption("destek");
-    const kendi = page.getByRole("row", { name: new RegExp(DESTEK_GIRIS) });
+    const kendi = page.getByRole("row", { name: new RegExp(telefonGorunen(DESTEK_GIRIS).replace(/\+/g, "\\+")) });
     await expect(kendi).toBeVisible();
     await expect(kendi.getByText("siz", { exact: true })).toBeVisible();
     await expect(kendi.getByText("2FA açık")).toBeVisible();
@@ -125,7 +125,7 @@ test.describe("Teknik destek", () => {
     await page.getByRole("searchbox", { name: "Hesap ara" }).fill(ogrenci.telefon);
     const satir = page.getByRole("row").filter({ hasText: "Veli" });
     await expect(satir).toHaveCount(1);
-    await expect(page.getByRole("row", { name: new RegExp(DESTEK_GIRIS) })).toHaveCount(0);
+    await expect(page.getByRole("row", { name: new RegExp(telefonGorunen(DESTEK_GIRIS).replace(/\+/g, "\\+")) })).toHaveCount(0);
 
     await satir.getByRole("button", { name: "Şifre sıfırla" }).click(); // onay penceresi otomatik onaylanır
     const kutu = page.getByRole("dialog", { name: /için yeni geçici şifre/ });
@@ -182,7 +182,7 @@ test.describe("Teknik destek", () => {
 
     // Yöneticiler sayfasında destek satırı salt okunur
     await page.goto("/yoneticiler");
-    const satir = page.getByRole("row", { name: new RegExp(DESTEK_GIRIS) });
+    const satir = page.getByRole("row", { name: new RegExp(telefonGorunen(DESTEK_GIRIS).replace(/\+/g, "\\+")) });
     await expect(satir.getByText("Teknik destek", { exact: true })).toBeVisible();
     await expect(satir.getByRole("button")).toHaveCount(0);
 
@@ -196,7 +196,7 @@ test.describe("Teknik destek", () => {
   test("destek yöneticiler sayfasında destek satırını düzenleyemez", async ({ page }) => {
     await destekApiGirisi(page);
     await page.goto("/yoneticiler");
-    const satir = page.getByRole("row", { name: new RegExp(DESTEK_GIRIS) });
+    const satir = page.getByRole("row", { name: new RegExp(telefonGorunen(DESTEK_GIRIS).replace(/\+/g, "\\+")) });
     await expect(satir.getByText("Teknik destek", { exact: true })).toBeVisible();
     await expect(satir.getByRole("button")).toHaveCount(0);
   });

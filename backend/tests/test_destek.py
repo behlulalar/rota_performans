@@ -451,9 +451,9 @@ async def test_e2e_tohumu_destek_hesabi(istemci, monkeypatch):
     monkeypatch.setenv("E2E_ADMIN_SIFRE", "Yonetici-test-sifre-1")
     assert await cli.e2e_tohum() == 0
     assert await cli.e2e_tohum() == 0  # tekrar çalışınca bozulmaz
-    k = await kayit("destek@rota.test")
+    k = await kayit(cli.E2E_DESTEK_GIRIS)
     assert k.rol == Rol.destek and k.totp_aktif is False and k.totp_sifreli is None
-    y = await login(istemci, "destek@rota.test", "destek", sifre=cli.E2E_DESTEK_SIFRE)
+    y = await login(istemci, cli.E2E_DESTEK_GIRIS, "destek", sifre=cli.E2E_DESTEK_SIFRE)
     assert y.json()["durum"] == "kurulum"
 
 

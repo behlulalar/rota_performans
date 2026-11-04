@@ -1,12 +1,12 @@
-import { arayuzdenGiris, benzersiz, expect, telefonBosluklu, telefonGorunen, telefonUret10, test, YENI_SIFRE, yoneticiApiGirisi, zorunluSifreyiBelirle } from "../yardimci";
+import { arayuzdenGiris, benzersiz, expect, telefonBosluklu, telefonGorunen, telefonUret10, test, YENI_SIFRE, yeniAntrenorGirisi, yoneticiApiGirisi, zorunluSifreyiBelirle } from "../yardimci";
 
 test.describe("Yöneticiler", () => {
   test("yeni yönetici oluşturulur, girer, kendi girişini değiştirir ve yeni girişle girer", async ({ page }) => {
     await yoneticiApiGirisi(page);
     const k = benzersiz();
     const adSoyad = `Yonetici ${k}`;
-    const giris = `yonetici.${k}@example.com`;
-    const yeniGiris = `yonetici.yeni.${k}@example.com`;
+    const giris = `+90${telefonUret10()}`;
+    const yeniGiris = `+90${telefonUret10()}`;
 
     await page.goto("/yoneticiler");
     await expect(page.getByRole("heading", { name: "Yöneticiler", level: 1 })).toBeVisible();
@@ -123,8 +123,8 @@ test.describe("Yöneticiler", () => {
   test("yönetici, antrenörün girişini değiştirir", async ({ page }) => {
     const belirtec = await yoneticiApiGirisi(page);
     const k = benzersiz();
-    const giris = `antrenor.${k}@example.com`;
-    const yeniGiris = `antrenor.yeni.${k}@example.com`;
+    const giris = yeniAntrenorGirisi();
+    const yeniGiris = yeniAntrenorGirisi();
     const yanit = await page.request.post("/api/antrenorler", {
       headers: { Authorization: `Bearer ${belirtec}` },
       data: { ad_soyad: `Antrenor ${k}`, giris },
@@ -137,7 +137,7 @@ test.describe("Yöneticiler", () => {
     const modal = page.getByRole("dialog", { name: "Antrenörü düzenle" });
     await modal.getByLabel(/^Giriş \(e-posta/).fill(yeniGiris);
     await modal.getByRole("button", { name: "Kaydet" }).click();
-    await expect(page.getByRole("row", { name: new RegExp(yeniGiris.replace(/\./g, "\\.")) })).toBeVisible();
+    await expect(page.getByRole("row", { name: new RegExp(yeniGiris.replace(/[.+]/g, "\\$&")) })).toBeVisible();
 
     await page.getByRole("button", { name: "Çıkış" }).click();
     await arayuzdenGiris(page, yeniGiris, gecici, "antrenor");

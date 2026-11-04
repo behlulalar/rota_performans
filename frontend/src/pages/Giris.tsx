@@ -4,9 +4,11 @@ import { useAuth } from "../auth/AuthProvider";
 import { tanitimGetir } from "../api/ayarlar";
 import BeniHatirla from "../components/BeniHatirla";
 import InstagramTakip from "../components/InstagramTakip";
+import TelefonGirdisi from "../components/TelefonGirdisi";
 import Karsilama from "../components/Karsilama";
 import { ApiHata } from "../lib/api";
 import { PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
+import { gecerliMi } from "../lib/telefon";
 import { girisiBicimle, hatirlananiOku, hatirlananiSil, varsayilanHatirla } from "../lib/hatirla";
 import { bilgiKutusu, birincilDugme, girdi } from "../lib/stil";
 
@@ -26,8 +28,8 @@ const BASLIK: Record<GirisPaneli, { baslik: string; karsilama: ReactNode; ipucu:
     ipucu: "Kulübe kayıtlı telefon numaranızla ve size verilen şifreyle giriş yapın.",
     yer: "05xx xxx xx xx",
   },
-  antrenor: { baslik: "Antrenör girişi", karsilama: "İyi dersler.", ipucu: "Kulübün size verdiği giriş bilgileriyle giriş yapın.", yer: "e-posta veya telefon" },
-  yonetici: { baslik: "Yönetici girişi", karsilama: "Yönetim paneli.", ipucu: "Yönetici hesabınızla e-posta veya telefon numaranızla giriş yapın.", yer: "E-posta veya telefon" },
+  antrenor: { baslik: "Antrenör girişi", karsilama: "İyi dersler.", ipucu: "Kulübün size verdiği telefon numarası ve şifrenizle giriş yapın.", yer: "" },
+  yonetici: { baslik: "Yönetici girişi", karsilama: "Yönetim paneli.", ipucu: "Yönetici hesabınızın telefon numarası ve şifrenizle giriş yapın.", yer: "" },
 };
 const DIGER: Record<GirisPaneli, GirisPaneli | null> = { veli: null, antrenor: "yonetici", yonetici: "antrenor" };
 
@@ -130,19 +132,10 @@ export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
           </form>
         ) : (
           <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[16px] p-6 space-y-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.35)]" noValidate>
-            <label className="block">
-              <span className="text-[13px] text-metin-soluk">Telefon veya e-posta</span>
-              <input
-                className={girdi}
-                value={giris}
-                onChange={(e) => setGiris(e.target.value)}
-                autoComplete="username"
-                type="text"
-                autoCapitalize="none"
-                placeholder={BASLIK[panel].yer}
-                required
-              />
-            </label>
+            <div>
+              <span id="giris-telefon-etiketi" className="text-[13px] text-metin-soluk">Telefon numarası</span>
+              <TelefonGirdisi value={giris} onChange={setGiris} aria-labelledby="giris-telefon-etiketi" autoFocus />
+            </div>
 
             <label className="block">
               <span className="text-[13px] text-metin-soluk">Şifre</span>
@@ -164,7 +157,7 @@ export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
               </p>
             )}
 
-            <button type="submit" disabled={gonderiliyor || giris.length < 3 || sifre.length < 1} className={`${birincilDugme} w-full`}>
+            <button type="submit" disabled={gonderiliyor || !gecerliMi(giris) || sifre.length < 1} className={`${birincilDugme} w-full`}>
               {gonderiliyor ? "Giriş yapılıyor…" : "Giriş yap"}
             </button>
           </form>

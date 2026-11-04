@@ -5,6 +5,8 @@ import { ikiAdimDogrula, ikiAdimKurulumu, ikiAdimKurulumuDogrula, type KurulumBi
 import { useAuth } from "../auth/AuthProvider";
 import BeniHatirla from "../components/BeniHatirla";
 import Karsilama from "../components/Karsilama";
+import TelefonGirdisi from "../components/TelefonGirdisi";
+import { gecerliMi, numaraCoz } from "../lib/telefon";
 import { ApiHata } from "../lib/api";
 import { hataMesaji } from "../lib/dogrulama";
 import { hatirlananiOku, varsayilanHatirla } from "../lib/hatirla";
@@ -36,7 +38,7 @@ export default function DestekGiris() {
   // Bu cihazda hatırlanan destek hesabı varsa giriş alanı dolu gelir (yalnız kod ve şifre sorulur).
   const [giris, setGiris] = useState(() => {
     const h = hatirlananiOku();
-    return h?.panel === "destek" ? h.giris : "";
+    return h?.panel === "destek" ? numaraCoz(h.giris) : "";
   });
   const [beniHatirla, setBeniHatirla] = useState(() => hatirlananiOku()?.panel === "destek" || varsayilanHatirla());
   const [sifre, setSifre] = useState("");
@@ -166,19 +168,10 @@ export default function DestekGiris() {
 
         {adim.ad === "sifre" && (
           <form onSubmit={sifreGonder} className={KART} noValidate>
-            <label className="block">
-              <span className="text-[13px] text-metin-soluk">Telefon veya e-posta</span>
-              <input
-                className={girdi}
-                value={giris}
-                onChange={(e) => setGiris(e.target.value)}
-                autoComplete="username"
-                type="text"
-                autoCapitalize="none"
-                placeholder="05xx xxx xx xx veya e-posta"
-                required
-              />
-            </label>
+            <div>
+              <span id="giris-telefon-etiketi" className="text-[13px] text-metin-soluk">Telefon numarası</span>
+              <TelefonGirdisi value={giris} onChange={setGiris} aria-labelledby="giris-telefon-etiketi" autoFocus />
+            </div>
             <label className="block">
               <span className="text-[13px] text-metin-soluk">Şifre</span>
               <input
@@ -192,7 +185,7 @@ export default function DestekGiris() {
             </label>
             <BeniHatirla isaretli={beniHatirla} degisti={setBeniHatirla} />
             {hataSatiri}
-            <button type="submit" disabled={gonderiliyor || giris.length < 3 || sifre.length < 1} className={`${birincilDugme} w-full`}>
+            <button type="submit" disabled={gonderiliyor || !gecerliMi(giris) || sifre.length < 1} className={`${birincilDugme} w-full`}>
               {gonderiliyor ? "Giriş yapılıyor…" : "Devam et"}
             </button>
           </form>
