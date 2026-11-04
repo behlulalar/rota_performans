@@ -6,7 +6,7 @@ import SayfaBasligi from "../components/SayfaBasligi";
 import Simge, { type SimgeAdi } from "../components/Simge";
 import { WhatsAppSimgesi } from "../components/WhatsAppDugmesi";
 import { hataMesaji } from "../lib/dogrulama";
-import { bicimle, rakamlaraCevir, whatsappAdresi } from "../lib/telefon";
+import { bicimle, numaraCoz, whatsappAdresi } from "../lib/telefon";
 import { hataKutusu } from "../lib/stil";
 
 /** Tıklanabilir iletişim satırı: simge, soluk etiket, altında değer. */
@@ -47,7 +47,7 @@ export default function VeliIletisim() {
       {bos && <Kart><p className="text-sm text-metin-soluk">Kulüp iletişim bilgileri henüz eklenmedi.</p></Kart>}
       {k && !bos && (k.telefon || k.eposta || k.adres) && (
         <Kart bosluksuz sinif="max-w-xl">
-          {k.telefon && <Satir simge={simge("telefon")} etiket="Telefon · Aramak için dokunun" deger={bicimle(k.telefon)} href={`tel:+90${rakamlaraCevir(k.telefon)}`} />}
+          {k.telefon && <Satir simge={simge("telefon")} etiket="Telefon · Aramak için dokunun" deger={bicimle(k.telefon)} href={`tel:${numaraCoz(k.telefon)}`} />}
           {whatsapp && <Satir simge={<WhatsAppSimgesi />} etiket="WhatsApp · Mesaj yazın" deger={bicimle(k.telefon)} href={whatsapp} yeniSekme />}
           {k.eposta && <Satir simge={simge("eposta")} etiket="E-posta" deger={k.eposta} href={`mailto:${k.eposta}`} />}
           {k.adres && (

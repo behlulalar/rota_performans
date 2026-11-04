@@ -10,7 +10,7 @@ import WhatsAppBaglantisi from "../components/WhatsAppBaglantisi";
 import YaziBoyutuSecici from "../components/YaziBoyutuSecici";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import { hataMesaji, yeniSifreHatasi } from "../lib/dogrulama";
-import { apiyeCevir, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
+import { apiyeCevir, gecerliMi, numaraCoz, TELEFON_HATA } from "../lib/telefon";
 import { basariKutusu, birincilDugme, girdi, hataKutusu } from "../lib/stil";
 
 const etiket = "text-[13px] text-metin-soluk";
@@ -47,7 +47,7 @@ function useKayit() {
 
 function KulupKarti({ veri, onKaydet }: { veri: AyarVeri; onKaydet: (a: AyarVeri) => void }) {
   const [ad, setAd] = useState(veri.ad);
-  const [telefon, setTelefon] = useState(rakamlaraCevir(veri.telefon));
+  const [telefon, setTelefon] = useState(numaraCoz(veri.telefon));
   const [eposta, setEposta] = useState(veri.eposta ?? "");
   const [adres, setAdres] = useState(veri.adres ?? "");
   const [instagram, setInstagram] = useState(veri.instagram ?? "");
@@ -173,7 +173,7 @@ function GirisFormu() {
 
 function TelefonFormu() {
   const { kullanici, sifreDegistirildi: kullaniciyiYenile } = useAuth();
-  const [telefon, setTelefon] = useState(rakamlaraCevir(kullanici?.telefon));
+  const [telefon, setTelefon] = useState(numaraCoz(kullanici?.telefon));
   const [sifre, setSifre] = useState("");
   const k = useKayit();
 

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { resitGecisiYap, type OgrenciDetay } from "../api/ogrenci";
 import { hataMesaji } from "../lib/dogrulama";
 import TelefonGirdisi from "./TelefonGirdisi";
-import { apiyeCevir, bicimle, gecerliMi, rakamlaraCevir, TELEFON_HATA } from "../lib/telefon";
+import { apiyeCevir, bicimle, gecerliMi, numaraCoz, TELEFON_HATA } from "../lib/telefon";
 import { girdi, birincilDugme } from "../lib/stil";
 import { useOnay } from "../components/OnayPenceresi";
 
@@ -17,7 +17,7 @@ export default function ResitGecisi({
   onTamam: (detay: OgrenciDetay) => void;
 }) {
   const onayla = useOnay();
-  const [telefon, setTelefon] = useState(rakamlaraCevir(ogrenci.telefon));
+  const [telefon, setTelefon] = useState(numaraCoz(ogrenci.telefon));
   const [adSoyad, setAdSoyad] = useState(`${ogrenci.ad} ${ogrenci.soyad}`);
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);

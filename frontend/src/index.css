@@ -111,12 +111,11 @@ body {
   outline-offset: 2px;
 }
 
-/* Başlıkta vurgulanan sözcük: açık temada sarı fosforlu kalem, koyu temada altın yazı. */
+/* Başlıkta vurgulanan sözcük: altın yazı, altında hareketli dalga çizgisi. */
 .vurgu-kalem {
-  background: linear-gradient(transparent 62%, var(--color-altin-acik) 62%);
+  color: var(--color-altin-metin);
 }
 :root[data-theme="dark"] .vurgu-kalem {
-  background: none;
   color: var(--color-altin);
 }
 
@@ -182,4 +181,80 @@ input[type="radio"] {
 /* Yazı boyutu: arayüz sabit px kullandığı için kök öğe CSS zoom ile ölçeklenir (bkz. lib/yaziBoyutu.ts). */
 html {
   zoom: var(--olcek, 1);
+}
+
+/* ---- Giriş sayfaları: karşılama animasyonları ----
+   Hareket tercihi kapalıysa animasyonlar hiç çalışmaz; son hâl doğrudan görünür. */
+.giris-imza {
+  font-family: "Dancing Script", "Segoe Script", cursive;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.giris-imza > span {
+  display: inline-block;
+  /* Yumuşak kenarlı maske: yazı harf harf değil, tek hamlede süzülerek açılır. */
+  --imza-ilerleme: 115%;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--imza-ilerleme) - 16%), transparent var(--imza-ilerleme));
+  mask-image: linear-gradient(90deg, #000 calc(var(--imza-ilerleme) - 16%), transparent var(--imza-ilerleme));
+}
+@property --imza-ilerleme {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 115%;
+}
+.vurgu-kalem {
+  position: relative;
+  display: inline-block;
+}
+/* Vurgulu sözcüğün altında altın dalga çizgisi; çizildikten sonra yavaşça akar. */
+.vurgu-kalem::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.16em;
+  height: 0.22em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M-12 4 Q-6 8 0 4 T12 4 T24 4 T36 4' fill='none' stroke='%23c99a00' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x 0 center / 0.66em 0.22em;
+}
+:root[data-theme="dark"] .vurgu-kalem::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M-12 4 Q-6 8 0 4 T12 4 T24 4 T36 4' fill='none' stroke='%23e0b52e' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.giris-dalga {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='120' viewBox='0 0 600 120' preserveAspectRatio='none'%3E%3Cpath d='M0 60 C100 20 200 20 300 60 S500 100 600 60 V120 H0Z' fill='%23e0b52e'/%3E%3C/svg%3E") repeat-x 0 bottom / 600px 100%;
+  opacity: 0.1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .giris-imza > span {
+    animation: imza-yaz 2.2s cubic-bezier(0.45, 0.05, 0.25, 1) 0.3s both;
+  }
+  .giris-belir {
+    animation: belir 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 0.2s both;
+  }
+  .giris-belir-2 { animation-delay: 0.45s; }
+  .giris-belir-3 { animation-delay: 0.7s; }
+  .vurgu-kalem::after {
+    animation: cizgi-ac 0.9s ease-out 2s both, dalga-kay 1.6s linear 2.9s infinite;
+  }
+  .giris-dalga {
+    animation: dalga-ak 16s linear infinite;
+  }
+}
+@keyframes imza-yaz {
+  from { --imza-ilerleme: 0%; }
+  to { --imza-ilerleme: 115%; }
+}
+@keyframes belir {
+  from { opacity: 0; transform: translateY(14px); }
+}
+@keyframes dalga-kay {
+  to { background-position-x: 0.66em; }
+}
+@keyframes cizgi-ac {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes dalga-ak {
+  to { background-position-x: 600px; }
 }

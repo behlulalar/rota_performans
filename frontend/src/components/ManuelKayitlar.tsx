@@ -7,7 +7,7 @@ import { birincilDugme, dugme, girdi, hataKutusu, listeSatiri, rozetNotr, secimK
 import { bugun } from "../lib/tarih";
 import Kart from "./Kart";
 
-const etiket = "text-[13px] text-metin-soluk";
+const etiket = "block text-[13px] text-metin-soluk";
 
 /** Kayıt formu: tarih varsayılanı seçili ay bu aysa bugün, değilse ayın son günü. */
 function KayitFormu({ yil, ay, onEklendi, onKapat }: { yil: number; ay: number; onEklendi: () => void; onKapat: () => void }) {
@@ -64,7 +64,7 @@ function KayitFormu({ yil, ay, onEklendi, onKapat }: { yil: number; ay: number; 
         <label className="block"><span className={etiket}>Tarih</span>
           <input className={girdi} type="date" max={bugun()} value={tarih} onChange={(e) => setTarih(e.target.value)} /></label>
         <label className="block"><span className={etiket}>Yöntem</span>
-          <select className={secimKutusu} value={yontem} onChange={(e) => setYontem(e.target.value as OdemeYontemi)}>
+          <select className={`${secimKutusu} mt-1 w-full`} value={yontem} onChange={(e) => setYontem(e.target.value as OdemeYontemi)}>
             {(Object.keys(YONTEM_ETIKET) as OdemeYontemi[]).map((y) => <option key={y} value={y}>{YONTEM_ETIKET[y]}</option>)}
           </select></label>
       </div>

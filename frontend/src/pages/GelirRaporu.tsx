@@ -217,6 +217,8 @@ export default function GelirRaporu() {
             </div>
           </div>
 
+          <ManuelKayitlar yil={donem.yil} ay={donem.ay} gizli={gizli} onDegisti={() => setDeneme((n) => n + 1)} />
+
           {gizli ? (
             <Kart>
               <p className="text-center text-metin-soluk py-6" data-testid="tutar-gizli">Teknik destek hesabında tutarlar gizlidir.</p>
@@ -298,7 +300,6 @@ export default function GelirRaporu() {
             )}
             </>
           )}
-          <ManuelKayitlar yil={donem.yil} ay={donem.ay} gizli={gizli} onDegisti={() => setDeneme((n) => n + 1)} />
         </div>
       )}
     </div>
