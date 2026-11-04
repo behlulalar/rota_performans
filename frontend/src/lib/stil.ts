@@ -1,6 +1,6 @@
 // Ortak sınıf dizeleri: tüm sayfalar aynı görünümü paylaşsın.
 export const dugme =
-  "inline-flex items-center justify-center rounded-[10px] border border-cizgi-guclu bg-transparent px-4 min-h-11 text-[13px] font-medium text-metin hover:border-altin hover:text-altin-metin disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "inline-flex items-center justify-center rounded-[10px] border border-cizgi-guclu bg-yuzey px-4 min-h-11 text-[13px] font-medium text-metin hover:border-altin hover:text-altin-metin disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 export const birincilDugme =
   "inline-flex items-center justify-center rounded-[10px] border border-birincil bg-birincil text-birincil-metin font-medium px-5 min-h-11 text-[13px] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity";
 export const girdi =
