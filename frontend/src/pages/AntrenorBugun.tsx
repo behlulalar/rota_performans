@@ -136,7 +136,7 @@ export default function AntrenorBugun() {
       )}
       {!veri && !hata && <p className="text-metin-soluk">Yükleniyor…</p>}
       {veri && (
-        <div className="space-y-4 max-w-3xl">
+        <div className="space-y-4">
           <div className="grid grid-cols-3 gap-2 md:gap-4">
             <Kutucuk etiket="Ders" deger={veri.ozet.ders_sayisi} />
             <Kutucuk etiket="Öğrenci" deger={veri.ozet.toplam_ogrenci} />
@@ -155,6 +155,7 @@ export default function AntrenorBugun() {
             </section>
           )}
 
+          <div className={`grid gap-4 ${siradaki && veri.dersler.length > 0 ? "lg:grid-cols-2" : ""}`}>
           {siradaki && <SiradakiKart d={siradaki} />}
 
           {veri.dersler.length === 0 ? (
@@ -177,6 +178,7 @@ export default function AntrenorBugun() {
               </div>
             </Kart>
           )}
+          </div>
         </div>
       )}
     </>

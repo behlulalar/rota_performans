@@ -42,7 +42,7 @@ function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil
 
   return (
     <Kart baslik="Bilgilerim" aciklama="Kulübün sizinle iletişim kurduğu bilgiler">
-      <form onSubmit={gonder} noValidate className="space-y-4 max-w-md">
+      <form onSubmit={gonder} noValidate className="space-y-4">
         <label className="block">
           <span className="text-[13px] text-metin-soluk">Giriş bilgisi</span>
           <input className={`${girdi} opacity-70`} value={profil.giris} readOnly aria-readonly="true" />
@@ -106,10 +106,12 @@ export default function AntrenorProfil() {
         </p>
       )}
       {profil && (
-        <div className="grid gap-4 lg:grid-cols-2 items-start">
+        <div className="grid gap-4 lg:grid-cols-2">
           <BilgiFormu profil={profil} onKaydet={setProfil} />
-          <SifreKarti />
-          <GorunumKarti />
+          <SifreKarti tamGenislik />
+          <div className="lg:col-span-2">
+            <GorunumKarti />
+          </div>
         </div>
       )}
     </>
