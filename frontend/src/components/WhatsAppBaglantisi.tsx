@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { whatsappBaglan, whatsappGetir, whatsappKes, type WhatsAppBaglanti } from "../api/whatsapp";
 import { hataMesaji } from "../lib/dogrulama";
 import { bicimle } from "../lib/telefon";
-import { birincilDugme, dugme, hataKutusu, rozetBasari, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
+import { birincilDugme, dugme, hataKutusu, tehlikeKutusu, rozetBasari, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
 import Kart from "./Kart";
 import { useOnay } from "./OnayPenceresi";
 
@@ -74,6 +74,16 @@ export default function WhatsAppBaglantisi() {
     <Kart baslik="WhatsApp bağlantısı" aciklama="Velilere WhatsApp mesajı gönderecek kulüp numarası" sag={<span className={rozet}>{rozetYazi}</span>}>
       <div className="space-y-4">
         {hata && <p role="alert" className={hataKutusu}>{hata}</p>}
+        {b?.devre_kesici.acik && (
+          <p role="alert" data-testid="devre-kesici" className={tehlikeKutusu}>
+            Devre kesici açık: WhatsApp gönderimi durduruldu.
+            {b.devre_kesici.sebep && <span className="block font-normal mt-0.5">Sebep: {b.devre_kesici.sebep}</span>}
+            <span className="block font-normal mt-0.5">Yaklaşık 30 dakika sonra, bağlantı sağlıklıysa kendiliğinden kapanır; bekleyen mesajlar o zaman gider.</span>
+          </p>
+        )}
+        {b && b.bekleyen_sayisi > 0 && (
+          <p className="text-[13px] text-metin-soluk">Kuyrukta bekleyen WhatsApp mesajı: <span className="num font-medium text-metin">{b.bekleyen_sayisi}</span></p>
+        )}
 
         {b?.durum === "yapilandirilmadi" && (
           <p className="text-sm text-metin-soluk">WhatsApp servisi sunucuda henüz kurulmadı. Teknik destekle iletişime geçin.</p>

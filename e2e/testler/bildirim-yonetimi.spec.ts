@@ -17,7 +17,8 @@ test.describe("Bildirimler (yönetici)", () => {
     await expect(page.getByText(/Bu filtrede bildirim yok\.|\d+ kayıt · Sayfa/)).toBeVisible();
     // WhatsApp sekmesi: kanal bazlı özet ve açıklama.
     await page.getByRole("tab", { name: "WhatsApp" }).click();
-    await expect(page.getByText("WhatsApp gönderimi Evolution API bağlandığında etkinleşecek.")).toBeVisible();
+    // e2e ortamında Evolution tanımlı ama numara bağlı değil.
+    await expect(page.getByTestId("wa-durumu")).toContainText("bağlı değil");
     await expect(page.getByTestId("push-durumu")).toHaveCount(0);
     await page.getByRole("tab", { name: "Uygulama bildirimleri" }).click();
     await expect(page.getByTestId("push-durumu")).toBeVisible();

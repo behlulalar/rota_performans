@@ -6,6 +6,7 @@ import { takvimGetir, type OturumOzet } from "../api/takvim";
 import Kart from "../components/Kart";
 import OzetKarti from "../components/OzetKarti";
 import SayfaBasligi from "../components/SayfaBasligi";
+import WhatsAppUyarisi, { useWhatsAppDurumu } from "../components/WhatsAppUyarisi";
 import DolulukCubugu from "../components/DolulukCubugu";
 import OgrenciFoto from "../components/OgrenciFoto";
 import ResitGecisi from "../components/ResitGecisi";
@@ -181,6 +182,7 @@ export default function GenelBakis() {
   const [resit, setResit] = useState<ResitUyarisi[] | null>(null);
   const [resitHata, setResitHata] = useState<string | null>(null);
   const [simdi, setSimdi] = useState(simdiSaat);
+  const wa = useWhatsAppDurumu();
 
   useEffect(() => {
     const t = setInterval(() => setSimdi(simdiSaat()), 60_000);
@@ -248,6 +250,7 @@ export default function GenelBakis() {
       />
 
       {hata && <p role="alert" className={`mb-4 ${uyariKutusu}`}>{hata}</p>}
+      <WhatsAppUyarisi b={wa} sinif="mb-4" />
       {!hata && !hazir && <Yukleniyor />}
 
       {veri && hazir && (

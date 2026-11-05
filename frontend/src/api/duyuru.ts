@@ -17,6 +17,7 @@ export type DuyuruOzet = {
   hedef_ozet: string;
   oturum_id: string | null;
   kanallar: DuyuruKanallari;
+  her_iki_kanal: boolean;
   istatistik: DuyuruIstatistik;
 };
 
@@ -34,7 +35,7 @@ export type DuyuruDetayi = DuyuruOzet & { alicilar: DuyuruAlicisi[] };
 
 export type Onizleme = { ogrenci: number; alici: number; push_alacak: number; push_yok: number; whatsapp_izinli: number };
 
-export type DuyuruGonderimi = { baslik: string; metin: string; hedef: DuyuruHedefi; kanallar: DuyuruKanallari };
+export type DuyuruGonderimi = { baslik: string; metin: string; hedef: DuyuruHedefi; kanallar: DuyuruKanallari; her_iki_kanal: boolean };
 
 const U = "/api/duyurular";
 const json = (g: unknown) => JSON.stringify(g);

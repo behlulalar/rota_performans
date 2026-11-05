@@ -8,6 +8,11 @@ export type Ayarlar = {
   instagram: string | null;
   geri_alma_dakika: number;
   azaldi_esigi: number;
+  wa_saatlik_limit: number;
+  wa_gunluk_limit: number;
+  wa_baslangic_saat: number;
+  wa_bitis_saat: number;
+  wa_push_varsa_atla: boolean;
 };
 
 export const ayarlariGetir = () => api<Ayarlar>("/api/ayarlar");

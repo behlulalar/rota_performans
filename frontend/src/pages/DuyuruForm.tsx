@@ -11,6 +11,7 @@ import { gruplariGetir, type GrupOzet } from "../api/grup";
 import { oturumGetir, takvimGetir, type OturumOzet } from "../api/takvim";
 import { useOnay } from "../components/OnayPenceresi";
 import SayfaBasligi from "../components/SayfaBasligi";
+import WhatsAppUyarisi, { useWhatsAppDurumu } from "../components/WhatsAppUyarisi";
 import { hataMesaji } from "../lib/dogrulama";
 import { saat } from "../lib/program";
 import { birincilDugme, girdi, kartKutusu, secimKutusu } from "../lib/stil";
@@ -86,6 +87,17 @@ export default function DuyuruForm() {
   const [metin, setMetin] = useState(ON_EK);
   const duzenlendi = useRef(false);
   const [push, setPush] = useState(true);
+  const [whatsapp, setWhatsapp] = useState(false);
+  const [herIki, setHerIki] = useState(false);
+  const wa = useWhatsAppDurumu();
+  // WhatsApp seçeneği yalnız numara bağlıyken etkindir; değilse nedeni yazılır.
+  const waNedeni =
+    wa === null ? "WhatsApp durumu kontrol ediliyor…"
+    : wa.durum === "yapilandirilmadi" ? "WhatsApp kurulmadığı için kapalı."
+    : wa.durum === "bagli" ? null
+    : wa.durum === "ulasilamiyor" ? "WhatsApp servisine ulaşılamadığı için kapalı."
+    : "WhatsApp bağlı olmadığı için kapalı. Ayarlar sayfasından numarayı bağlayın.";
+  const waKapali = waNedeni !== null;
   const [onizleme, setOnizleme] = useState<Onizleme | null>(null);
   const [onizlemeHatasi, setOnizlemeHatasi] = useState<string | null>(null);
   const [hata, setHata] = useState<string | null>(null);
@@ -146,23 +158,23 @@ export default function DuyuruForm() {
     setOnizlemeHatasi(null);
     if (!hedef) return;
     let iptal = false;
-    duyuruOnizle(hedef, { push, whatsapp: false })
+    duyuruOnizle(hedef, { push, whatsapp })
       .then((v) => !iptal && setOnizleme(v))
       .catch((e) => !iptal && setOnizlemeHatasi(hataMesaji(e)));
     return () => {
       iptal = true;
     };
-  }, [hedef, push]);
+  }, [hedef, push, whatsapp]);
 
   const doldurulmamis = /\[[^\]]+\]/.test(metin);
   const hazir = Boolean(
     hedef &&
-    push &&
+    (push || whatsapp) &&
     baslik.trim() &&
     metin.trim() &&
     !doldurulmamis &&
     onizleme &&
-    onizleme.push_alacak > 0,
+    ((push && onizleme.push_alacak > 0) || (whatsapp && onizleme.whatsapp_izinli > 0)),
   );
 
   const sablonSec = (s: SablonAdi) => {
@@ -177,7 +189,12 @@ export default function DuyuruForm() {
     if (!hedef || !onizleme) return;
     const tamam = await onayla({
       baslik: "Duyuruyu gönder",
-      mesaj: `"${baslik.trim()}" duyurusu ${onizleme.push_alacak} veliye uygulama bildirimi olarak gönderilecek. Gönderilen duyuru geri alınamaz.`,
+      mesaj: `"${baslik.trim()}" duyurusu ${[
+        push ? `${onizleme.push_alacak} veliye uygulama bildirimi` : null,
+        whatsapp ? `${onizleme.whatsapp_izinli} veliye WhatsApp` : null,
+      ].filter(Boolean).join(" ve ")} olarak gönderilecek.${
+        push && whatsapp && herIki ? " Uygulama bildirimi alan velilere de WhatsApp gidecek." : ""
+      } Gönderilen duyuru geri alınamaz.`,
       onayYazisi: "Gönder",
     });
     if (!tamam) return;
@@ -188,7 +205,8 @@ export default function DuyuruForm() {
         baslik: baslik.trim(),
         metin: metin.trim(),
         hedef,
-        kanallar: { push, whatsapp: false },
+        kanallar: { push, whatsapp },
+        her_iki_kanal: push && whatsapp && herIki,
       });
       git(`/duyurular/${d.id}`);
     } catch (e) {
@@ -355,14 +373,30 @@ export default function DuyuruForm() {
               />
               Uygulama bildirimi
             </label>
-            <label className="flex items-center gap-2 min-h-11 md:min-h-0 text-sm text-metin-soluk">
-              <input type="checkbox" checked={false} disabled />
+            <label className={`flex items-center gap-2 min-h-11 md:min-h-0 text-sm ${waKapali ? "text-metin-soluk" : ""}`}>
+              <input
+                type="checkbox"
+                checked={whatsapp && !waKapali}
+                disabled={waKapali}
+                onChange={(e) => setWhatsapp(e.target.checked)}
+              />
               WhatsApp
             </label>
-            <p className="text-xs text-metin-soluk">
-              WhatsApp gönderimi Evolution API bağlandığında başlayacak;
-              WhatsApp seçeneği o zamana kadar kapalıdır.
-            </p>
+            {waNedeni && (
+              <p className="text-xs text-metin-soluk" data-testid="whatsapp-nedeni">{waNedeni}</p>
+            )}
+            {push && whatsapp && !waKapali && (
+              <label className="flex items-start gap-2 min-h-11 md:min-h-0 text-sm pl-6">
+                <input type="checkbox" className="mt-1" checked={herIki} onChange={(e) => setHerIki(e.target.checked)} />
+                <span>Her iki kanaldan da gönder (push alanlara da WhatsApp gider)</span>
+              </label>
+            )}
+            {push && whatsapp && !waKapali && !herIki && (
+              <p className="text-xs text-metin-soluk pl-6">
+                Seçilmezse, uygulama bildirimi ulaşan velilere WhatsApp gönderilmez; yalnız bildirim alamayanlara gider.
+              </p>
+            )}
+            {whatsapp && !waKapali && <WhatsAppUyarisi b={wa} sinif="!text-xs" />}
           </fieldset>
 
           <section className={`${kartKutusu} p-5`} aria-live="polite">
@@ -382,11 +416,22 @@ export default function DuyuruForm() {
                 {onizleme.alici} veli ({onizleme.ogrenci} öğrenci) · uygulama
                 bildirimi alacak: {onizleme.push_alacak} · bildirimi kapalı veya
                 cihazı yok: {onizleme.push_yok}
+                {whatsapp && <> · WhatsApp alacak: {onizleme.whatsapp_izinli}</>}
               </p>
             )}
             {onizleme && onizleme.push_alacak === 0 && push && (
               <p className="mt-1 text-[13px] text-uyari">
                 Uygulama bildirimi alacak veli yok.
+              </p>
+            )}
+            {onizleme && whatsapp && onizleme.whatsapp_izinli === 0 && (
+              <p className="mt-1 text-[13px] text-uyari">
+                WhatsApp izni olan veli yok.
+              </p>
+            )}
+            {onizleme && whatsapp && push && !herIki && onizleme.whatsapp_izinli > 0 && (
+              <p className="mt-1 text-xs text-metin-soluk">
+                WhatsApp sayısı izni olan tüm velileri gösterir; uygulama bildirimi ulaşanlara gönderilmeyebilir.
               </p>
             )}
           </section>

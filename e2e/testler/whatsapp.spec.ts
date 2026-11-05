@@ -11,6 +11,7 @@ test.describe("WhatsApp bağlantısı", () => {
     const yanit = () => ({
       durum, qr: durum === "baglaniyor" ? QR : null,
       numara: durum === "bagli" ? "+905321234567" : null, profil_adi: durum === "bagli" ? "Rota Performans" : null,
+      devre_kesici: { acik: false, sebep: null }, bekleyen_sayisi: 0,
     });
     await page.route("**/api/whatsapp", (r) => r.fulfill({ json: yanit() }));
     await page.route("**/api/whatsapp/baglan", (r) => {

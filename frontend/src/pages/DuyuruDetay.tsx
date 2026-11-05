@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { duyuruGetir, type DuyuruDetayi } from "../api/duyuru";
+import { duyuruGetir, type DuyuruDetayi, type KanalIstatistigi } from "../api/duyuru";
 import { DURUM_ETIKET, KANAL_ETIKET, type BildirimDurumu } from "../api/bildirimYonetimi";
 import KanalRozetleri from "../components/KanalRozetleri";
 import SayfaBasligi from "../components/SayfaBasligi";
@@ -11,6 +11,27 @@ import { zaman } from "./Duyurular";
 const DURUM_ROZET: Record<BildirimDurumu, string> = {
   bekliyor: rozetUyari, gonderildi: rozetBasari, hata: rozetHata, iptal: rozetNotr,
 };
+
+function KanalSonucu({ ad, k, tur }: { ad: string; k: KanalIstatistigi; tur: "push" | "whatsapp" }) {
+  const sayilar: [BildirimDurumu, number][] = [
+    ["bekliyor", k.bekliyor], ["gonderildi", k.gonderildi], ["hata", k.hata], ["iptal", k.iptal],
+  ];
+  return (
+    <div className={`${kartKutusu} p-4 space-y-2`} data-testid={`kanal-sonucu-${tur}`}>
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-medium">{ad}</h3>
+        <span className="text-xs text-metin-soluk num">{k.toplam} alıcı</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {sayilar.map(([d, n]) => (
+          <span key={d} className={n > 0 ? DURUM_ROZET[d] : rozetNotr}>
+            {DURUM_ETIKET[d]}: <span className="num">{n}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function DuyuruDetay() {
   const { id } = useParams();
@@ -46,6 +67,25 @@ export default function DuyuruDetay() {
         <p className="text-sm whitespace-pre-wrap break-words" data-testid="duyuru-metni">{d.metin}</p>
         <KanalRozetleri d={d} />
       </div>
+
+      <section>
+        <h2 className="font-display text-[19px] mb-2">Kanal sonuçları</h2>
+        {!d.kanallar.push && !d.kanallar.whatsapp ? (
+          <p className="text-[13px] text-metin-soluk">Kanal seçilmemiş.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {d.kanallar.push && <KanalSonucu ad="Uygulama bildirimi" k={d.istatistik.push} tur="push" />}
+            {d.kanallar.whatsapp && <KanalSonucu ad="WhatsApp" k={d.istatistik.whatsapp} tur="whatsapp" />}
+          </div>
+        )}
+        {d.kanallar.push && d.kanallar.whatsapp && (
+          <p className="mt-2 text-xs text-metin-soluk">
+            {d.her_iki_kanal
+              ? "Her iki kanaldan gönderildi: uygulama bildirimi alan velilere de WhatsApp gitti."
+              : "Uygulama bildirimi ulaşan velilere WhatsApp gönderilmez; bu satırlar WhatsApp'ta \"İptal\" görünür."}
+          </p>
+        )}
+      </section>
 
       <section>
         <h2 className="font-display text-[19px] mb-2">Alıcılar</h2>

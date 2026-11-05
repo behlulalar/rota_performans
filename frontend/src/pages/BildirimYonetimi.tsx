@@ -6,6 +6,7 @@ import {
   type BildirimDurumu, type BildirimKanali, type BildirimKaydi, type BildirimListesi, type BildirimOzeti,
 } from "../api/bildirimYonetimi";
 import { useOnay } from "../components/OnayPenceresi";
+import WhatsAppUyarisi, { useWhatsAppDurumu } from "../components/WhatsAppUyarisi";
 import OzetKarti from "../components/OzetKarti";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { hataMesaji } from "../lib/dogrulama";
@@ -33,6 +34,7 @@ export default function BildirimYonetimi() {
   const [hata, setHata] = useState<string | null>(null);
   const [islemHatasi, setIslemHatasi] = useState<string | null>(null);
   const [surum, setSurum] = useState(0);
+  const wa = useWhatsAppDurumu();
 
   useEffect(() => {
     const t = setTimeout(() => { setQ(arama.trim()); setSayfa(1); }, 300);
@@ -126,7 +128,21 @@ export default function BildirimYonetimi() {
           </p>
         )}
         {kanal === "whatsapp" && (
-          <p className="text-metin-soluk">WhatsApp gönderimi Evolution API bağlandığında etkinleşecek.</p>
+          <>
+            {wa?.durum === "yapilandirilmadi" && (
+              <p className="text-metin-soluk" data-testid="wa-kurulmadi">WhatsApp henüz kurulmadı; kurulum ve bağlantı Ayarlar sayfasındadır.</p>
+            )}
+            {wa && wa.durum !== "yapilandirilmadi" && (
+              <p data-testid="wa-durumu">
+                WhatsApp: <span className={wa.durum === "bagli" && !wa.devre_kesici.acik ? "text-basari font-medium" : "text-uyari font-medium"}>
+                  {wa.devre_kesici.acik ? "gönderim durduruldu" : wa.durum === "bagli" ? "bağlı" : "bağlı değil"}
+                </span>
+                {" · "}kuyrukta bekleyen: <span className="num">{wa.bekleyen_sayisi}</span>
+                {" · "}<Link to="/ayarlar" className="text-altin-metin hover:underline">Ayarlar</Link>
+              </p>
+            )}
+            <WhatsAppUyarisi b={wa} sinif="mt-2" />
+          </>
         )}
       </div>
 

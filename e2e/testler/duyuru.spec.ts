@@ -69,7 +69,8 @@ test.describe("Duyurular", () => {
     await expect(page.getByLabel("Hazır şablon")).toHaveValue("ders_iptali");
     await expect(page.getByLabel("Mesaj")).toHaveValue(new RegExp(`${grupAdi} grubunun .* dersi iptal edilmiştir`));
     await expect(page.getByLabel("WhatsApp")).toBeDisabled();
-    await expect(page.getByText("WhatsApp gönderimi Evolution API bağlandığında başlayacak; WhatsApp seçeneği o zamana kadar kapalıdır.")).toBeVisible();
+    // e2e ortamında numara bağlı değil: seçenek kapalı ve nedeni yazılı.
+    await expect(page.getByTestId("whatsapp-nedeni")).toContainText("WhatsApp bağlı olmadığı için kapalı.");
     await expect(page.getByTestId("onizleme")).toContainText("1 veli (1 öğrenci) · uygulama bildirimi alacak: 1 · bildirimi kapalı veya cihazı yok: 0");
 
     await page.getByRole("button", { name: "Duyuruyu gönder" }).click();
