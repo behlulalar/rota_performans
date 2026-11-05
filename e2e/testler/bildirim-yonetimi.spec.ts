@@ -17,8 +17,8 @@ test.describe("Bildirimler (yönetici)", () => {
     await expect(page.getByText(/Bu filtrede bildirim yok\.|\d+ kayıt · Sayfa/)).toBeVisible();
     // WhatsApp sekmesi: kanal bazlı özet ve açıklama.
     await page.getByRole("tab", { name: "WhatsApp" }).click();
-    // e2e ortamında Evolution tanımlı ama numara bağlı değil.
-    await expect(page.getByTestId("wa-durumu")).toContainText("bağlı değil");
+    // Numara bağlı değil: ortama göre "kurulmadı" (CI) ya da "bağlı değil" (Evolution tanımlı yerel ortam).
+    await expect(page.getByTestId("wa-kurulmadi").or(page.getByTestId("wa-durumu"))).toContainText(/WhatsApp henüz kurulmadı|bağlı değil/);
     await expect(page.getByTestId("push-durumu")).toHaveCount(0);
     await page.getByRole("tab", { name: "Uygulama bildirimleri" }).click();
     await expect(page.getByTestId("push-durumu")).toBeVisible();
