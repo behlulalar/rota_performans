@@ -115,7 +115,7 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 
 ### Faz 4: Bildirimler (24 – 28 Kas)
 - [x] Web Push (VAPID), cihaz kaydı, bildirim ayarları
-- [x] WhatsApp gönderimi (Evolution): kuyruk, ban korumaları (rastgele aralık, saatlik/günlük limit, ısınma, 09–21 penceresi, devre kesici, push varsa atla), geri alma penceresi; arka uç hazır
+- [x] WhatsApp gönderimi (Evolution): kuyruk, ban korumaları (rastgele aralık, saatlik/günlük limit, ısınma, 09–21 penceresi, devre kesici, push varsa atla), geri alma penceresi; arka uç ve arayüz hazır (gerçek numarayla deneme canlıdan önce yapılacak)
 - [x] Bildirimler yalnızca birincil iletişim kişisine
 - [x] PWA kurulumu (manifest, simge, ana ekrana ekleme yönlendirmesi)
 - [x] PWA tamamlama: tüm panellerde kurulum yönlendirmesi, bekleyen sürüm için "Yeni sürüm hazır / Yenile" bildirimi, manifest (kısayollar, mağaza ekran görüntüleri, her yönlendirme), iOS/çentik güvenli alanları, tablet için yönetici gezinmesi 1024 px, giriş sayfaları ortalı yerleşim
