@@ -162,8 +162,8 @@ def _kulup_zamani(tarih: date, saat: time) -> datetime:
 
 
 async def yukle() -> int:
-    if settings.env != "dev":
-        print(f"ornek-veri yalnızca ENV=dev iken çalışır (şu an ENV={settings.env}).")
+    if settings.env not in ("dev", "demo"):
+        print(f"ornek-veri yalnızca ENV=dev veya ENV=demo iken çalışır (şu an ENV={settings.env}).")
         return 1
     rng = random.Random(2026)
     bugun = bugun_fn()
@@ -486,8 +486,8 @@ async def yukle_odeme() -> int:
     defterde yüklemesi yoktur (gerçek akışta ödeme alınca ders yüklenir)."""
     from app.api.paketler import ay_ekle
 
-    if settings.env != "dev":
-        print(f"ornek-odeme-verisi yalnızca ENV=dev iken çalışır (şu an ENV={settings.env}).")
+    if settings.env not in ("dev", "demo"):
+        print(f"ornek-odeme-verisi yalnızca ENV=dev veya ENV=demo iken çalışır (şu an ENV={settings.env}).")
         return 1
     bugun = bugun_fn()
     async with SessionLocal() as session:

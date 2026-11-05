@@ -1,0 +1,23 @@
+# Üretim/demo imajı: yalnız çalışma bağımlılıkları, --reload yok, uygulama kullanıcısı app.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# Yüklenen fotoğraflar için dizin: adlandırılmış volume ilk bağlanışta bu sahipliği devralır.
+RUN useradd --create-home app && mkdir -p /app/uploads && chown -R app /app
+USER app
+
+ARG APP_SURUM=""
+ARG GIT_SHA=""
+ENV APP_SURUM=$APP_SURUM GIT_SHA=$GIT_SHA
+
+# Geçişleri çalıştırıp başlatan komut compose dosyasında verilir.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

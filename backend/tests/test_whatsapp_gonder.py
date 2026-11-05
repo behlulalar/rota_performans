@@ -773,3 +773,20 @@ async def test_bildirim_listesi_kanal_filtresi(istemci, yonetici):
     for kanal, adet in (("whatsapp", 1), ("push", 1)):
         j = (await istemci.get("/api/bildirim-yonetimi", params={"kanal": kanal}, headers=yonetici)).json()
         assert j["toplam"] == adet and all(k["kanal"] == kanal for k in j["kayitlar"])
+
+
+async def test_izinli_liste_disindaki_numaraya_gonderilmez(evolution, monkeypatch):
+    await kur()
+    monkeypatch.setattr(settings, "whatsapp_izinli_numaralar", "+905550000000")
+    sonuc = await calistir()
+    assert sonuc["gonderildi"] == 0 and sonuc["iptal"] == 1 and evolution.gonderim_sayisi == 0
+    b = await tek()
+    assert b.durum == BildirimDurum.iptal and b.hata == "izinli numara listesinde değil"
+    assert "5551112233" not in (b.hata or "")
+
+
+async def test_izinli_listedeki_numaraya_gonderilir(evolution, monkeypatch):
+    await kur()
+    monkeypatch.setattr(settings, "whatsapp_izinli_numaralar", "+905550000000, +905551112233")
+    sonuc = await calistir()
+    assert sonuc["gonderildi"] == 1 and evolution.gonderim_sayisi == 1

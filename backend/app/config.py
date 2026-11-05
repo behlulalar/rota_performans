@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     evolution_url: str = ""
     evolution_api_key: str = ""
     evolution_instance: str = "rota"
+    # Demo/test koruması: doluysa WhatsApp YALNIZ bu numaralara (virgülle ayrılmış, +90... biçimi) gider;
+    # diğerlerinin bildirimi iptal edilir. Örnek verideki sahte numaralar gerçek kişilere ait olabilir.
+    whatsapp_izinli_numaralar: str = ""
 
     # Sürüm bilgisi (derleme sırasında ortamdan verilir; yoksa destek ekranı "geliştirme" gösterir).
     app_surum: str = ""
@@ -48,6 +51,10 @@ class Settings(BaseSettings):
     @property
     def whatsapp_etkin(self) -> bool:
         return bool(self.evolution_url and self.evolution_api_key)
+
+    @property
+    def whatsapp_izinli_liste(self) -> list[str]:
+        return [n.strip() for n in self.whatsapp_izinli_numaralar.split(",") if n.strip()]
 
     @property
     def cors_origin_list(self) -> list[str]:

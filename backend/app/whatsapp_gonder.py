@@ -293,6 +293,11 @@ async def _dongu(
             b.durum, b.hata = BildirimDurum.hata, "telefon yok"
             sayac["hata"] += 1
             continue
+        if settings.whatsapp_izinli_liste and kisi.telefon not in settings.whatsapp_izinli_liste:
+            # Demo koruması: izin listesinde olmayan numaraya hiçbir zaman gönderilmez (hata alanında numara yok).
+            b.durum, b.hata = BildirimDurum.iptal, "izinli numara listesinde değil"
+            sayac["iptal"] += 1
+            continue
         duyuru = await session.get(Duyuru, b.duyuru_id) if b.duyuru_id else None
         if ayar.push_varsa_atla and await _push_ile_ulasiyor(session, b, kisi, simdi, duyuru):
             b.durum, b.hata = BildirimDurum.iptal, "push ile ulaşıyor"

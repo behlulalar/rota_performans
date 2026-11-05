@@ -1,0 +1,119 @@
+# Rota Performans: demo/test dağıtımı (tek sunucu, diğer sistemlerden izole).
+# Dışarıya YALNIZ 127.0.0.1:18500 açılır; TLS ve alan adı sunucudaki ana nginx'te (nginx-rota.conf).
+# Kullanım: bkz. README.md. Sırlar .env dosyasındadır, depoya girmez.
+name: rota-demo
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      POSTGRES_USER: rota
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: rota
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      - ./db-init.sql:/docker-entrypoint-initdb.d/01-evolution-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rota -d rota"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 128m
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile.prod
+      args:
+        APP_SURUM: ${APP_SURUM:-demo}
+        GIT_SHA: ${GIT_SHA:-}
+    image: rota-backend:${APP_SURUM:-demo}
+    restart: unless-stopped
+    mem_limit: 512m
+    env_file: .env
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"]
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/api/saglik',timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  isci:
+    image: rota-backend:${APP_SURUM:-demo}
+    restart: unless-stopped
+    mem_limit: 256m
+    env_file: .env
+    command: ["python", "-m", "app.isci"]
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7
+    restart: unless-stopped
+    mem_limit: 768m
+    environment:
+      SERVER_URL: http://evolution:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://rota:${POSTGRES_PASSWORD}@db:5432/evolution?schema=evolution_api
+      DATABASE_CONNECTION_CLIENT_NAME: rota_demo
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_LOCAL_ENABLED: "false"
+      CONFIG_SESSION_PHONE_CLIENT: Rota Performans
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      QRCODE_LIMIT: "30"
+      QRCODE_COLOR: "#000000"
+      LOG_LEVEL: ERROR,WARN
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile.prod
+    image: rota-web:${APP_SURUM:-demo}
+    restart: unless-stopped
+    mem_limit: 64m
+    ports:
+      - "127.0.0.1:18500:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  dbdata:
+  redisdata:
+  uploads:
+  evolution_instances:

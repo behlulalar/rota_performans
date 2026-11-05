@@ -161,14 +161,14 @@ async def e2e_tohum() -> int:
 
 
 async def ornek_veri() -> int:
-    """Geliştirme veritabanına örnek veri ekler (yalnızca ENV=dev)."""
+    """Geliştirme veritabanına örnek veri ekler (yalnızca ENV=dev|demo)."""
     from app import ornek_veri as modul
 
     return await modul.yukle()
 
 
 async def ornek_odeme_verisi() -> int:
-    """Örnek öğrencilere paket ve ödeme ekler (yalnızca ENV=dev)."""
+    """Örnek öğrencilere paket ve ödeme ekler (yalnızca ENV=dev|demo)."""
     from app import ornek_veri as modul
 
     return await modul.yukle_odeme()
@@ -205,8 +205,8 @@ async def main() -> int:
     d2fa = alt.add_parser("destek-2fa-sifirla", help="Destek hesabının iki adımlı doğrulamasını sıfırlar")
     d2fa.add_argument("giris", help="Destek hesabının girişi")
     alt.add_parser("e2e-tohum", help="E2E test yöneticisini oluşturur (yalnız ENV=test|e2e)")
-    alt.add_parser("ornek-veri", help="Geliştirme veritabanına örnek veri ekler (yalnız ENV=dev)")
-    alt.add_parser("ornek-odeme-verisi", help="Örnek öğrencilere paket ve ödeme ekler (yalnız ENV=dev)")
+    alt.add_parser("ornek-veri", help="Geliştirme veritabanına örnek veri ekler (yalnız ENV=dev|demo)")
+    alt.add_parser("ornek-odeme-verisi", help="Örnek öğrencilere paket ve ödeme ekler (yalnız ENV=dev|demo)")
     alt.add_parser("vapid-uret", help="Web Push için VAPID anahtar çifti üretir")
     argumanlar = ayrac.parse_args()
 
