@@ -94,7 +94,7 @@ export default function DuyuruForm() {
   const waNedeni =
     wa === null ? "WhatsApp durumu kontrol ediliyor…"
     : wa.durum === "yapilandirilmadi" ? "WhatsApp kurulmadığı için kapalı."
-    : wa.durum === "bagli" ? null
+    : wa.durum === "bagli" ? (wa.devre_kesici.acik ? "WhatsApp gönderimi geçici olarak durduruldu (bağlantı sorunu). Sorun giderilince kendiliğinden açılır; detay için Ayarlar'a bakın." : null)
     : wa.durum === "ulasilamiyor" ? "WhatsApp servisine ulaşılamadığı için kapalı."
     : "WhatsApp bağlı olmadığı için kapalı. Ayarlar sayfasından numarayı bağlayın.";
   const waKapali = waNedeni !== null;

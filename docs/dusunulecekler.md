@@ -45,3 +45,12 @@ Ek talep olarak ayrıca değerlendirilir:
 - Yük testi için gerçek sayıya yakın sentetik veri üreteci (Faz 5).
 - Üretimde duman testi (E2E planı): [faz-plani.md](faz-plani.md) test stratejisi bölümü.
 - Admin için yedek kurtarma kodları (2FA cihazı kaybolursa).
+
+## 7. WhatsApp devre kesici: incelenecek noktalar (5 Kas 2026, Faz 4.4)
+Devre kesici bilerek konan bir güvenlik düzeneğidir (bağlantı kopması ya da art arda 3 gönderim hatasında WhatsApp gönderimini 30 dk durdurur, bekleyen mesajlar silinmez). Ayrıca bakılacaklar:
+- **Duyuru formu:** Devre kesici açıkken WhatsApp kutusu kapatıldı ve nedeni yazıldı. Alternatif: kutu açık kalıp yalnız uyarı göstermek (duyuru kuyruğa girer, kesici kapanınca gider).
+- **30 dk bekleme:** Bağlantı koptuktan sonra yeniden bağlansa bile 30 dk dolmadan gönderim başlamaz. Süre uygun mu, elle "devre kesiciyi sıfırla" düğmesi gerekir mi?
+- **Önizleme sayısı:** Duyuru önizlemesindeki "WhatsApp alacak" sayısı, push ile ulaşan velileri de içerir; "push alana WhatsApp gönderme" açıkken gerçek sayı daha düşük olur.
+- **Belirsiz sonuç:** Gönderim sırasında zaman aşımı olursa mesaj tekrar denenmez (çift mesaj olmasın diye) ve "hatalı" görünür; yönetici elle "yeniden dene" diyebilir.
+- **Gerçek numara denemesi:** Evolution'ın gerçek yanıtları (özellikle numara WhatsApp'ta yoksa) yalnız taklitle test edildi. Canlıdan önce küçük bir gerçek deneme gerekir.
+- **Limitler ve ısınma:** 50/saat, 250/gün, ısınma 20/50/120 varsayımları numaranın yaşına göre gözden geçirilecek. Numara değişirse ısınma otomatik sıfırlanmaz.
