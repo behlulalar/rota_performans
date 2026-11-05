@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
 from app import telefon as telefon_modulu
+from app import whatsapp_gonder as wag
 from app.bildirim import AZALDI_ESIGI, GERI_ALMA_SURESI
 from app.db import get_session
 from app.deps import aktif_kullanici, rol_gerekli
@@ -33,6 +34,8 @@ def _yanit(a: KulupAyari | None) -> AyarYaniti:
         return AyarYaniti(
             ad=VARSAYILAN_AD, telefon=None, eposta=None, adres=None, instagram=None,
             geri_alma_dakika=int(GERI_ALMA_SURESI.total_seconds() // 60), azaldi_esigi=AZALDI_ESIGI,
+            wa_saatlik_limit=wag.VARSAYILAN_SAATLIK, wa_gunluk_limit=wag.VARSAYILAN_GUNLUK,
+            wa_baslangic_saat=wag.VARSAYILAN_BASLANGIC, wa_bitis_saat=wag.VARSAYILAN_BITIS, wa_push_varsa_atla=True,
         )
     return AyarYaniti.model_validate(a, from_attributes=True)
 
@@ -65,7 +68,8 @@ async def guncelle(
         if len(ad) < 2:
             raise _hata422("Kulüp adı en az 2 karakter olmalı")
         gelen["ad"] = ad
-    for alan in ("geri_alma_dakika", "azaldi_esigi"):
+    for alan in ("geri_alma_dakika", "azaldi_esigi", "wa_saatlik_limit", "wa_gunluk_limit", "wa_baslangic_saat",
+                 "wa_bitis_saat", "wa_push_varsa_atla"):
         if alan in gelen and gelen[alan] is None:
             raise _hata422("Bu alan boş bırakılamaz")
     if "telefon" in gelen:
@@ -92,9 +96,16 @@ async def guncelle(
     if satir is None:
         # Varsayılanlar açıkça yazılır (flush öncesi nitelikler boş kalmasın).
         satir = KulupAyari(id=1, ad=VARSAYILAN_AD, geri_alma_dakika=int(GERI_ALMA_SURESI.total_seconds() // 60),
-                           azaldi_esigi=AZALDI_ESIGI)
+                           azaldi_esigi=AZALDI_ESIGI, wa_saatlik_limit=wag.VARSAYILAN_SAATLIK,
+                           wa_gunluk_limit=wag.VARSAYILAN_GUNLUK, wa_baslangic_saat=wag.VARSAYILAN_BASLANGIC,
+                           wa_bitis_saat=wag.VARSAYILAN_BITIS, wa_push_varsa_atla=True)
         session.add(satir)
     onceki = _yanit(satir).model_dump()
+    # Gönderim penceresi: başlangıç bitişten önce olmalı (gelmeyen alan mevcut değerden alınır).
+    bas = gelen.get("wa_baslangic_saat", onceki["wa_baslangic_saat"])
+    bit = gelen.get("wa_bitis_saat", onceki["wa_bitis_saat"])
+    if bas >= bit:
+        raise _hata422("WhatsApp gönderim penceresinin başlangıç saati bitişten önce olmalı")
     degisen = []
     for alan, deger in gelen.items():
         if onceki[alan] != deger:

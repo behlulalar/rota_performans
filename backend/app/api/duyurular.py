@@ -1,4 +1,4 @@
-"""Yönetici duyuruları: velilere elle yazılan mesaj (şimdilik yalnız uygulama bildirimi)."""
+"""Yönetici duyuruları: velilere elle yazılan mesaj (uygulama bildirimi ve/veya WhatsApp)."""
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
 from app import duyuru as dsvc
+from app import whatsapp as wa
 from app.db import get_session
 from app.deps import rol_gerekli
 from app.models.bildirim import Bildirim
@@ -32,7 +33,7 @@ router = APIRouter(prefix="/api/duyurular", tags=["duyurular"])
 
 Yonetici = Depends(rol_gerekli(Rol.admin))
 
-WHATSAPP_KAPALI = "WhatsApp henüz etkin değil"
+WHATSAPP_BAGLI_DEGIL = "WhatsApp bağlı değil"
 
 
 def _ip(request: Request) -> str:
@@ -112,7 +113,8 @@ async def _istatistikler(session: AsyncSession, idler: list[uuid.UUID]) -> dict[
 def _ozet(d: Duyuru, hedef_ozet: str, ist: DuyuruIstatistik) -> dict:
     return dict(
         id=d.id, baslik=d.baslik, metin=d.metin, olusturma=d.olusturma, hedef_tur=d.hedef_tur, hedef_ozet=hedef_ozet,
-        oturum_id=d.oturum_id, kanallar=DuyuruKanallari(push=d.kanal_push, whatsapp=d.kanal_whatsapp), istatistik=ist,
+        oturum_id=d.oturum_id, kanallar=DuyuruKanallari(push=d.kanal_push, whatsapp=d.kanal_whatsapp), her_iki_kanal=d.her_iki_kanal,
+        istatistik=ist,
     )
 
 
@@ -120,16 +122,24 @@ def _ozet(d: Duyuru, hedef_ozet: str, ist: DuyuruIstatistik) -> dict:
 async def olustur(
     govde: DuyuruGirdi, request: Request, yonetici: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)
 ):
-    if govde.kanallar.whatsapp:
-        raise HTTPException(422, WHATSAPP_KAPALI)
-    if not govde.kanallar.push:
+    if not govde.kanallar.push and not govde.kanallar.whatsapp:
         raise HTTPException(422, "En az bir kanal seçin")
+    # WhatsApp yalnız numara bağlıyken kabul edilir (ayar açık olması yetmez).
+    if govde.kanallar.whatsapp and (await wa.durum()).durum != "bagli":
+        raise HTTPException(422, WHATSAPP_BAGLI_DEGIL)
     kitle = await _kitle(session, govde.hedef)
-    if not kitle.push:
-        raise HTTPException(422, "Uygulama bildirimi alacak veli yok")
+    push_var = govde.kanallar.push and bool(kitle.push)
+    wa_var = govde.kanallar.whatsapp and bool(kitle.whatsapp)
+    if not push_var and not wa_var:
+        if govde.kanallar.push and govde.kanallar.whatsapp:
+            raise HTTPException(422, "Bildirim alacak veli yok")
+        raise HTTPException(
+            422, "Uygulama bildirimi alacak veli yok" if govde.kanallar.push else "WhatsApp alacak veli yok"
+        )
     d = Duyuru(
         baslik=govde.baslik, metin=govde.metin, hedef_tur=govde.hedef.tur, hedef=_hedef_json(govde.hedef),
-        kanal_push=govde.kanallar.push, kanal_whatsapp=False, olusturan_id=yonetici.id,
+        kanal_push=govde.kanallar.push, kanal_whatsapp=govde.kanallar.whatsapp,
+        her_iki_kanal=govde.her_iki_kanal, olusturan_id=yonetici.id,
         oturum_id=govde.hedef.oturum_id if govde.hedef.tur == DuyuruHedefTuru.oturum else None,
     )
     session.add(d)

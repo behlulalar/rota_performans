@@ -1,6 +1,7 @@
 """WhatsApp bağlantısı (Evolution API v2). Kulübün tek numarası tek bir "instance" olarak tutulur
 (adı EVOLUTION_INSTANCE). Bu modül yalnız bağlantıyı yönetir: durum, QR ile bağlama, bağlantıyı kesme.
-Mesaj gönderimi ve ban koruması ayrı adımda (docs/bildirim-kurallari.md bölüm 4)."""
+Mesaj gönderimi (`metin_gonder`) burada, ban koruması ve kuyruk mantığı app/whatsapp_gonder.py'dedir
+(docs/bildirim-kurallari.md bölüm 4)."""
 from dataclasses import dataclass
 from typing import Literal
 
@@ -15,6 +16,19 @@ _DURUMLAR: dict[str, Durum] = {"open": "bagli", "connecting": "baglaniyor", "clo
 
 class WhatsAppHatasi(Exception):
     """Evolution API'ye ulaşılamadı ya da beklenmeyen yanıt verdi."""
+
+
+class KesinHata(WhatsAppHatasi):
+    """Mesaj kesinlikle gitmedi (bağlantı kurulamadı ya da servis isteği reddetti): sonra yeniden denenebilir."""
+
+
+class BelirsizSonuc(WhatsAppHatasi):
+    """İstek gitmiş olabilir ama yanıt alınamadı (zaman aşımı, kopma, 5xx): mesaj gitmiş olabilir,
+    bu yüzden YENİDEN DENENMEZ (çift mesaj olmasın)."""
+
+
+class GecersizNumara(WhatsAppHatasi):
+    """Numara WhatsApp'ta yok / geçersiz: yeniden denemenin anlamı yok."""
 
 
 @dataclass
@@ -94,3 +108,32 @@ async def baglantiyi_kes() -> None:
     except WhatsAppHatasi:
         pass  # QR okutulmadan (bağlanırken) kesilen oturumda logout hata verir; silmek yeterli.
     await _iste("DELETE", f"/instance/delete/{ad}")
+
+
+# Bağlantının hiç kurulamadığı hatalar: istek karşıya ulaşmadı, mesaj gitmedi.
+_KESIN_AG_HATALARI = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
+
+
+async def metin_gonder(numara: str, metin: str, gecikme_ms: int = 0) -> None:
+    """Düz metin mesajı yollar (Evolution v2 `POST /message/sendText/{instance}`).
+    `numara` ülke koduyla, yalnız rakam ("905321234567"); `+` varsa atılır. `gecikme_ms`: karşı tarafta
+    "yazıyor…" göstergesinin süresi. Başarıda None döner; hatada KesinHata / BelirsizSonuc / GecersizNumara
+    fırlatır. Hata iletilerine numara ve metin yazılmaz."""
+    rakam = numara.lstrip("+")
+    if not rakam.isdigit():
+        raise GecersizNumara("Numara geçersiz")
+    govde = {"number": rakam, "text": metin, "delay": max(0, int(gecikme_ms))}
+    try:
+        async with _istemci() as c:
+            y = await c.post(f"/message/sendText/{settings.evolution_instance}", json=govde)
+    except _KESIN_AG_HATALARI as e:
+        raise KesinHata(f"Evolution API'ye bağlanılamadı: {e.__class__.__name__}") from e
+    except httpx.HTTPError as e:
+        raise BelirsizSonuc(f"Gönderim sonucu alınamadı: {e.__class__.__name__}") from e
+    if y.status_code < 300:
+        return
+    if y.status_code == 400:
+        raise GecersizNumara("Numara WhatsApp'ta bulunamadı")
+    if y.status_code < 500:  # 401/403/404...: yapılandırma ya da oturum sorunu, istek işlenmedi
+        raise KesinHata(f"Evolution API isteği reddetti ({y.status_code})")
+    raise BelirsizSonuc(f"Evolution API hata döndü ({y.status_code})")

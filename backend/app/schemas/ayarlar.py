@@ -9,6 +9,11 @@ class AyarYaniti(BaseModel):
     instagram: str | None
     geri_alma_dakika: int
     azaldi_esigi: int
+    wa_saatlik_limit: int
+    wa_gunluk_limit: int
+    wa_baslangic_saat: int
+    wa_bitis_saat: int
+    wa_push_varsa_atla: bool
 
 
 class KulupIletisim(BaseModel):
@@ -40,3 +45,8 @@ class AyarGuncelle(BaseModel):
     instagram: str | None = Field(default=None, max_length=200)
     geri_alma_dakika: int | None = Field(default=None, ge=1, le=15)
     azaldi_esigi: int | None = Field(default=None, ge=1, le=5)
+    wa_saatlik_limit: int | None = Field(default=None, ge=1, le=200)
+    wa_gunluk_limit: int | None = Field(default=None, ge=1, le=1000)
+    wa_baslangic_saat: int | None = Field(default=None, ge=0, le=23)
+    wa_bitis_saat: int | None = Field(default=None, ge=1, le=24)
+    wa_push_varsa_atla: bool | None = None

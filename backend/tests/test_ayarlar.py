@@ -10,6 +10,10 @@ from tests.test_bildirim import T0, bildirimler, isaretle, ortam, oturum, yukle
 from tests.test_yoklama import giris, yonetici  # noqa: F401  (fixture)
 
 URL = "/api/ayarlar"
+WA_VARSAYILAN = {
+    "wa_saatlik_limit": 50, "wa_gunluk_limit": 250, "wa_baslangic_saat": 9, "wa_bitis_saat": 21,
+    "wa_push_varsa_atla": True,
+}
 
 
 async def test_satir_yokken_varsayilanlar(istemci, yonetici):
@@ -17,7 +21,7 @@ async def test_satir_yokken_varsayilanlar(istemci, yonetici):
     assert r.status_code == 200
     assert r.json() == {
         "ad": "Rota Performans Akademi", "telefon": None, "eposta": None, "adres": None, "instagram": None,
-        "geri_alma_dakika": 3, "azaldi_esigi": 2,
+        "geri_alma_dakika": 3, "azaldi_esigi": 2, **WA_VARSAYILAN,
     }
 
 
@@ -31,7 +35,7 @@ async def test_kismi_ve_tam_guncelleme(istemci, yonetici):
     })
     j = r.json()
     assert j == {"ad": "Yeni Ad", "telefon": None, "eposta": "bilgi@kulup.com", "adres": "Ankara", "instagram": None,
-                 "geri_alma_dakika": 7, "azaldi_esigi": 4}
+                 "geri_alma_dakika": 7, "azaldi_esigi": 4, **WA_VARSAYILAN}
     assert (await istemci.get(URL, headers=yonetici)).json() == j
 
 

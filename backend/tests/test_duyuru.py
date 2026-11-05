@@ -1,4 +1,4 @@
-"""Duyurular: hedef kitle, kardeş tekilleştirme, izin / tercih / cihaz kuralları, WhatsApp reddi, push gönderimi, istatistik."""
+"""Duyurular: hedef kitle, kardeş tekilleştirme, izin / tercih / cihaz kuralları, WhatsApp bağlı değilken red, push gönderimi, istatistik."""
 import json
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -249,13 +249,13 @@ async def test_birincil_kisisi_olmayan_ogrenci_alici_degil(istemci, yonetici):
 # ---------- oluşturma kuralları ----------
 
 
-async def test_whatsapp_henuz_etkin_degil_422(istemci, yonetici):
+async def test_whatsapp_bagli_degilken_422(istemci, yonetici):
+    # Testlerde Evolution yapılandırılmamıştır: durum "yapilandirilmadi", WhatsApp'lı duyuru reddedilir.
     k = await veli_hesabi()
     await ogrenci("A", kullanici_id=k)
-    y = await gonder(istemci, yonetici, TUM, kanallar={"push": True, "whatsapp": True})
-    assert y.status_code == 422 and y.json()["detail"] == "WhatsApp henüz etkin değil"
-    y = await gonder(istemci, yonetici, TUM, kanallar={"push": False, "whatsapp": True})
-    assert y.status_code == 422 and y.json()["detail"] == "WhatsApp henüz etkin değil"
+    for kanallar in ({"push": True, "whatsapp": True}, {"push": False, "whatsapp": True}):
+        y = await gonder(istemci, yonetici, TUM, kanallar=kanallar)
+        assert y.status_code == 422 and y.json()["detail"] == "WhatsApp bağlı değil"
     assert await bildirimler() == []
     async with SessionLocal() as s:
         assert (await s.execute(select(Duyuru))).first() is None
@@ -287,7 +287,7 @@ async def test_olusturma_kaydi_denetim_ve_oturum_bagi(istemci, yonetici):
     assert y.status_code == 201
     d = y.json()
     assert d["oturum_id"] == str(ot.id) and d["hedef_tur"] == "oturum" and d["metin"] == "Ders iptal."
-    assert d["kanallar"] == {"push": True, "whatsapp": False}
+    assert d["kanallar"] == {"push": True, "whatsapp": False} and d["her_iki_kanal"] is False
     assert d["istatistik"]["push"]["toplam"] == 1 and d["istatistik"]["push"]["bekliyor"] == 1
     assert d["istatistik"]["whatsapp"]["toplam"] == 0
     assert d["hedef_ozet"].startswith("Ders: A · ")

@@ -47,6 +47,33 @@ SABLONLAR: dict[str, str] = {
     DUYURU: "{metin}",
 }
 
+# WhatsApp için her kişisel şablonun aynı anlama gelen 3 söylenişi (mesajlar birebir aynı olmasın).
+# Seçim bildirim kimliğine göre deterministiktir: `soylenis_sec`. Link yoktur. {ad}, {tarih}, {saat}, {bakiye} doldurulur.
+SOYLENISLER: dict[str, list[str]] = {
+    DERS_GELMEDI: [
+        "Rota Performans Akademi: {ad}, {tarih} {saat} dersine katılmadı. Telafi hakkı tanımlanacaktır.",
+        "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} {tarih} {saat} dersine gelemedi; telafi hakkı tanımlanacaktır.",
+        "Rota Performans Akademi bilgilendirmesi: {ad} {tarih} {saat} dersinde yoktu. Kendisi için telafi hakkı tanımlanacaktır.",
+    ],
+    DERS_HAKKI_AZALDI: [
+        "Rota Performans Akademi: {ad} için {bakiye} ders hakkı kaldı. Yeni paket için kulüple iletişime geçebilirsiniz.",
+        "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} için yalnızca {bakiye} ders hakkı kaldı; yeni paket için bize ulaşabilirsiniz.",
+        "Rota Performans Akademi bilgilendirmesi: {ad} adına {bakiye} ders hakkı kalmıştır. Yeni paket için kulüple görüşebilirsiniz.",
+    ],
+    DERS_HAKKI_BITTI: [
+        "Rota Performans Akademi: {ad} için ders hakkı bitti. Derslere devam için yeni paket almanız gerekir.",
+        "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} için ders hakkı sona erdi; derslere devam için yeni paket gerekiyor.",
+        "Rota Performans Akademi bilgilendirmesi: {ad} adına ders hakkı kalmamıştır. Derslere devam edebilmesi için yeni paket almanız gerekir.",
+    ],
+}
+
+
+def soylenis_sec(sablon: str, bildirim_id: int) -> str:
+    """Kişisel şablonun WhatsApp söylenişi; bildirim kimliğine göre (id % 3) deterministik."""
+    secenekler = SOYLENISLER[sablon]
+    return secenekler[bildirim_id % len(secenekler)]
+
+
 # Şablon -> kullanıcı tercihindeki tür anahtarı.
 # `duyuru` burada YOKTUR: duyurular tür tercihlerine (ders_gelmedi / ders_hakki) tabi değildir,
 # yalnızca kanal tercihlerine (push / whatsapp açık-kapalı) uyar. Bkz. app/duyuru.py.
@@ -221,9 +248,10 @@ async def gonderilecekleri_al(
     return list((await session.execute(sorgu)).scalars().all())
 
 
-async def metin_olustur(session: AsyncSession, bildirim: Bildirim) -> str:
-    """Bildirimin mesaj metnini kayıttan üretir (öğrencinin adı gönderim anında okunur)."""
-    sablon = SABLONLAR[bildirim.sablon]
+async def metin_olustur(session: AsyncSession, bildirim: Bildirim, *, soylenis: bool = False) -> str:
+    """Bildirimin mesaj metnini kayıttan üretir (öğrencinin adı gönderim anında okunur).
+    `soylenis=True`: kişisel şablonlarda bildirim kimliğine göre seçilen alternatif söyleniş (WhatsApp)."""
+    sablon = soylenis_sec(bildirim.sablon, bildirim.id) if soylenis and bildirim.sablon in SOYLENISLER else SABLONLAR[bildirim.sablon]
     if bildirim.sablon == DUYURU:
         duyuru = await session.get(Duyuru, bildirim.duyuru_id) if bildirim.duyuru_id else None
         return duyuru.metin if duyuru is not None else ""

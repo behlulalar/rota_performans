@@ -29,6 +29,9 @@ class Duyuru(Base):
     hedef: Mapped[dict] = mapped_column(JSONB, default=dict)
     kanal_push: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     kanal_whatsapp: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # True: push da gitse WhatsApp'a yine gönderilir (ders iptali gibi önemli duyurular). False: push ile ulaşılan
+    # kişiye WhatsApp gönderilmez (ayar `wa_push_varsa_atla` açıksa).
+    her_iki_kanal: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     olusturan_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="SET NULL")
     )

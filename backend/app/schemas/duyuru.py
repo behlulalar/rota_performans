@@ -49,6 +49,8 @@ class DuyuruGirdi(BaseModel):
     metin: str = Field(min_length=1, max_length=1000)
     hedef: DuyuruHedef
     kanallar: DuyuruKanallari = DuyuruKanallari()
+    # True: alıcı push ile de ulaşılsa WhatsApp'a yine gönderilir (ders iptali gibi önemli duyurular).
+    her_iki_kanal: bool = False
 
     @field_validator("baslik", "metin")
     @classmethod
@@ -81,6 +83,7 @@ class DuyuruOzet(BaseModel):
     hedef_ozet: str
     oturum_id: uuid.UUID | None
     kanallar: DuyuruKanallari
+    her_iki_kanal: bool
     istatistik: DuyuruIstatistik
 
 

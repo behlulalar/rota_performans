@@ -10,6 +10,7 @@ from app.models import DenetimKaydi, Rol
 from tests.test_yoklama import giris, yonetici  # noqa: F401  (fixture)
 
 URL = "/api/whatsapp"
+DEVRE_YOK = {"devre_kesici": {"acik": False, "sebep": None}, "bekleyen_sayisi": 0}
 
 
 class SahteEvolution:
@@ -67,7 +68,7 @@ async def test_yapilandirilmamis(istemci, yonetici):
 
 
 async def test_qr_ile_baglanma_ve_kesme(istemci, yonetici, evolution):
-    assert (await istemci.get(URL, headers=yonetici)).json() == {"durum": "bagli_degil", "numara": None, "profil_adi": None, "qr": None}
+    assert (await istemci.get(URL, headers=yonetici)).json() == {"durum": "bagli_degil", "numara": None, "profil_adi": None, "qr": None, **DEVRE_YOK}
     y = (await istemci.post(f"{URL}/baglan", headers=yonetici)).json()
     assert y["durum"] == "baglaniyor" and y["qr"] == "data:image/png;base64,QR"
     assert "POST /instance/create" in evolution.istekler
@@ -77,7 +78,7 @@ async def test_qr_ile_baglanma_ve_kesme(istemci, yonetici, evolution):
 
     evolution.durum = "open"  # telefonda okutuldu
     y = (await istemci.get(URL, headers=yonetici)).json()
-    assert y == {"durum": "bagli", "numara": "+905321234567", "profil_adi": "Rota Kulüp", "qr": None}
+    assert y == {"durum": "bagli", "numara": "+905321234567", "profil_adi": "Rota Kulüp", "qr": None, **DEVRE_YOK}
     assert (await istemci.post(f"{URL}/baglan", headers=yonetici)).json()["durum"] == "bagli"
 
     y = await istemci.post(f"{URL}/kes", headers=yonetici)

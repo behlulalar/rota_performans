@@ -9,7 +9,7 @@ from datetime import timedelta
 
 from redis.asyncio import Redis
 
-from app import ders_hakki, push
+from app import ders_hakki, push, whatsapp_gonder
 from app.config import settings
 from app.db import SessionLocal, engine
 from app.oturumlar import URETIM_GUN, bugun, oturumlari_uret, simdi
@@ -19,6 +19,7 @@ log = logging.getLogger("isci")
 DONGU_SANIYE = 30
 URETIM_SANIYE = 3600
 PUSH_PARTI = 50
+WHATSAPP_PARTI = 50  # döngüde en çok 1 mesaj gider; bu, aday satır penceresidir
 # Destek ekranı işçinin canlı olduğunu bu anahtardan (son atışın epoch saniyesi) anlar.
 KALP_ATISI_ANAHTAR = "isci:kalp_atisi"
 KALP_ATISI_TTL = 120
@@ -35,6 +36,12 @@ async def devamsizliklari_isle() -> None:
 async def push_bildirimlerini_gonder() -> None:
     async with SessionLocal() as session:
         await push.push_gonder(session, simdi(), limit=PUSH_PARTI)
+        await session.commit()
+
+
+async def whatsapp_bildirimlerini_gonder() -> None:
+    async with SessionLocal() as session:
+        await whatsapp_gonder.whatsapp_gonder(session, simdi(), limit=WHATSAPP_PARTI)
         await session.commit()
 
 
@@ -69,6 +76,10 @@ async def calis(durdur: asyncio.Event) -> None:
             await push_bildirimlerini_gonder()
         except Exception:
             log.exception("Push gönderimi başarısız")
+        try:
+            await whatsapp_bildirimlerini_gonder()
+        except Exception:
+            log.exception("WhatsApp gönderimi başarısız")
         if son_uretim is None or time.monotonic() - son_uretim >= URETIM_SANIYE:
             try:
                 await oturumlari_hazirla()
