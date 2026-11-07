@@ -25,22 +25,23 @@ test.describe("Tema", () => {
     expect(await tema(page)).toBe("dark");
   });
 
-  test("kayıtlı tercih yoksa yönetici sayfaları sistem renk şemasını izler", async ({ page }) => {
+  test("kayıtlı tercih yoksa tüm girişler cihaz açık olsa bile koyu temayla başlar", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
-    await page.goto("/yonetici-giris");
-    expect(await tema(page)).toBe("light");
-    await page.emulateMedia({ colorScheme: "dark" });
-    await page.goto("/antrenor-giris");
-    expect(await tema(page)).toBe("dark");
+    for (const yol of ["/giris", "/yonetici-giris", "/antrenor-giris"]) {
+      await page.goto(yol);
+      expect(await tema(page), yol).toBe("dark");
+    }
   });
 
-  test("veli sayfaları cihaz koyu olsa bile açık temayla başlar; seçilen tema hatırlanır", async ({ page }) => {
+  test("veli sayfalarında seçilen açık tema hatırlanır; koyuya dönünce o da hatırlanır", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
     await page.goto("/giris");
-    expect(await tema(page)).toBe("light");
-    await page.getByRole("button", { name: "Koyu temaya geç" }).click();
-    await page.reload();
     expect(await tema(page)).toBe("dark");
+    await page.getByRole("button", { name: "Açık temaya geç" }).click();
+    await page.reload();
+    expect(await tema(page)).toBe("light");
+    await page.goto("/yonetici-giris");
+    expect(await tema(page)).toBe("light");
   });
 });
 

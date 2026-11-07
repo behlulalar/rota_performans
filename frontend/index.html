@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="tr" data-theme="light">
+<html lang="tr" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#fbfaf6" />
+    <meta name="theme-color" content="#0e0e0f" />
     <title>Rota Performans Akademi</title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/png" href="/favicon.png?v=2" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -17,23 +17,14 @@
     <meta name="format-detection" content="telephone=no" />
     <script>
       // Render'dan önce tema seçilir; böylece yanıp sönme olmaz.
-      // Kayıtlı tercih önceliklidir. Yoksa veli sayfaları (giriş, panel, profil) açık temayla başlar,
-      // yönetici ve antrenör sayfaları cihazın temasını izler.
+      // Varsayılan tema tüm girişlerde (veli, antrenör, yönetici) koyudur; cihaz teması izlenmez.
+      // Kullanıcı temayı değiştirirse son seçimi bu cihazda kayıtlı kalır ve her açılışta uygulanır.
       (function () {
-        var yol = location.pathname;
-        var veli = yol === "/" || yol === "/giris" || yol.indexOf("/panel") === 0 || yol.indexOf("/profil") === 0;
-        var t = "light";
+        var t = "dark";
         try {
           var k = localStorage.getItem("rota-tema-2");
           if (k === "light" || k === "dark") t = k;
-          else if (!veli) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        } catch (e) {
-          if (!veli) {
-            try {
-              t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-            } catch (e2) {}
-          }
-        }
+        } catch (e) {}
         document.documentElement.dataset.theme = t;
         // Yazı boyutu: kayıtlı ölçek (CSS zoom) ilk boyamadan önce uygulanır.
         try {
