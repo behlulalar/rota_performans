@@ -11,7 +11,8 @@ import { ApiHata } from "../lib/api";
 import { hataMesaji } from "../lib/dogrulama";
 import { hatirlananiOku, varsayilanHatirla } from "../lib/hatirla";
 import { rolPaneli } from "../lib/panel";
-import { birincilDugme, dugme, girdi, uyariKutusu } from "../lib/stil";
+import { BOSTA_DAKIKA } from "../lib/bosta";
+import { bilgiKutusu, birincilDugme, dugme, girdi, uyariKutusu } from "../lib/stil";
 
 const KART = "bg-yuzey border border-cizgi rounded-[16px] p-6 space-y-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.35)]";
 const KOD_HATASI = "Doğrulama kodu hatalı";
@@ -33,7 +34,7 @@ const ACIKLAMA: Record<Adim["ad"], string> = {
 const gruplu = (a: string) => a.replace(/\s/g, "").replace(/(.{4})(?=.)/g, "$1 ");
 
 export default function DestekGiris() {
-  const { kullanici, girisYap, belirtecleGiris } = useAuth();
+  const { kullanici, girisYap, belirtecleGiris, bostaKapandi } = useAuth();
   const [adim, setAdim] = useState<Adim>({ ad: "sifre" });
   // Bu cihazda hatırlanan destek hesabı varsa giriş alanı dolu gelir (yalnız kod ve şifre sorulur).
   const [giris, setGiris] = useState(() => {
@@ -165,6 +166,12 @@ export default function DestekGiris() {
     <Karsilama baslik="Teknik destek." aciklama={ACIKLAMA[adim.ad]} arkaPlan>
       <div>
         <h2 className="mb-3 font-display text-[19px] text-center lg:text-left">Teknik destek girişi</h2>
+
+        {bostaKapandi && (
+          <p role="status" className={`${bilgiKutusu} mb-3`}>
+            Güvenliğiniz için {BOSTA_DAKIKA} dakika işlem yapılmadığından oturumunuz kapatıldı. Lütfen yeniden giriş yapın.
+          </p>
+        )}
 
         {adim.ad === "sifre" && (
           <form onSubmit={sifreGonder} className={KART} noValidate>

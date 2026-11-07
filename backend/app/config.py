@@ -14,10 +14,11 @@ class Settings(BaseSettings):
     kimlik_ozet_anahtari: str
     access_token_minutes: int = 15
     refresh_token_days: int = 14
-    # "Beni hatırla": açıkken oturum bu kadar gün (kayan) sürer, çerez kalıcıdır.
-    hatirla_gun: int = 30
-    # Kapalıyken oturum bu kadar saat sürer, çerez oturum çerezidir.
-    hatirlamasiz_saat: int = 12
+    # Boşta kalma süresi (dakika): oturum, son kullanıcı hareketinden bu kadar sonra geçersiz olur.
+    # Süre yalnız gerçek hareketle (POST /api/auth/etkinlik) uzar; arka plandaki otomatik yenileme uzatmaz.
+    bosta_dakika: int = 30
+    # "Beni hatırla": yalnız çerezin tarayıcı kapanınca silinip silinmeyeceğini belirler (gün).
+    hatirla_cerez_gun: int = 30
     cookie_secure: bool = True
     cors_origins: str = ""
     # Yüklenen fotoğrafların kök dizini (herkese açık sunulmaz, yalnızca API üzerinden okunur).

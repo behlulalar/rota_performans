@@ -165,18 +165,29 @@ async def test_guvenlik_basliklari(istemci):
     assert yanit.headers["cache-control"] == "no-store"
 
 
-async def test_beni_hatirla_acik_kalici_cerez_ve_30_gunluk_oturum(istemci):
+async def _bitisi_ayarla(fark: timedelta) -> None:
+    """Tek oturumun bitişini şimdiden `fark` sonrasına çeker (negatif: süresi dolmuş)."""
+    async with SessionLocal() as session:
+        oturum = (await session.execute(select(Oturum))).scalar_one()
+        oturum.bitis = simdi() + fark
+        await session.commit()
+
+
+def _yaklasik_bosta(oturum: Oturum) -> bool:
+    return timedelta(minutes=29, seconds=30) < oturum.bitis - simdi() <= timedelta(minutes=30)
+
+
+async def test_beni_hatirla_acik_kalici_cerez_ama_oturum_30_dakika_bostada_biter(istemci):
     await kullanici_olustur()
     yanit = await giris_yap(istemci, hatirla=True)
     assert yanit.status_code == 200
     assert _max_age(yanit) == 30 * 86400
     oturum = await _tek_oturum()
     assert oturum.hatirla is True
-    fark = oturum.bitis - simdi()
-    assert timedelta(days=29, hours=23) < fark <= timedelta(days=30)
+    assert _yaklasik_bosta(oturum)
 
 
-async def test_beni_hatirla_kapali_oturum_cerezi_ve_12_saatlik_oturum(istemci):
+async def test_beni_hatirla_kapali_oturum_cerezi_ve_30_dakikalik_oturum(istemci):
     await kullanici_olustur()
     for hatirla in (None, False):
         yanit = await giris_yap(istemci, hatirla=hatirla)
@@ -187,8 +198,7 @@ async def test_beni_hatirla_kapali_oturum_cerezi_ve_12_saatlik_oturum(istemci):
         assert "httponly" in ayar and "samesite=strict" in ayar and "path=/api/auth" in ayar
         oturum = await _tek_oturum()
         assert oturum.hatirla is False
-        fark = oturum.bitis - simdi()
-        assert timedelta(hours=11, minutes=55) < fark <= timedelta(hours=12)
+        assert _yaklasik_bosta(oturum)
 
 
 async def test_yenileme_hatirla_modunu_ve_cerez_turunu_korur(istemci):
@@ -197,9 +207,7 @@ async def test_yenileme_hatirla_modunu_ve_cerez_turunu_korur(istemci):
     yanit = await istemci.post("/api/auth/refresh")
     assert yanit.status_code == 200
     assert _max_age(yanit) == 30 * 86400
-    oturum = await _tek_oturum()
-    assert oturum.hatirla is True
-    assert oturum.bitis - simdi() > timedelta(days=29, hours=23)
+    assert (await _tek_oturum()).hatirla is True
 
     istemci.cookies.clear()
     await giris_yap(istemci, hatirla=False)
@@ -207,19 +215,48 @@ async def test_yenileme_hatirla_modunu_ve_cerez_turunu_korur(istemci):
     assert yanit.status_code == 200
     ayar = yanit.headers["set-cookie"].lower()
     assert "max-age" not in ayar and "expires" not in ayar
-    oturum = await _tek_oturum()
-    assert oturum.hatirla is False
-    assert timedelta(hours=11, minutes=55) < oturum.bitis - simdi() <= timedelta(hours=12)
+    assert (await _tek_oturum()).hatirla is False
 
 
-async def test_12_saati_gecmis_hatirlamasiz_oturum_yenilenemez(istemci):
+async def test_otomatik_yenileme_bosta_suresini_uzatmaz(istemci):
     await kullanici_olustur()
-    await giris_yap(istemci, hatirla=False)
-    async with SessionLocal() as session:
-        oturum = (await session.execute(select(Oturum))).scalar_one()
-        oturum.bitis = simdi() - timedelta(minutes=1)
-        await session.commit()
+    await giris_yap(istemci)
+    await _bitisi_ayarla(timedelta(minutes=5))
+    assert (await istemci.post("/api/auth/refresh")).status_code == 200
+    # Yeni belirteç eski bitişi taşır: arka plan yenilemesi oturumu canlı tutamaz.
+    assert (await _tek_oturum()).bitis - simdi() <= timedelta(minutes=5)
+
+
+async def test_eski_uzun_omurlu_oturum_yenilemede_30_dakikaya_iner(istemci):
+    await kullanici_olustur()
+    await giris_yap(istemci, hatirla=True)
+    await _bitisi_ayarla(timedelta(days=29))
+    assert (await istemci.post("/api/auth/refresh")).status_code == 200
+    assert (await _tek_oturum()).bitis - simdi() <= timedelta(minutes=30)
+
+
+async def test_kullanici_hareketi_bosta_suresini_yeniden_baslatir(istemci):
+    await kullanici_olustur()
+    await giris_yap(istemci)
+    await _bitisi_ayarla(timedelta(minutes=5))
+    assert (await istemci.post("/api/auth/etkinlik")).status_code == 204
+    assert _yaklasik_bosta(await _tek_oturum())
+
+
+async def test_30_dakikadir_hareketsiz_oturum_yenilenemez_ve_uzatilamaz(istemci):
+    await kullanici_olustur()
+    await giris_yap(istemci, hatirla=True)
+    await _bitisi_ayarla(timedelta(minutes=-1))
+    assert (await istemci.post("/api/auth/etkinlik")).status_code == 401
     assert (await istemci.post("/api/auth/refresh")).status_code == 401
+
+
+async def test_etkinlik_cerezsiz_veya_iptal_edilmis_oturumda_reddedilir(istemci):
+    await kullanici_olustur()
+    assert (await istemci.post("/api/auth/etkinlik")).status_code == 401
+    await giris_yap(istemci)
+    assert (await istemci.post("/api/auth/logout")).status_code == 204
+    assert (await istemci.post("/api/auth/etkinlik")).status_code == 401
 
 
 async def test_me_ad_soyad_yonetici_antrenor_veli(istemci):

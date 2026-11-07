@@ -10,6 +10,7 @@ import { ApiHata } from "../lib/api";
 import { PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
 import { gecerliMi, otomatikOdak } from "../lib/telefon";
 import { girisiBicimle, hatirlananiOku, hatirlananiSil, varsayilanHatirla } from "../lib/hatirla";
+import { BOSTA_DAKIKA } from "../lib/bosta";
 import { bilgiKutusu, birincilDugme, girdi } from "../lib/stil";
 
 // Teknik destek kendi iki adımlı giriş sayfasını kullanır (DestekGiris).
@@ -34,7 +35,7 @@ const BASLIK: Record<GirisPaneli, { baslik: string; karsilama: ReactNode; ipucu:
 const DIGER: Record<GirisPaneli, GirisPaneli | null> = { veli: null, antrenor: "yonetici", yonetici: "antrenor" };
 
 export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
-  const { kullanici, girisYap, oturumSuresiDoldu } = useAuth();
+  const { kullanici, girisYap, oturumSuresiDoldu, bostaKapandi } = useAuth();
   const [giris, setGiris] = useState("");
   const [sifre, setSifre] = useState("");
   const [hata, setHata] = useState<string | null>(null);
@@ -83,6 +84,11 @@ export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
     >
       <div>
         <h2 className="mb-3 font-display text-[19px] text-center lg:text-left">{BASLIK[panel].baslik}</h2>
+        {bostaKapandi && (
+          <p role="status" className={`${bilgiKutusu} mb-3`}>
+            Güvenliğiniz için {BOSTA_DAKIKA} dakika işlem yapılmadığından oturumunuz kapatıldı. Lütfen yeniden giriş yapın.
+          </p>
+        )}
         {hatirlanan ? (
           <form onSubmit={gonder} className="bg-yuzey border border-cizgi rounded-[16px] p-6 space-y-4 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.35)]" noValidate>
             {oturumSuresiDoldu && (

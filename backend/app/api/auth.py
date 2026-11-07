@@ -1,7 +1,7 @@
 import json
 import secrets
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
@@ -138,8 +138,8 @@ def _istemci_ip(request: Request) -> str:
     return request.client.host if request.client else "bilinmiyor"
 
 
-def _sure(hatirla: bool) -> timedelta:
-    return timedelta(days=settings.hatirla_gun) if hatirla else timedelta(hours=settings.hatirlamasiz_saat)
+def _bosta_suresi() -> timedelta:
+    return timedelta(minutes=settings.bosta_dakika)
 
 
 def _cookie_yaz(response: Response, belirtec: str, hatirla: bool) -> None:
@@ -147,7 +147,7 @@ def _cookie_yaz(response: Response, belirtec: str, hatirla: bool) -> None:
     response.set_cookie(
         COOKIE_ADI,
         belirtec,
-        max_age=int(_sure(True).total_seconds()) if hatirla else None,
+        max_age=settings.hatirla_cerez_gun * 86400 if hatirla else None,
         httponly=True,
         secure=settings.cookie_secure,
         samesite="strict",
@@ -159,13 +159,17 @@ def _cookie_sil(response: Response) -> None:
     response.delete_cookie(COOKIE_ADI, path=COOKIE_YOLU)
 
 
-async def _oturum_ac(session: AsyncSession, kullanici: Kullanici, hatirla: bool) -> str:
+async def _oturum_ac(
+    session: AsyncSession, kullanici: Kullanici, hatirla: bool, bitis: datetime | None = None
+) -> str:
+    """Yeni yenileme belirteci oturumu. `bitis` verilmezse boşta süresi şimdiden başlar (giriş);
+    yenilemede önceki oturumun bitişi korunur, böylece otomatik yenileme oturumu uzatmaz."""
     belirtec, ozet = yenileme_belirteci_uret()
     session.add(
         Oturum(
             kullanici_id=kullanici.id,
             token_ozeti=ozet,
-            bitis=simdi() + _sure(hatirla),
+            bitis=bitis or simdi() + _bosta_suresi(),
             hatirla=hatirla,
         )
     )
@@ -436,11 +440,30 @@ async def yenile(
         raise reddet()
 
     oturum.iptal = True
-    yeni = await _oturum_ac(session, kullanici, oturum.hatirla)
+    # Bitiş korunur (eski uzun ömürlü oturumlar da en geç şimdi + boşta süresine indirilir).
+    yeni = await _oturum_ac(session, kullanici, oturum.hatirla, min(oturum.bitis, simdi() + _bosta_suresi()))
     await session.commit()
 
     _cookie_yaz(response, yeni, oturum.hatirla)
     return _belirtec_yaniti(kullanici)
+
+
+@router.post("/etkinlik", status_code=status.HTTP_204_NO_CONTENT)
+async def etkinlik(
+    session: AsyncSession = Depends(get_session),
+    yenileme: str | None = Cookie(default=None, alias=COOKIE_ADI),
+):
+    """Kullanıcı hareketi bildirimi: boşta süresini şimdiden yeniden başlatır. Yalnız geçerli oturumda çalışır."""
+    oturum = None
+    if yenileme:
+        oturum = (
+            await session.execute(select(Oturum).where(Oturum.token_ozeti == belirtec_ozeti(yenileme)).with_for_update())
+        ).scalar_one_or_none()
+    if oturum is None or oturum.iptal or oturum.bitis < simdi():
+        # Çerez silinmez: eşzamanlı bir yenileme belirteci az önce döndürmüş olabilir (yeni çerez bozulmasın).
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Oturum süresi doldu, lütfen yeniden giriş yapın.")
+    oturum.bitis = simdi() + _bosta_suresi()
+    await session.commit()
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

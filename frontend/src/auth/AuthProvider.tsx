@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, belirteciAyarla, oturumuYenile, sifreZorunluDinleyiciAyarla } from "../lib/api";
 import type { Panel } from "../lib/panel";
+import { useBostaKapanma } from "../lib/bosta";
 import { cikisIsaretle, cikisYapildiMi, hatirlananiKaydet, hatirlananiOku, hatirlananiSil } from "../lib/hatirla";
 
 export type Rol = "admin" | "destek" | "antrenor" | "veli" | "ogrenci";
@@ -14,6 +15,8 @@ type AuthDegeri = {
   yukleniyor: boolean;
   /** Hatırlanan kullanıcı varken sessiz yenileme başarısız olduysa (oturum süresi dolmuş) true. */
   oturumSuresiDoldu: boolean;
+  /** Boşta kalma süresi dolduğu için oturum kapatıldıysa true; yeni girişte sıfırlanır. */
+  bostaKapandi: boolean;
   /** Destek hesabında oturum açmaz, ikinci adımı döner; diğer rollerde oturum açar ve null döner. */
   girisYap: (giris: string, sifre: string, beniHatirla: boolean, panel: Panel) => Promise<IkiAdim | null>;
   /** İkinci adım bittikten sonra elde edilen erişim belirteciyle oturumu açar. */
@@ -29,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [kullanici, setKullanici] = useState<Kullanici | null>(null);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [oturumSuresiDoldu, setOturumSuresiDoldu] = useState(false);
+  const [bostaKapandi, setBostaKapandi] = useState(false);
 
   // Sayfa açılışında yenileme çerezi varsa oturumu sessizce geri getirir.
   useEffect(() => {
@@ -66,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else hatirlananiSil();
     cikisIsaretle(false);
     setOturumSuresiDoldu(false);
+    setBostaKapandi(false);
     setKullanici(ben);
     return null;
   }, []);
@@ -77,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else hatirlananiSil();
     cikisIsaretle(false);
     setOturumSuresiDoldu(false);
+    setBostaKapandi(false);
     setKullanici(ben);
   }, []);
 
@@ -90,6 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setKullanici(null);
     }
   }, []);
+
+  // Hareketsizlik: BOSTA_DAKIKA boyunca fare/klavye/dokunma yoksa oturum sunucuda ve burada kapanır.
+  const bostaKapat = useCallback(() => {
+    fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
+    belirteciAyarla(null);
+    cikisIsaretle(false);
+    setOturumSuresiDoldu(false);
+    setBostaKapandi(true);
+    setKullanici(null);
+  }, []);
+  useBostaKapanma(kullanici !== null, bostaKapat);
 
   const sifreDegistirildi = useCallback(async () => {
     try {
@@ -109,8 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deger = useMemo(
-    () => ({ kullanici, yukleniyor, oturumSuresiDoldu, girisYap, belirtecleGiris, cikisYap, sifreDegistirildi }),
-    [kullanici, yukleniyor, oturumSuresiDoldu, girisYap, belirtecleGiris, cikisYap, sifreDegistirildi],
+    () => ({ kullanici, yukleniyor, oturumSuresiDoldu, bostaKapandi, girisYap, belirtecleGiris, cikisYap, sifreDegistirildi }),
+    [kullanici, yukleniyor, oturumSuresiDoldu, bostaKapandi, girisYap, belirtecleGiris, cikisYap, sifreDegistirildi],
   );
   return <AuthBaglami.Provider value={deger}>{children}</AuthBaglami.Provider>;
 }
