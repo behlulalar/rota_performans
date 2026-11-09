@@ -120,6 +120,16 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 - [x] PWA kurulumu (manifest, simge, ana ekrana ekleme yönlendirmesi)
 - [x] PWA tamamlama: tüm panellerde kurulum yönlendirmesi, bekleyen sürüm için "Yeni sürüm hazır / Yenile" bildirimi, manifest (kısayollar, mağaza ekran görüntüleri, her yönlendirme), iOS/çentik güvenli alanları, tablet için yönetici gezinmesi 1024 px, giriş sayfaları ortalı yerleşim
 
+### Faz 4.5: Sözleşme taahhütleri (teslim: en geç 11 Aralık 2026)
+Sözleşmede (Ek-1, Madde 2.2, 10.5) yazılı olup sistemde henüz bulunmayan işler. Teslimden önce bitmeli, yoksa sözleşme ile sistem ayrışır.
+- [ ] **Devamsızlık sebebi:** "gelmedi" işaretlenirken sebep seçilir/kaydedilir (sebep listesini müşteri verir; sebebin telafi hakkını etkileyip etkilemediği müşteriden sorulacak, bkz. [dusunulecekler.md](dusunulecekler.md) madde 3)
+- [ ] **Şifre sıfırlama:** velinin kendisi sıfırlar (e-posta/SMTP veya telefon yöntemi seçilecek); yalnız yönetici sıfırlayabiliyor şu an
+- [ ] **Excel içe aktarma:** müşterinin dosyası gelince (en geç 25 Kas) sütun eşleme, önizleme, hata raporu (Dilim 1.4)
+- [ ] **Yönetici 2 adımlı doğrulama (TOTP):** Faz 0'dan taşındı, kurtarma kodlarıyla birlikte
+- [ ] Sözleşmedeki sarı alanlar dolduruldu, imzalandı (tarih, IBAN, kimlik/adres, yetkili adı)
+
+Sözleşmeye yeni eklenen ve sistemde zaten bulunan özellikler (Duyurular, ders iptali, gelir raporu, devam özeti, denetim kaydı, destek paneli vb.) Ek-1'de yazılıdır; değişirse sözleşme de güncellenir.
+
 ### Faz 5: Test, güvenlik ve yayına alma (27 Kas – 30 Kas)
 - [ ] Yetki testleri, yük denemesi (ör. 300 eşzamanlı kullanıcı)
 - [ ] iOS/Android cihaz testleri
