@@ -21,6 +21,7 @@ import DuyuruForm from "./pages/DuyuruForm";
 import Duyurular from "./pages/Duyurular";
 import DenetimKaydi from "./pages/DenetimKaydi";
 import Ayarlar from "./pages/Ayarlar";
+import WhatsApp from "./pages/WhatsApp";
 import GenelBakis from "./pages/GenelBakis";
 import OgrenciDetay from "./pages/OgrenciDetay";
 import OgrenciForm from "./pages/OgrenciForm";
@@ -144,6 +145,7 @@ export default function App() {
             <Route path="/duyurular/yeni" element={<DuyuruForm />} />
             <Route path="/duyurular/:id" element={<DuyuruDetay />} />
             <Route path="/bildirimler" element={<BildirimYonetimi />} />
+            <Route path="/whatsapp" element={<WhatsApp />} />
             <Route path="/ayarlar" element={<Ayarlar />} />
             <Route path="/paketler" element={<PaketListe />} />
             <Route path="/gruplar" element={<GrupListe />} />

@@ -18,7 +18,7 @@ const ROZET: Record<WhatsAppBaglanti["durum"], [string, string]> = {
   bagli: [rozetBasari, "Bağlı"],
 };
 
-/** Ayarlar > WhatsApp bağlantısı: kulüp numarasını QR okutarak bağlar, durumu izler, bağlantıyı keser. */
+/** WhatsApp sayfası > bağlantı kartı: kulüp numarasını QR okutarak bağlar, durumu izler, bağlantıyı keser. */
 export default function WhatsAppBaglantisi() {
   const onayla = useOnay();
   const [b, setB] = useState<WhatsAppBaglanti | null>(null);

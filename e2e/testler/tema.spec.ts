@@ -75,7 +75,7 @@ test.describe("Yönetici menüsü", () => {
     const menu = page.getByRole("complementary", { name: "Menü" });
     await expect(menu.locator('[aria-disabled="true"]')).toHaveCount(0);
 
-    for (const [ad, yol] of [["Bildirimler", "/bildirimler"], ["Ayarlar", "/ayarlar"]]) {
+    for (const [ad, yol] of [["Bildirimler", "/bildirimler"], ["WhatsApp", "/whatsapp"], ["Ayarlar", "/ayarlar"]]) {
       await menu.getByRole("link", { name: ad }).click();
       await expect(page).toHaveURL(new RegExp(`${yol}$`));
       await expect(page.getByRole("heading", { name: ad, level: 1 })).toBeVisible();

@@ -25,7 +25,7 @@ test.describe("WhatsApp bağlantısı", () => {
     });
 
     await arayuzdenGiris(page, YONETICI_GIRIS, YONETICI_SIFRE);
-    await page.goto("/ayarlar");
+    await page.goto("/whatsapp");
     const kart = page.locator("section").filter({ has: page.getByRole("heading", { name: "WhatsApp bağlantısı" }) });
     await expect(kart.getByText("Bağlı değil")).toBeVisible();
     const klasor = process.env.EKRAN_KLASORU;

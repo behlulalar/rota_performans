@@ -138,7 +138,7 @@ export default function BildirimYonetimi() {
                   {wa.devre_kesici.acik ? "gönderim durduruldu" : wa.durum === "bagli" ? "bağlı" : "bağlı değil"}
                 </span>
                 {" · "}kuyrukta bekleyen: <span className="num">{wa.bekleyen_sayisi}</span>
-                {" · "}<Link to="/ayarlar" className="text-altin-metin hover:underline">Ayarlar</Link>
+                {" · "}<Link to="/whatsapp" className="text-altin-metin hover:underline">WhatsApp</Link>
               </p>
             )}
             <WhatsAppUyarisi b={wa} sinif="mt-2" />
