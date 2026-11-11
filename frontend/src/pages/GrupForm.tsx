@@ -35,7 +35,7 @@ export default function GrupForm() {
         let liste = aktifler;
         // Pasif bir antrenör atanmışsa seçili kalması için listeye eklenir.
         if (g?.antrenor && !aktifler.some((a) => a.id === g.antrenor!.id)) {
-          liste = [...aktifler, { id: g.antrenor.id, ad_soyad: `${g.antrenor.ad_soyad} (pasif)`, telefon: null, aktif: false, giris: null, grup_sayisi: 0 }];
+          liste = [...aktifler, { id: g.antrenor.id, ad_soyad: `${g.antrenor.ad_soyad} (pasif)`, telefon: null, aktif: false, giris: null, grup_sayisi: 0, grup_idleri: [] }];
         }
         setAntrenorler(liste);
         if (g) {

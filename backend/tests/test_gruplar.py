@@ -36,9 +36,9 @@ async def ogrenci_olustur(istemci, baslik, ad="Deneme", soyad="Öğrenci"):
         return str(o.id)
 
 
-async def antrenor_olustur(istemci, baslik, giris_="hoca@kulup.com", ad="Hoca Bir"):
+async def antrenor_olustur(istemci, baslik, giris_="0532 000 00 01", ad="Hoca Bir"):
     yanit = await istemci.post(
-        "/api/antrenorler", json={"ad_soyad": ad, "giris": giris_}, headers=baslik
+        "/api/antrenorler", json={"ad_soyad": ad, "telefon": giris_}, headers=baslik
     )
     assert yanit.status_code == 201, yanit.text
     return yanit.json()["antrenor"]

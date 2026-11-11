@@ -6,12 +6,21 @@ test.describe("Antrenör", () => {
     const k = benzersiz();
     const adSoyad = `Antrenor ${k}`;
     const giris = yeniAntrenorGirisi();
+    const grupAdi = `Grup ${k}`;
+    const token = await yoneticiApiGirisi(page);
+    const g = await page.request.post("/api/gruplar", {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { ad: grupAdi, kontenjan: 10, program: [{ gun: 2, baslangic: "17:00", bitis: "18:00" }] },
+    });
+    expect(g.status(), await g.text()).toBe(201);
 
     await page.goto("/antrenorler");
     await page.getByRole("button", { name: "Yeni antrenör" }).click();
     const form = page.getByRole("dialog", { name: "Yeni antrenör" });
     await form.getByLabel("Ad soyad").fill(adSoyad);
-    await form.getByLabel(/Giriş \(e-posta/).fill(giris);
+    await form.getByLabel("Telefon").fill(giris);
+    await expect(form.getByLabel(/Giriş \(e-posta/)).toHaveCount(0);
+    await form.getByRole("checkbox", { name: new RegExp(grupAdi) }).check();
     await form.getByRole("button", { name: "Oluştur" }).click();
 
     const sifreKutusu = page.getByRole("dialog", { name: `${adSoyad} için geçici şifre` });
@@ -19,7 +28,14 @@ test.describe("Antrenör", () => {
     const sifre = (await sifreKutusu.locator("code").innerText()).trim();
     expect(sifre.length).toBeGreaterThanOrEqual(8);
     await sifreKutusu.getByRole("button", { name: "Kapat" }).click();
-    await expect(page.getByRole("row", { name: new RegExp(adSoyad) })).toBeVisible();
+    const satir = page.getByRole("row", { name: new RegExp(adSoyad) });
+    await expect(satir).toBeVisible();
+
+    // Düzenleme penceresinde grup seçili gelir.
+    await satir.getByRole("button", { name: "Düzenle" }).click();
+    const duzen = page.getByRole("dialog", { name: "Antrenörü düzenle" });
+    await expect(duzen.getByRole("checkbox", { name: new RegExp(grupAdi) })).toBeChecked();
+    await duzen.getByRole("button", { name: "Kapat" }).click();
 
     await page.getByRole("button", { name: "Çıkış" }).click();
     await expect(page).toHaveURL(/\/yonetici-giris$/);

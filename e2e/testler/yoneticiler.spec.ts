@@ -120,14 +120,14 @@ test.describe("Yöneticiler", () => {
     await expect(page.getByRole("heading", { name: "Genel bakış", level: 1 })).toBeVisible();
   });
 
-  test("yönetici, antrenörün girişini değiştirir", async ({ page }) => {
+  test("yönetici, antrenörün telefonunu (girişini) değiştirir", async ({ page }) => {
     const belirtec = await yoneticiApiGirisi(page);
     const k = benzersiz();
     const giris = yeniAntrenorGirisi();
     const yeniGiris = yeniAntrenorGirisi();
     const yanit = await page.request.post("/api/antrenorler", {
       headers: { Authorization: `Bearer ${belirtec}` },
-      data: { ad_soyad: `Antrenor ${k}`, giris },
+      data: { ad_soyad: `Antrenor ${k}`, telefon: giris },
     });
     expect(yanit.status()).toBe(201);
     const gecici = ((await yanit.json()) as { gecici_sifre: string }).gecici_sifre;
@@ -135,9 +135,9 @@ test.describe("Yöneticiler", () => {
     await page.goto("/antrenorler");
     await page.getByRole("row", { name: new RegExp(`Antrenor ${k}`) }).getByRole("button", { name: "Düzenle" }).click();
     const modal = page.getByRole("dialog", { name: "Antrenörü düzenle" });
-    await modal.getByLabel(/^Giriş \(e-posta/).fill(yeniGiris);
+    await modal.getByLabel("Telefon").fill(yeniGiris);
     await modal.getByRole("button", { name: "Kaydet" }).click();
-    await expect(page.getByRole("row", { name: new RegExp(yeniGiris.replace(/[.+]/g, "\\$&")) })).toBeVisible();
+    await expect(page.getByRole("row", { name: new RegExp(`Antrenor ${k}.*${telefonGorunen(yeniGiris).replace(/[.+]/g, "\\$&")}`) })).toBeVisible();
 
     await page.getByRole("button", { name: "Çıkış" }).click();
     await arayuzdenGiris(page, yeniGiris, gecici, "antrenor");

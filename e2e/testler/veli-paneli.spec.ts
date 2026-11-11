@@ -1,6 +1,6 @@
 import {
   arayuzdenGiris, benzersiz, expect, odemeAlAPI, ogrenciOlusturAPI, paketAtaAPI, paketOlusturAPI, telefonBosluklu, test,
-  yoneticiApiGirisi, zorunluSifreyiBelirle,
+  yeniAntrenorGirisi, yoneticiApiGirisi, zorunluSifreyiBelirle,
 } from "../yardimci";
 
 async function veliHesabiAc(page: import("@playwright/test").Page, token: string, ogrenciId: string): Promise<string> {
@@ -187,7 +187,7 @@ test.describe("Veli paneli", () => {
     const token = await yoneticiApiGirisi(page);
     const yetki = { Authorization: `Bearer ${token}` };
     const k = benzersiz();
-    const a = await page.request.post("/api/antrenorler", { headers: yetki, data: { ad_soyad: `Antrenor ${k}`, giris: `antrenor.${k}@example.com` } });
+    const a = await page.request.post("/api/antrenorler", { headers: yetki, data: { ad_soyad: `Antrenor ${k}`, telefon: yeniAntrenorGirisi() } });
     expect(a.status(), await a.text()).toBe(201);
     const antrenorId = ((await a.json()) as { antrenor: { id: string } }).antrenor.id;
     const program = [1, 3, 5, 6].map((gun) => ({ gun, baslangic: "17:00", bitis: "18:00" }));

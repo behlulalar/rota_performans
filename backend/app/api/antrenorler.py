@@ -95,11 +95,21 @@ async def _ozetler(session: AsyncSession, kosullar: list) -> list[AntrenorOzet]:
         .where(*kosullar)
         .order_by(Antrenor.ad_soyad, Antrenor.id)
     )
+    satirlar = satirlar.all()
+    gruplar: dict[uuid.UUID, list[uuid.UUID]] = {}
+    if satirlar:
+        for aid, gid in await session.execute(
+            select(Grup.antrenor_id, Grup.id)
+            .where(Grup.antrenor_id.in_([a.id for a, _, _ in satirlar]), Grup.aktif.is_(True))
+            .order_by(Grup.ad, Grup.id)
+        ):
+            gruplar.setdefault(aid, []).append(gid)
     return [
         AntrenorOzet(
-            id=a.id, ad_soyad=a.ad_soyad, telefon=a.telefon, aktif=a.aktif, giris=giris, grup_sayisi=sayi
+            id=a.id, ad_soyad=a.ad_soyad, telefon=a.telefon, aktif=a.aktif, giris=giris, grup_sayisi=sayi,
+            grup_idleri=gruplar.get(a.id, []),
         )
-        for a, giris, sayi in satirlar.all()
+        for a, giris, sayi in satirlar
     ]
 
 
@@ -112,6 +122,39 @@ async def _antrenor_al(session: AsyncSession, antrenor_id: uuid.UUID) -> Antreno
     if antrenor is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, BULUNAMADI)
     return antrenor
+
+
+async def _gruplari_ata(
+    session: AsyncSession, antrenor_id: uuid.UUID, grup_idleri: list[uuid.UUID]
+) -> dict[str, list[str]]:
+    """Antrenörün aktif grupları tam olarak grup_idleri olur; diğerlerinin antrenörü boşalır (aynı işlem)."""
+    istenen = set(grup_idleri)
+    if istenen:
+        bulunan = {
+            g.id: g
+            for g in (
+                await session.execute(select(Grup).where(Grup.id.in_(istenen), Grup.aktif.is_(True)).with_for_update())
+            ).scalars()
+        }
+        if len(bulunan) != len(istenen):
+            raise _hata422("Grup bulunamadı veya pasif")
+    else:
+        bulunan = {}
+    mevcut = {
+        g.id: g
+        for g in (
+            await session.execute(
+                select(Grup).where(Grup.antrenor_id == antrenor_id, Grup.aktif.is_(True)).with_for_update()
+            )
+        ).scalars()
+    }
+    eklenen = [gid for gid in sorted(istenen, key=str) if gid not in mevcut]
+    cikarilan = [gid for gid in sorted(mevcut, key=str) if gid not in istenen]
+    for gid in eklenen:
+        bulunan[gid].antrenor_id = antrenor_id
+    for gid in cikarilan:
+        mevcut[gid].antrenor_id = None
+    return {"eklenen": [str(g) for g in eklenen], "cikarilan": [str(g) for g in cikarilan]}
 
 
 @router.get("", response_model=list[AntrenorOzet])
@@ -131,8 +174,8 @@ async def olustur(
     yonetici: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
-    giris = _giris_hazirla(govde.giris)
-    telefon = _telefon_normalize(govde.telefon) if govde.telefon else None
+    telefon = _telefon_normalize(govde.telefon)
+    giris = normalize_giris(telefon)
     if (await session.execute(select(Kullanici.id).where(Kullanici.giris == giris))).first() is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
     await cakisma_denetle(session, giris)
@@ -147,9 +190,12 @@ async def olustur(
     antrenor = Antrenor(kullanici_id=kullanici.id, ad_soyad=govde.ad_soyad, telefon=telefon, aktif=True)
     session.add(antrenor)
     await session.flush()
+    detay = None
+    if govde.grup_idleri:
+        detay = {"gruplar": await _gruplari_ata(session, antrenor.id, govde.grup_idleri)}
     await audit.kaydet(
         session, "antrenor_olusturuldu", kullanici_id=yonetici.id, hedef_tur="antrenor", hedef_id=str(antrenor.id),
-        ip=_ip(request),
+        ip=_ip(request), detay=detay,
     )
     try:
         await session.commit()
@@ -182,20 +228,20 @@ async def guncelle(
         antrenor.ad_soyad = govde.ad_soyad
         if kullanici is not None:
             kullanici.ad_soyad = govde.ad_soyad
-    if "giris" in verilen:
-        if govde.giris is None:
-            raise _hata422("giris boş olamaz")
-        if kullanici is None:
-            raise _hata422("Antrenörün giriş hesabı yok")
-        giris = _giris_hazirla(govde.giris)
-        if giris != kullanici.giris:
-            if (await session.execute(select(Kullanici.id).where(Kullanici.giris == giris))).first() is not None:
-                raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
-            await cakisma_denetle(session, giris, kullanici.id)
-            kullanici.giris = giris
-            await _oturumlari_iptal_et(session, kullanici.id)
     if "telefon" in verilen:
-        antrenor.telefon = _telefon_normalize(govde.telefon) if govde.telefon else None
+        if govde.telefon is None or not govde.telefon.strip():
+            raise _hata422("telefon boş olamaz")
+        telefon = _telefon_normalize(govde.telefon)
+        if kullanici is not None and telefon != kullanici.giris:
+            if (await session.execute(select(Kullanici.id).where(Kullanici.giris == telefon))).first() is not None:
+                raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
+            await cakisma_denetle(session, telefon, kullanici.id)
+            kullanici.giris = telefon
+            await _oturumlari_iptal_et(session, kullanici.id)
+        antrenor.telefon = telefon
+    gruplar = None
+    if govde.grup_idleri is not None:
+        gruplar = await _gruplari_ata(session, antrenor.id, govde.grup_idleri)
     if "aktif" in verilen:
         antrenor.aktif = govde.aktif
         if kullanici is not None:
@@ -204,7 +250,8 @@ async def guncelle(
                 await _oturumlari_iptal_et(session, kullanici.id)
     await audit.kaydet(
         session, "antrenor_guncellendi", kullanici_id=yonetici.id, hedef_tur="antrenor", hedef_id=str(antrenor.id),
-        ip=_ip(request), detay={"alanlar": sorted(verilen)},
+        ip=_ip(request),
+        detay={"alanlar": sorted(verilen), **({"gruplar": gruplar} if gruplar is not None else {})},
     )
     try:
         await session.commit()

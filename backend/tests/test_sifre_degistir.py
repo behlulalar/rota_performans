@@ -119,18 +119,18 @@ async def test_admin_bayraksiz_ve_gecici_sifre_uretenler_bayrak_koyar(istemci):
     assert (await istemci.get("/api/auth/me", headers=h)).json()["sifre_degistirmeli"] is False
 
     y = await istemci.post(
-        "/api/antrenorler", headers=h, json={"ad_soyad": "Hoca Bir", "giris": "hoca@kulup.com"}
+        "/api/antrenorler", headers=h, json={"ad_soyad": "Hoca Bir", "telefon": "0532 000 00 01"}
     )
     assert y.status_code == 201, y.text
-    assert (await getir("hoca@kulup.com")).sifre_degistirmeli is True
+    assert (await getir("+905320000001")).sifre_degistirmeli is True
     async with SessionLocal() as s:
-        k = await getir("hoca@kulup.com")
+        k = await getir("+905320000001")
         k.sifre_degistirmeli = False
         await s.merge(k)
         await s.commit()
     aid = y.json()["antrenor"]["id"]
     assert (await istemci.post(f"/api/antrenorler/{aid}/sifre-sifirla", headers=h)).status_code == 200
-    assert (await getir("hoca@kulup.com")).sifre_degistirmeli is True
+    assert (await getir("+905320000001")).sifre_degistirmeli is True
 
 
 async def test_veli_hesabi_ve_sifirlama_bayrak_koyar(istemci):

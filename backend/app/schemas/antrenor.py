@@ -9,9 +9,9 @@ class AntrenorOlustur(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     ad_soyad: Baslik = Field(min_length=1, max_length=200)
-    telefon: str | None = Field(default=None, max_length=40)
-    # E-posta veya telefon.
-    giris: str = Field(min_length=1, max_length=255)
+    # Giriş bilgisi de bu telefondur (yalnız telefonla giriş).
+    telefon: str = Field(min_length=1, max_length=40)
+    grup_idleri: list[uuid.UUID] = Field(default_factory=list, max_length=200)
 
 
 class AntrenorGuncelle(BaseModel):
@@ -20,7 +20,8 @@ class AntrenorGuncelle(BaseModel):
     ad_soyad: Baslik | None = Field(default=None, min_length=1, max_length=200)
     telefon: str | None = Field(default=None, max_length=40)
     aktif: bool | None = None
-    giris: str | None = Field(default=None, min_length=1, max_length=255)
+    # None/yok: gruplara dokunulmaz; liste: antrenörün aktif grupları tam olarak bunlar olur.
+    grup_idleri: list[uuid.UUID] | None = Field(default=None, max_length=200)
 
 
 class AntrenorOzet(BaseModel):
@@ -30,6 +31,7 @@ class AntrenorOzet(BaseModel):
     aktif: bool
     giris: str | None
     grup_sayisi: int
+    grup_idleri: list[uuid.UUID] = Field(default_factory=list)
 
 
 class AntrenorOlusturYanit(BaseModel):

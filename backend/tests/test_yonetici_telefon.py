@@ -138,16 +138,13 @@ async def test_yonetici_telefon_cakismalari(istemci, yonetici):
 
 async def test_antrenor_ve_veli_hesabi_yonetici_telefonuyla_cakisamaz(istemci, yonetici):
     assert (await yonetici_ac(istemci, yonetici)).status_code == 201
-    r = await istemci.post("/api/antrenorler", json={"ad_soyad": "Hoca Bir", "giris": "0532 111 22 33"}, headers=h(yonetici))
+    r = await istemci.post("/api/antrenorler", json={"ad_soyad": "Hoca Bir", "telefon": "0532 111 22 33"}, headers=h(yonetici))
     assert r.status_code == 409 and "telefon/giriş" in r.json()["detail"]
-    ok = await istemci.post("/api/antrenorler", json={"ad_soyad": "Hoca Bir", "giris": "hoca@kulup.com"}, headers=h(yonetici))
+    ok = await istemci.post("/api/antrenorler", json={"ad_soyad": "Hoca Bir", "telefon": "0533 111 22 33"}, headers=h(yonetici))
     assert ok.status_code == 201, ok.text
     aid = ok.json()["antrenor"]["id"]
-    p = await istemci.patch(f"/api/antrenorler/{aid}", json={"giris": TEL}, headers=h(yonetici))
-    assert p.status_code == 409
-    # Antrenör kartındaki iletişim telefonu (Antrenor.telefon) giriş değildir: çakışma aranmaz
     p = await istemci.patch(f"/api/antrenorler/{aid}", json={"telefon": TEL}, headers=h(yonetici))
-    assert p.status_code == 200
+    assert p.status_code == 409
     # Veli hesabı
     o = await ogrenci_ac(istemci, yonetici, telefon="0532 111 22 33")
     r = await hesap_ac(istemci, yonetici, o["id"])

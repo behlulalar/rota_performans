@@ -592,6 +592,9 @@ async def giris_degistir(
     kullanici.giris = yeni
     if kullanici.telefon == yeni:
         kullanici.telefon = None  # giriş zaten bu telefon; ikinci kayda gerek yok
+    if kullanici.rol == Rol.antrenor and "@" not in yeni:
+        # Antrenörün giriş telefonu ile antrenör kartındaki telefon ayrışmasın.
+        await session.execute(update(Antrenor).where(Antrenor.kullanici_id == kullanici.id).values(telefon=yeni))
     kullanici.basarisiz_deneme = 0
     sorgu = update(Oturum).where(Oturum.kullanici_id == kullanici.id)
     if yenileme:

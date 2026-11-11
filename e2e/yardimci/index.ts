@@ -228,7 +228,7 @@ export async function yoklamaOrtamiKur(page: Page): Promise<YoklamaOrtami> {
   const adSoyad = `Antrenor ${k}`;
   const giris = yeniAntrenorGirisi();
 
-  const a = await page.request.post("/api/antrenorler", { headers: yetki, data: { ad_soyad: adSoyad, giris } });
+  const a = await page.request.post("/api/antrenorler", { headers: yetki, data: { ad_soyad: adSoyad, telefon: giris } });
   expect(a.status(), await a.text()).toBe(201);
   const antrenor = (await a.json()) as { antrenor: { id: string }; gecici_sifre: string };
 
