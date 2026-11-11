@@ -4,4 +4,3 @@ __pycache__/
 .venv/
 uploads/
 tests/
-requirements-dev.txt
