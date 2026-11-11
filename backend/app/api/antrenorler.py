@@ -3,7 +3,7 @@ import uuid
 
 from email_validator import EmailNotValidError, validate_email
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -129,32 +129,28 @@ async def _gruplari_ata(
 ) -> dict[str, list[str]]:
     """Antrenörün aktif grupları tam olarak grup_idleri olur; diğerlerinin antrenörü boşalır (aynı işlem)."""
     istenen = set(grup_idleri)
+    # Tüm ilgili satırlar TEK sorguda, id sırasıyla kilitlenir: eşzamanlı atamalar ters sırada kilitleyip kilitlenmez.
+    kosul = and_(Grup.antrenor_id == antrenor_id, Grup.aktif.is_(True))
     if istenen:
-        bulunan = {
-            g.id: g
-            for g in (
-                await session.execute(select(Grup).where(Grup.id.in_(istenen), Grup.aktif.is_(True)).with_for_update())
-            ).scalars()
-        }
-        if len(bulunan) != len(istenen):
-            raise _hata422("Grup bulunamadı veya pasif")
-    else:
-        bulunan = {}
-    mevcut = {
+        kosul = or_(Grup.id.in_(istenen), kosul)
+    satirlar = {
         g.id: g
-        for g in (
-            await session.execute(
-                select(Grup).where(Grup.antrenor_id == antrenor_id, Grup.aktif.is_(True)).with_for_update()
-            )
-        ).scalars()
+        for g in (await session.execute(select(Grup).where(kosul).order_by(Grup.id).with_for_update())).scalars()
     }
+    if any(gid not in satirlar or not satirlar[gid].aktif for gid in istenen):
+        raise _hata422("Grup bulunamadı veya pasif")
+    mevcut = {gid: g for gid, g in satirlar.items() if g.antrenor_id == antrenor_id and g.aktif}
     eklenen = [gid for gid in sorted(istenen, key=str) if gid not in mevcut]
     cikarilan = [gid for gid in sorted(mevcut, key=str) if gid not in istenen]
+    onceki = {str(gid): str(satirlar[gid].antrenor_id) for gid in eklenen if satirlar[gid].antrenor_id is not None}
     for gid in eklenen:
-        bulunan[gid].antrenor_id = antrenor_id
+        satirlar[gid].antrenor_id = antrenor_id
     for gid in cikarilan:
         mevcut[gid].antrenor_id = None
-    return {"eklenen": [str(g) for g in eklenen], "cikarilan": [str(g) for g in cikarilan]}
+    sonuc: dict = {"eklenen": [str(g) for g in eklenen], "cikarilan": [str(g) for g in cikarilan]}
+    if onceki:
+        sonuc["onceki_antrenor"] = onceki
+    return sonuc
 
 
 @router.get("", response_model=list[AntrenorOzet])
@@ -224,7 +220,11 @@ async def guncelle(
             raise _hata422(f"{alan} boş olamaz")
     kullanici = await session.get(Kullanici, antrenor.kullanici_id) if antrenor.kullanici_id else None
 
+    degisen: list[str] = []
+    giris_degisti = False
     if "ad_soyad" in verilen:
+        if govde.ad_soyad != antrenor.ad_soyad:
+            degisen.append("ad_soyad")
         antrenor.ad_soyad = govde.ad_soyad
         if kullanici is not None:
             kullanici.ad_soyad = govde.ad_soyad
@@ -237,21 +237,33 @@ async def guncelle(
                 raise HTTPException(status.HTTP_409_CONFLICT, GIRIS_TEKRAR)
             await cakisma_denetle(session, telefon, kullanici.id)
             kullanici.giris = telefon
+            giris_degisti = True
             await _oturumlari_iptal_et(session, kullanici.id)
+        if telefon != antrenor.telefon or giris_degisti:
+            degisen.append("telefon")
         antrenor.telefon = telefon
     gruplar = None
     if govde.grup_idleri is not None:
-        gruplar = await _gruplari_ata(session, antrenor.id, govde.grup_idleri)
+        gruplar = await _gruplari_ata(session, antrenor.id, list(dict.fromkeys(govde.grup_idleri)))
+        if gruplar["eklenen"] or gruplar["cikarilan"]:
+            degisen.append("grup_idleri")
     if "aktif" in verilen:
+        if govde.aktif != antrenor.aktif:
+            degisen.append("aktif")
         antrenor.aktif = govde.aktif
         if kullanici is not None:
             kullanici.aktif = govde.aktif
             if not govde.aktif:
                 await _oturumlari_iptal_et(session, kullanici.id)
+    detay: dict = {"alanlar": sorted(degisen)}
+    if giris_degisti:
+        detay["giris_degisti"] = True
+        detay["oturumlar_kapatildi"] = True
+    if gruplar is not None and (gruplar["eklenen"] or gruplar["cikarilan"]):
+        detay["gruplar"] = gruplar
     await audit.kaydet(
         session, "antrenor_guncellendi", kullanici_id=yonetici.id, hedef_tur="antrenor", hedef_id=str(antrenor.id),
-        ip=_ip(request),
-        detay={"alanlar": sorted(verilen), **({"gruplar": gruplar} if gruplar is not None else {})},
+        ip=_ip(request), detay=detay,
     )
     try:
         await session.commit()

@@ -266,14 +266,20 @@ function YeniAntrenor({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
 }
 
 function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; onKapat: () => void; onKaydedildi: () => void }) {
-  // Eski kayıtlarda giriş e-posta olabilir: telefon alanı önce kartın telefonundan, yoksa telefon olan girişten doldurulur.
-  const ilkTelefon = numaraCoz(antrenor.telefon ?? telefonSec(antrenor.giris, null));
+  // Giriş telefonsa alan ondan doldurulur (kartın telefonu ayrışmış olabilir); değilse (eski e-posta girişi) kartın telefonundan.
+  const girisTelefonu = antrenor.giris && !antrenor.giris.includes("@") ? telefonSec(antrenor.giris, null) : null;
+  const ilkTelefon = numaraCoz(telefonSec(antrenor.giris, antrenor.telefon));
   const [ad, setAd] = useState(antrenor.ad_soyad);
   const [telefon, setTelefon] = useState(ilkTelefon);
   const [gruplar, setGruplar] = useState<string[]>(antrenor.grup_idleri);
   const [hata, setHata] = useState<string | null>(null);
   const [gonderiliyor, setGonderiliyor] = useState(false);
-  const degisti = antrenor.giris !== null && telefon !== numaraCoz(telefonSec(antrenor.giris, null));
+  const girisEposta = antrenor.giris !== null && girisTelefonu === null;
+  // Telefon yalnız değiştirildiyse ya da giriş telefon değilse (eski e-posta girişi) gönderilir.
+  const telefonGonder = telefon !== ilkTelefon || girisEposta;
+  const girisDegisecek = antrenor.giris !== null && telefonGonder && gecerliMi(telefon) && (girisEposta || apiyeCevir(telefon) !== girisTelefonu);
+  const gruplarDegisti =
+    gruplar.length !== antrenor.grup_idleri.length || gruplar.some((g) => !antrenor.grup_idleri.includes(g));
 
   async function gonder(e: FormEvent) {
     e.preventDefault();
@@ -285,8 +291,8 @@ function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; 
     try {
       await antrenorGuncelle(antrenor.id, {
         ad_soyad: ad.trim(),
-        telefon: apiyeCevir(telefon)!,
-        grup_idleri: gruplar,
+        ...(telefonGonder ? { telefon: apiyeCevir(telefon)! } : {}),
+        ...(gruplarDegisti ? { grup_idleri: gruplar } : {}),
       });
       onKaydedildi();
     } catch (err) {
@@ -302,8 +308,12 @@ function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; 
           <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} autoFocus /></label>
         <label className="block"><span className="text-[13px] text-metin-soluk">Telefon</span>
           <TelefonGirdisi value={telefon} onChange={setTelefon} />
-          {degisti && (
-            <span className="block mt-1 text-[12px] text-metin-soluk">Telefon değişince antrenörün açık oturumları kapanır; yeni numarayla tekrar girmesi gerekir.</span>
+          {girisDegisecek && (
+            <span className="block mt-1 text-[12px] text-metin-soluk">
+              {girisEposta
+                ? `Bu antrenörün girişi e-posta (${antrenor.giris}); kaydedince giriş bu telefon olur.`
+                : `Giriş numarası ${bicimle(girisTelefonu!)} → ${bicimle(apiyeCevir(telefon)!)} olarak değişir; açık oturumları kapanır.`}
+            </span>
           )}
         </label>
         <GrupSecici secili={gruplar} onDegis={setGruplar} antrenorId={antrenor.id} />

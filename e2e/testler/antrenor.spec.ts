@@ -35,6 +35,8 @@ test.describe("Antrenör", () => {
     await satir.getByRole("button", { name: "Düzenle" }).click();
     const duzen = page.getByRole("dialog", { name: "Antrenörü düzenle" });
     await expect(duzen.getByRole("checkbox", { name: new RegExp(grupAdi) })).toBeChecked();
+    // Telefon değişmediyse giriş değişikliği uyarısı çıkmaz.
+    await expect(duzen).not.toContainText("açık oturumları kapanır");
     await duzen.getByRole("button", { name: "Kapat" }).click();
 
     await page.getByRole("button", { name: "Çıkış" }).click();

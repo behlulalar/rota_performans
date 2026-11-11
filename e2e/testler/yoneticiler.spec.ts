@@ -136,6 +136,7 @@ test.describe("Yöneticiler", () => {
     await page.getByRole("row", { name: new RegExp(`Antrenor ${k}`) }).getByRole("button", { name: "Düzenle" }).click();
     const modal = page.getByRole("dialog", { name: "Antrenörü düzenle" });
     await modal.getByLabel("Telefon").fill(yeniGiris);
+    await expect(modal).toContainText("açık oturumları kapanır");
     await modal.getByRole("button", { name: "Kaydet" }).click();
     await expect(page.getByRole("row", { name: new RegExp(`Antrenor ${k}.*${telefonGorunen(yeniGiris).replace(/[.+]/g, "\\$&")}`) })).toBeVisible();
 

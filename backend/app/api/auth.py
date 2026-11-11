@@ -583,6 +583,8 @@ async def giris_degistir(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Şifre hatalı")
 
     yeni = _giris_hazirla(govde.yeni_giris)
+    if kullanici.rol == Rol.antrenor and "@" in yeni:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Antrenör girişi yalnız telefon olabilir")
     if yeni == kullanici.giris:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Yeni giriş bilgisi mevcut olanla aynı")
     if (await session.execute(select(Kullanici.id).where(Kullanici.giris == yeni))).first() is not None:

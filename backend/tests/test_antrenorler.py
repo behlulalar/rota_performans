@@ -359,3 +359,46 @@ async def test_antrenor_kendi_girisini_degistirince_kart_telefonu_esitlenir(iste
     assert y.status_code == 200, y.text
     kart = [a for a in (await istemci.get("/api/antrenorler", headers=yonetici)).json() if a["id"] == d["antrenor"]["id"]][0]
     assert kart["giris"] == "+905324443322" and kart["telefon"] == "+905324443322"
+
+
+async def test_yalniz_ad_degisince_giris_ve_oturumlar_degismez(istemci, yonetici):
+    d = (await olustur(istemci, yonetici)).json()
+    aid = d["antrenor"]["id"]
+    await istemci.post("/api/auth/login", json={"giris": "+905320000000", "sifre": d["gecici_sifre"]})
+    y = await istemci.patch(f"/api/antrenorler/{aid}", json={"ad_soyad": "Yeni Ad"}, headers=yonetici)
+    assert y.status_code == 200, y.text
+    assert y.json()["giris"] == "+905320000000"
+    async with SessionLocal() as s:
+        k = (await s.execute(select(Kullanici).where(Kullanici.giris == "+905320000000"))).scalar_one()
+        assert (await s.execute(select(Oturum).where(Oturum.kullanici_id == k.id, Oturum.iptal.is_(False)))).first() is not None
+        kayit = (await s.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "antrenor_guncellendi"))).scalar_one()
+    assert kayit.detay == {"alanlar": ["ad_soyad"]}
+
+
+async def test_antrenor_girisini_eposta_yapamaz(istemci, yonetici):
+    d = (await olustur(istemci, yonetici)).json()
+    g = await istemci.post("/api/auth/login", json={"giris": "+905320000000", "sifre": d["gecici_sifre"]})
+    baslik = {"Authorization": f"Bearer {g.json()['access_token']}"}
+    y = await istemci.patch(
+        "/api/auth/giris", json={"yeni_giris": "hoca@kulup.com", "sifre": d["gecici_sifre"]}, headers=baslik
+    )
+    assert y.status_code == 422, y.text
+    assert "telefon" in y.json()["detail"]
+
+
+async def test_guncelle_denetim_detayi(istemci, yonetici):
+    a = (await olustur(istemci, yonetici)).json()["antrenor"]
+    b = (await olustur(istemci, yonetici, ad_soyad="Veli Hoca", telefon="0532 000 00 09")).json()["antrenor"]
+    g = await grup_ac("C", antrenor_id=b["id"])
+    y = await istemci.patch(
+        f"/api/antrenorler/{a['id']}",
+        json={"ad_soyad": "Ali Hoca", "telefon": "0533 111 22 33", "grup_idleri": [g, g]},
+        headers=yonetici,
+    )
+    assert y.status_code == 200, y.text
+    async with SessionLocal() as s:
+        kayit = (await s.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "antrenor_guncellendi"))).scalar_one()
+    assert kayit.detay["alanlar"] == ["grup_idleri", "telefon"]
+    assert kayit.detay["giris_degisti"] is True and kayit.detay["oturumlar_kapatildi"] is True
+    assert kayit.detay["gruplar"]["onceki_antrenor"] == {g: b["id"]}
+    assert "533" not in json.dumps(kayit.detay)

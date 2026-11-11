@@ -287,7 +287,9 @@ async def test_giris_degistirme_kilit(istemci):
 async def test_giris_degistirme_roller(istemci):
     b, _ = await giris(istemci, "hoca@kulup.com", Rol.antrenor)
     y = await istemci.patch(GIRIS_URL, json={"yeni_giris": "hoca2@kulup.com", "sifre": SIFRE}, headers=b)
-    assert y.status_code == 200 and y.json()["giris"] == "hoca2@kulup.com"
+    assert y.status_code == 422
+    y = await istemci.patch(GIRIS_URL, json={"yeni_giris": "0532 444 33 22", "sifre": SIFRE}, headers=b)
+    assert y.status_code == 200 and y.json()["giris"] == "+905324443322"
     v, _ = await giris(istemci, "veli@kulup.com", Rol.veli)
     y = await istemci.patch(GIRIS_URL, json={"yeni_giris": "veli2@kulup.com", "sifre": SIFRE}, headers=v)
     assert y.status_code == 403
