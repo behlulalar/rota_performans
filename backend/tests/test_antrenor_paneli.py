@@ -160,14 +160,14 @@ async def test_profil_getir_ve_guncelle(istemci):
     yanit = await istemci.get("/api/antrenor/profil", headers=baslik)
     assert yanit.json() == {"ad_soyad": "Ben Hoca", "telefon": None, "giris": "ben@kulup.com"}
     yanit = await istemci.patch(
-        "/api/antrenor/profil", json={"ad_soyad": "  ahmet YILMAZ ", "telefon": "0555 111 22 33"}, headers=baslik
+        "/api/antrenor/profil", json={"ad_soyad": "  ahmet YILMAZ "}, headers=baslik
     )
     assert yanit.status_code == 200
-    assert yanit.json() == {"ad_soyad": "Ahmet Yılmaz", "telefon": "+905551112233", "giris": "ben@kulup.com"}
+    assert yanit.json() == {"ad_soyad": "Ahmet Yılmaz", "telefon": None, "giris": "ben@kulup.com"}
     async with SessionLocal() as s:
         a = await s.get(Antrenor, ant.id)
         k = (await s.execute(select(Kullanici).where(Kullanici.giris == "ben@kulup.com"))).scalar_one()
-        assert (a.ad_soyad, a.telefon, k.ad_soyad) == ("Ahmet Yılmaz", "+905551112233", "Ahmet Yılmaz")
+        assert (a.ad_soyad, a.telefon, k.ad_soyad) == ("Ahmet Yılmaz", None, "Ahmet Yılmaz")
         kayit = (
             await s.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "antrenor_profil_guncellendi"))
         ).scalar_one()
@@ -176,13 +176,12 @@ async def test_profil_getir_ve_guncelle(istemci):
     assert (await istemci.post("/api/auth/login", json={"giris": "ben@kulup.com", "sifre": SIFRE})).status_code == 200
 
 
-async def test_profil_kismi_guncelleme_ve_telefon_silme(istemci):
+async def test_profil_telefon_degistirilemez(istemci):
     baslik, _ = await antrenor_hesabi(istemci, "ben@kulup.com", "Ben")
-    await istemci.patch("/api/antrenor/profil", json={"telefon": "05551112233"}, headers=baslik)
+    for govde in ({"telefon": "05551112233"}, {"ad_soyad": "Yeni Ad", "telefon": ""}):
+        assert (await istemci.patch("/api/antrenor/profil", json=govde, headers=baslik)).status_code == 422
     yanit = await istemci.patch("/api/antrenor/profil", json={"ad_soyad": "Yeni Ad"}, headers=baslik)
-    assert yanit.json()["telefon"] == "+905551112233" and yanit.json()["ad_soyad"] == "Yeni Ad"
-    yanit = await istemci.patch("/api/antrenor/profil", json={"telefon": ""}, headers=baslik)
-    assert yanit.json()["telefon"] is None
+    assert yanit.json()["telefon"] is None and yanit.json()["ad_soyad"] == "Yeni Ad"
 
 
 async def test_profil_dogrulama(istemci):
@@ -193,7 +192,6 @@ async def test_profil_dogrulama(istemci):
 
     assert (await patch({"ad_soyad": "   "})).status_code == 422
     assert (await patch({"ad_soyad": None})).status_code == 422
-    assert (await patch({"telefon": "123"})).status_code == 422
     assert (await patch({"giris": "baska@kulup.com"})).status_code == 422  # giriş değiştirilemez
     assert (await istemci.get("/api/antrenor/profil", headers=baslik)).json()["giris"] == "ben@kulup.com"
     yonetici = await giris(istemci, "yonetici@kulup.com", Rol.admin)

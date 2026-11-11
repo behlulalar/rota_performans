@@ -52,5 +52,3 @@ class AntrenorProfilGuncelle(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     ad_soyad: Baslik | None = Field(default=None, min_length=1, max_length=200)
-    # Boş dize telefonu siler.
-    telefon: str | None = Field(default=None, max_length=40)

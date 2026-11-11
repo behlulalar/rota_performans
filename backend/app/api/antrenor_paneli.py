@@ -7,7 +7,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import audit
-from app import telefon as telefon_modulu
 from app.api.oturumlar import _antrenor_kosulu, _kendi_antrenor_kaydi, _ozetler
 from app.config import settings
 from app.devam import grup_devamlari
@@ -152,12 +151,7 @@ async def profil_guncelle(
             raise HTTPException(422, "ad_soyad boş olamaz")
         antrenor.ad_soyad = govde.ad_soyad
         kullanici.ad_soyad = govde.ad_soyad
-    if "telefon" in verilen:
-        try:
-            antrenor.telefon = telefon_modulu.normalize(govde.telefon) if govde.telefon else None
-        except ValueError as hata:
-            raise HTTPException(422, str(hata))
-    # Giriş bilgisi buradan değişmez: hesap ele geçirilirse kilit dışı kalınmasın.
+    # Giriş bilgisi (telefon) buradan değişmez: yalnız yönetici değiştirir; hesap ele geçirilirse kilit dışı kalınmasın.
     await audit.kaydet(
         session, "antrenor_profil_guncellendi", kullanici_id=kullanici.id, hedef_tur="antrenor",
         hedef_id=str(antrenor.id), ip=_ip(request), detay={"alanlar": sorted(verilen)},

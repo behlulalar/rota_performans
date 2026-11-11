@@ -1,4 +1,4 @@
-import { arayuzdenGiris, expect, telefonUret10, test, yoklamaOrtamiKur } from "../yardimci";
+import { arayuzdenGiris, expect, test, yoklamaOrtamiKur } from "../yardimci";
 
 test.describe("Antrenör: Bugün ve Profilim", () => {
   test("girişte Bugün açılır, bugünkü ders görünür ve yoklamaya gidilir", async ({ page }) => {
@@ -37,7 +37,7 @@ test.describe("Antrenör: Bugün ve Profilim", () => {
     await expect(page.getByRole("region", { name: "Sıradaki ders" })).toHaveCount(0);
   });
 
-  test("profil: ad ve telefon güncellenir, yenilemede kalır; giriş değişmez", async ({ page }) => {
+  test("profil: ad güncellenir, yenilemede kalır; telefon (giriş) salt okunur", async ({ page }) => {
     test.slow();
     const o = await yoklamaOrtamiKur(page);
     await arayuzdenGiris(page, o.antrenor.giris, o.antrenor.sifre);
@@ -46,25 +46,19 @@ test.describe("Antrenör: Bugün ve Profilim", () => {
     await page.getByRole("navigation", { name: "Ana menü" }).getByRole("link", { name: "Profilim" }).click();
     await expect(page).toHaveURL(/\/profilim$/);
     await expect(page.getByRole("heading", { name: "Profilim" })).toBeVisible();
-    await expect(page.getByLabel("Giriş bilgisi")).toHaveValue(o.antrenor.giris);
-    await expect(page.getByLabel("Giriş bilgisi")).toHaveAttribute("readonly", "");
+    const giris = page.getByLabel(/Giriş bilgisi|Telefon/).first();
+    await expect(giris).toHaveAttribute("readonly", "");
+    const gorunen = await giris.inputValue();
+    await expect(page.getByRole("textbox", { name: /^Telefon$/ })).toHaveCount(0);
 
-    const telefon = telefonUret10();
     await page.getByLabel("Ad soyad").fill("yeni hoca adı");
-    await page.getByLabel("Telefon").fill(telefon);
     await page.getByRole("button", { name: "Bilgileri kaydet" }).click();
     await expect(page.getByText("Bilgileriniz kaydedildi.")).toBeVisible();
     await expect(page.getByLabel("Ad soyad")).toHaveValue("Yeni Hoca Adı");
 
     await page.reload();
     await expect(page.getByLabel("Ad soyad")).toHaveValue("Yeni Hoca Adı");
-    await expect(page.getByLabel("Telefon")).toHaveValue(telefon);
-    await expect(page.getByLabel("Giriş bilgisi")).toHaveValue(o.antrenor.giris);
-
-    // Geçersiz telefon istemcide reddedilir.
-    await page.getByLabel("Telefon").fill("123");
-    await page.getByRole("button", { name: "Bilgileri kaydet" }).click();
-    await expect(page.getByRole("alert")).toContainText("Geçerli bir telefon numarası girin");
+    await expect(page.getByLabel(/Giriş bilgisi|Telefon/).first()).toHaveValue(gorunen);
 
     // Görünüm kartı ve şifre kartı da bu sayfadadır.
     await expect(page.getByRole("heading", { name: "Görünüm" })).toBeVisible();

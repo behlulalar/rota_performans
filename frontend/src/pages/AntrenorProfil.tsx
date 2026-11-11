@@ -4,17 +4,16 @@ import { useAuth } from "../auth/AuthProvider";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import SifreKarti from "../components/SifreKarti";
-import TelefonGirdisi from "../components/TelefonGirdisi";
 import YaziBoyutuSecici from "../components/YaziBoyutuSecici";
 import { hataMesaji } from "../lib/dogrulama";
 import { basariKutusu, birincilDugme, girdi } from "../lib/stil";
-import { apiyeCevir, gecerliMi, numaraCoz, TELEFON_HATA } from "../lib/telefon";
+import { bicimle } from "../lib/telefon";
 
 function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil) => void }) {
   // Üst çubuktaki ad güncellensin diye kullanıcı sunucudan yeniden okunur.
   const { sifreDegistirildi: kullaniciyiYenile } = useAuth();
+  const girisTelefon = !profil.giris.includes("@");
   const [ad, setAd] = useState(profil.ad_soyad);
-  const [telefon, setTelefon] = useState(numaraCoz(profil.telefon));
   const [hata, setHata] = useState<string | null>(null);
   const [tamam, setTamam] = useState(false);
   const [mesgul, setMesgul] = useState(false);
@@ -23,12 +22,10 @@ function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil
     e.preventDefault();
     setTamam(false);
     if (!ad.trim()) return setHata("Ad soyad boş olamaz.");
-    // Telefon isteğe bağlıdır; yazıldıysa geçerli olmalı.
-    if (telefon && !gecerliMi(telefon)) return setHata(`${TELEFON_HATA}.`);
     setMesgul(true);
     setHata(null);
     try {
-      const yeni = await antrenorProfilGuncelle({ ad_soyad: ad.trim(), telefon: apiyeCevir(telefon) ?? "" });
+      const yeni = await antrenorProfilGuncelle({ ad_soyad: ad.trim() });
       onKaydet(yeni);
       setAd(yeni.ad_soyad);
       setTamam(true);
@@ -44,18 +41,25 @@ function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil
     <Kart baslik="Bilgilerim" aciklama="Kulübün sizinle iletişim kurduğu bilgiler">
       <form onSubmit={gonder} noValidate className="space-y-4">
         <label className="block">
-          <span className="text-[13px] text-metin-soluk">Giriş bilgisi</span>
-          <input className={`${girdi} opacity-70`} value={profil.giris} readOnly aria-readonly="true" />
-          <span className="mt-1 block text-xs text-metin-soluk">Giriş bilgisini değiştirmek için kulüple iletişime geçin.</span>
+          <span className="text-[13px] text-metin-soluk">{girisTelefon ? "Telefon (giriş bilgisi)" : "Giriş bilgisi"}</span>
+          <input className={`${girdi} opacity-70`} value={girisTelefon ? bicimle(profil.giris) : profil.giris} readOnly aria-readonly="true" />
+          <span className="mt-1 block text-xs text-metin-soluk">
+            {girisTelefon
+              ? "Telefon numaranız giriş bilginizdir; değiştirmek için yöneticiye başvurun."
+              : "Giriş bilgisini değiştirmek için kulüple iletişime geçin."}
+          </span>
         </label>
         <label className="block">
           <span className="text-[13px] text-metin-soluk">Ad soyad</span>
           <input className={girdi} value={ad} onChange={(e) => setAd(e.target.value)} maxLength={200} autoComplete="name" />
         </label>
-        <label className="block">
-          <span className="text-[13px] text-metin-soluk">Telefon</span>
-          <TelefonGirdisi value={telefon} onChange={setTelefon} />
-        </label>
+        {!girisTelefon && profil.telefon && (
+          <label className="block">
+            <span className="text-[13px] text-metin-soluk">Telefon</span>
+            <input className={`${girdi} opacity-70`} value={bicimle(profil.telefon)} readOnly aria-readonly="true" />
+            <span className="mt-1 block text-xs text-metin-soluk">Telefon numaranızı değiştirmek için yöneticiye başvurun.</span>
+          </label>
+        )}
         {hata && (
           <p role="alert" className="text-[13px] text-hata">
             {hata}

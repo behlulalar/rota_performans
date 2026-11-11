@@ -29,5 +29,5 @@ export type AntrenorProfil = { ad_soyad: string; telefon: string | null; giris: 
 
 export const bugunGetir = () => api<BugunYaniti>("/api/antrenor/bugun");
 export const antrenorProfilGetir = () => api<AntrenorProfil>("/api/antrenor/profil");
-export const antrenorProfilGuncelle = (g: { ad_soyad?: string; telefon?: string }) =>
+export const antrenorProfilGuncelle = (g: { ad_soyad: string }) =>
   api<AntrenorProfil>("/api/antrenor/profil", { method: "PATCH", body: JSON.stringify(g) });
