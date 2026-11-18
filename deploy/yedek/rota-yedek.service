@@ -1,0 +1,8 @@
+[Unit]
+Description=Rota Performans şifreli yedek
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/rota/deploy/yedek/yedek-al.sh /opt/rota/deploy/canli

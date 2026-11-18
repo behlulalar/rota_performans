@@ -1,0 +1,9 @@
+[Unit]
+Description=Rota Performans günlük yedek (03:30 İstanbul)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 Europe/Istanbul
+Persistent=true
+
+[Install]
+WantedBy=timers.target
