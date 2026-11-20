@@ -31,10 +31,15 @@ from app.models.ogrenci import (
 )
 from app.models.paket import Odeme, OdemeYontemi, OgrenciPaketi, OgrenciPaketiDurum, Paket, PaketTuru
 from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
-from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, YoklamaDurum
+from app.models.yoklama import DersHakkiHareketi, DevamsizlikSebebi, HareketTuru, Sayac, YoklamaDurum
 from app.oturumlar import bugun as bugun_fn
 from app.oturumlar import oturumlari_uret
 from app.security import sifre_ozeti
+
+# Örnek devamsızlıkların sebep dağılımı: çoğu mazeretli, bir kısmı habersiz.
+ORNEK_SEBEPLER = [DevamsizlikSebebi.izinli] * 4 + [DevamsizlikSebebi.raporlu] * 2 + [
+    DevamsizlikSebebi.yarisma, DevamsizlikSebebi.devamsiz, DevamsizlikSebebi.devamsiz,
+]
 
 SIFRE = "Ornek-Sifre-2026"
 GECMIS_GUN = 28
@@ -390,6 +395,7 @@ async def _ekle(session, rng, bugun: date, simdi: datetime, sifre_hash: str) -> 
                 session, oturum_id=s.id, ogrenci_id=ogr_id,
                 durum=YoklamaDurum.geldi if geldi else YoklamaDurum.gelmedi,
                 telafi_mi=False, isaretleyen_id=isaretleyen, simdi=an,
+                sebep=None if geldi else rng.choice(ORNEK_SEBEPLER),
             )
             tuketim[ogr_id] += 1
             if not geldi:

@@ -1,4 +1,5 @@
 import { api } from "../lib/api";
+import type { Sebep } from "../lib/sebep";
 import type { Durum, Sayac, HakTur } from "./ogrenci";
 import type { OdemeYontemi, PaketDurum } from "./paket";
 
@@ -11,6 +12,7 @@ export type VeliDers = {
   telafi_mi: boolean;
   durum: "planli" | "yapildi" | "iptal";
   yoklama: "geldi" | "gelmedi" | null;
+  sebep?: Sebep | null;
 };
 
 export type CocukOzet = {
@@ -47,6 +49,7 @@ export type DersOzeti = {
   telafi_dogan: number;
   telafi_kullanilan: number;
   telafi_kalan: number;
+  telafi_yanan?: number;
 };
 
 export type CocukDetay = CocukOzet & {
@@ -55,7 +58,7 @@ export type CocukDetay = CocukOzet & {
   gecmis_dersler: VeliDers[];
   paketler: VeliPaket[];
   ders_ozeti: DersOzeti;
-  hareketler: { zaman: string; sayac: Sayac; miktar: number; tur: HakTur }[];
+  hareketler: { zaman: string; sayac: Sayac; miktar: number; tur: HakTur; son_kullanma?: string | null }[];
 };
 
 export type Profil = { giris: string; rol: "veli" | "ogrenci"; ad_soyad: string | null; telefon: string | null };

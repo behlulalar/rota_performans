@@ -82,7 +82,7 @@ Taslaktan farklar:
 
 **1 saat kuralı:** Arka plan işi, planlı zamanı gelen `gelmedi` yoklamalarını işler. İşlerken yoklama hâlâ `gelmedi` mi diye tekrar bakar. Değişmişse hareket yazmaz. 1 saatten sonra yapılan düzeltme `iptal` hareketiyle geri alınır (silme yok). WhatsApp/push bildirimi bu süreden **bağımsız**, kısa geri alma penceresi kuralı geçerli kalır.
 
-`son_kullanma` alanı telafi kuralı belli olunca doldurulur, şimdi boş kalır. Bu yüzden kural sonradan şemayı değiştirmeden eklenebilir.
+`son_kullanma` (Kasım 2026, geçiş `fcbb49787e58`): devamsızlık telafisinde dersin ayının son günü (İstanbul takvimi). Yoklamada `gelmedi` için sebep zorunludur (`izinli`, `raporlu`, `yarisma`: telafi doğar; `devamsiz`: yalnızca normal −1, telafi doğmaz) ve isteğe bağlı iç not `aciklama` (veliye gösterilmez). Kullanılmayan telafi hakkı ay sonunda `telafi_suresi_doldu` hareketiyle düşer; telafi hakları en eskiden tüketilir. Süre dolumu bir uzlaştırmadır: günlük işçi işi ve her yoklama düzeltmesi, olması gereken yanma ile yazılmış olan arasındaki farkı (gerekirse artı yönde, yine yeni satırla) yazar. Geçiş anında var olan haklar geriye dönük yanmaz: son günleri en erken geçişin yapıldığı ayın sonudur. Yöneticinin elle verdiği telafi hakkı süresizdir (`son_kullanma` boş).
 
 Her hareket tek veritabanı işleminde yazılır. Aynı yoklama iki kez hareket üretemez (tekil kısıt).
 

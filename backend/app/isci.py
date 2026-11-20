@@ -1,5 +1,6 @@
 """Arka plan işçisi: `python -m app.isci`.
-Her 30 saniyede bekleyen devamsızlıkları işler, saatte bir ilerideki ders oturumlarını üretir.
+Her 30 saniyede bekleyen devamsızlıkları işler, saatte bir ilerideki ders oturumlarını üretir,
+günde bir (İstanbul takvim günü değişince ve açılışta) süresi dolan telafi haklarını düşer.
 Günlüğe kişisel veri yazılmaz, yalnızca sayılar."""
 import asyncio
 import logging
@@ -33,6 +34,13 @@ async def devamsizliklari_isle() -> None:
         log.info("%d yoklama için devamsızlık hareketi yazıldı", sayi)
 
 
+async def suresi_dolan_telafileri_isle() -> None:
+    # Tekrar çalışması ya da iki işçinin aynı anda çalışması güvenlidir (bkz. ders_hakki).
+    sayi = await ders_hakki.suresi_dolan_telafileri_isle(SessionLocal, bugun(), simdi())
+    if sayi:
+        log.info("Süresi dolan %d telafi hakkı düşüldü", sayi)
+
+
 async def push_bildirimlerini_gonder() -> None:
     async with SessionLocal() as session:
         await push.push_gonder(session, simdi(), limit=PUSH_PARTI)
@@ -63,6 +71,7 @@ async def kalp_atisi_yaz() -> None:
 
 async def calis(durdur: asyncio.Event) -> None:
     son_uretim: float | None = None
+    son_telafi_gunu = None
     while not durdur.is_set():
         try:
             await kalp_atisi_yaz()
@@ -72,6 +81,13 @@ async def calis(durdur: asyncio.Event) -> None:
             await devamsizliklari_isle()
         except Exception:
             log.exception("Devamsızlık işleme başarısız")
+        if son_telafi_gunu != bugun():
+            try:
+                gun = bugun()
+                await suresi_dolan_telafileri_isle()
+                son_telafi_gunu = gun
+            except Exception:
+                log.exception("Telafi süre dolumu başarısız")
         try:
             await push_bildirimlerini_gonder()
         except Exception:

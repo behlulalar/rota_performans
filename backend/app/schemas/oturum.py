@@ -4,7 +4,7 @@ from datetime import date, datetime, time
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.models.program import OturumDurum
-from app.models.yoklama import HareketTuru, Sayac, YoklamaDurum
+from app.models.yoklama import ACIKLAMA_EN_COK, DevamsizlikSebebi, HareketTuru, Sayac, YoklamaDurum
 from app.schemas.ogrenci import DersHakki
 
 EN_COK_GUN = 62
@@ -56,6 +56,9 @@ class OturumOgrenci(BaseModel):
     foto_var: bool
     telafi_mi: bool
     yoklama: YoklamaDurum | None
+    # Yalnız gelmedi için; eski kayıtlarda boş olabilir. Açıklama iç nottur (antrenör ve yönetici görür).
+    sebep: DevamsizlikSebebi | None = None
+    aciklama: str | None = None
     bakiye: DersHakki
 
 
@@ -68,8 +71,21 @@ class IptalGirdi(BaseModel):
 
 
 class YoklamaGirdi(BaseModel):
+    """Gelmedi için `sebep` zorunludur, geldi için gönderilmez (uç nokta 422 ile anlaşılır mesaj verir).
+    `aciklama` her gönderimde öğrencinin güncel notudur: gönderilmezse silinir."""
+
     ogrenci_id: uuid.UUID
     durum: YoklamaDurum
+    sebep: DevamsizlikSebebi | None = None
+    aciklama: str | None = Field(default=None, max_length=ACIKLAMA_EN_COK)
+
+    @field_validator("aciklama", mode="before")
+    @classmethod
+    def _kirp(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            return v or None
+        return v
 
 
 class HareketOturum(BaseModel):
@@ -84,6 +100,7 @@ class HareketYanit(BaseModel):
     miktar: int
     tur: HareketTuru
     neden: str | None
+    son_kullanma: date | None = None
     oturum: HareketOturum | None
 
 

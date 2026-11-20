@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.ogrenci import Ogrenci
 from app.models.program import DersOturumu, Grup, OgrenciGrup, OturumDurum
 from app.models.yoklama import Yoklama, YoklamaDurum
-from app.schemas.devam import DevamDersi, DevamOzeti, DevamSatiri, GrupDevami
+from app.schemas.devam import DevamDersi, DevamOzeti, DevamSatiri, GelmediSebepleri, GrupDevami
 
 SON_GUN = 30
 SON_DERS_SAYISI = 10
@@ -32,8 +32,14 @@ def _ozet(satirlar: list[DevamDersi], bugun: date) -> DevamOzeti:
         if s.durum != "gelmedi":
             break
         ard_arda += 1
+    sebepler = GelmediSebepleri()
+    for s in satirlar:
+        if s.durum == "gelmedi":
+            alan = s.sebep.value if s.sebep else "bilinmiyor"
+            setattr(sebepler, alan, getattr(sebepler, alan) + 1)
     return DevamOzeti(
         katildi=geldi, gelmedi=len(satirlar) - geldi, oran=_oran(geldi, len(satirlar) - geldi),
+        gelmedi_sebepleri=sebepler,
         son30_katildi=son_geldi, son30_gelmedi=len(son) - son_geldi, son30_oran=_oran(son_geldi, len(son) - son_geldi),
         ard_arda_gelmedi=ard_arda, son_dersler=satirlar[:SON_DERS_SAYISI],
     )
@@ -43,15 +49,18 @@ async def devam_ozetleri(session: AsyncSession, ogrenci_idler: list[uuid.UUID], 
     if not ogrenci_idler:
         return {}
     sorgu = (
-        select(Yoklama.ogrenci_id, Yoklama.durum, Yoklama.telafi_mi, DersOturumu.tarih, DersOturumu.baslangic, Grup.ad)
+        select(Yoklama.ogrenci_id, Yoklama.durum, Yoklama.sebep, Yoklama.aciklama, Yoklama.telafi_mi, DersOturumu.tarih, DersOturumu.baslangic, Grup.ad)
         .join(DersOturumu, DersOturumu.id == Yoklama.oturum_id)
         .join(Grup, Grup.id == DersOturumu.grup_id)
         .where(Yoklama.ogrenci_id.in_(ogrenci_idler), DersOturumu.durum != OturumDurum.iptal)
         .order_by(DersOturumu.tarih.desc(), DersOturumu.baslangic.desc())
     )
     gruplu: dict[uuid.UUID, list[DevamDersi]] = defaultdict(list)
-    for oid, durum, telafi, tarih, _, grup_ad in (await session.execute(sorgu)).all():
-        gruplu[oid].append(DevamDersi(tarih=tarih, durum="geldi" if durum == YoklamaDurum.geldi else "gelmedi", telafi_mi=telafi, grup_ad=grup_ad))
+    for oid, durum, sebep, aciklama, telafi, tarih, _, grup_ad in (await session.execute(sorgu)).all():
+        gruplu[oid].append(DevamDersi(
+            tarih=tarih, durum="geldi" if durum == YoklamaDurum.geldi else "gelmedi", sebep=sebep, aciklama=aciklama if durum == YoklamaDurum.gelmedi else None, telafi_mi=telafi,
+            grup_ad=grup_ad,
+        ))
     return {oid: _ozet(gruplu[oid], bugun) for oid in ogrenci_idler}
 
 

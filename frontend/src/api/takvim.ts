@@ -1,4 +1,5 @@
 import { api } from "../lib/api";
+import type { Sebep } from "../lib/sebep";
 
 export type OturumDurum = "planli" | "yapildi" | "iptal";
 export type YoklamaDurum = "geldi" | "gelmedi";
@@ -22,12 +23,14 @@ export type OturumOgrenci = {
   foto_var: boolean;
   telafi_mi: boolean;
   yoklama: YoklamaDurum | null;
+  sebep: Sebep | null;
+  aciklama: string | null;
   bakiye: { normal: number; telafi: number };
 };
 
 export type OturumDetay = OturumOzet & { ogrenciler: OturumOgrenci[] };
 
-export type YoklamaKaydi = { ogrenci_id: string; durum: YoklamaDurum };
+export type YoklamaKaydi = { ogrenci_id: string; durum: YoklamaDurum; sebep?: Sebep; aciklama?: string };
 
 const json = (g: unknown) => JSON.stringify(g);
 

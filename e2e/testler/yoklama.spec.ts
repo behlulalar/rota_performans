@@ -22,6 +22,7 @@ test.describe("Yoklama", () => {
     const satir = (ad: string) => page.getByRole("listitem", { name: new RegExp(ad) });
     await satir(o.geldi.ad).getByRole("button", { name: "Geldi", exact: true }).click();
     await satir(o.gelmedi.ad).getByRole("button", { name: "Gelmedi", exact: true }).click();
+    await satir(o.gelmedi.ad).getByRole("button", { name: "Raporlu", exact: true }).click();
     await page.getByRole("button", { name: "Yoklamayı kaydet (2/2 işaretli)" }).click();
 
     await expect(page.getByRole("status")).toContainText("Yoklama kaydedildi");

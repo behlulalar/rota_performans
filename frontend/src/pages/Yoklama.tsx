@@ -9,10 +9,14 @@ import SayfaBasligi from "../components/SayfaBasligi";
 import { basariKutusu, bilgiKutusu, birincilDugme, dugme, rozetBasari, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
 import { hataMesaji } from "../lib/dogrulama";
 import { saat } from "../lib/program";
+import { mazeretli, SEBEP_ACIKLAMA_MAKS, SEBEPLER, type Sebep } from "../lib/sebep";
 import { gosterilenDers } from "../lib/dersHakki";
 import { bugun, uzunTarih } from "../lib/tarih";
 
 type Secim = Record<string, YoklamaDurum | null>;
+
+type Sebepler = Record<string, Sebep | null>;
+type Aciklamalar = Record<string, string>;
 
 const ERKEN_ACILIS_DK = 15;
 
@@ -27,6 +31,9 @@ const saatDakika = (d: Date) =>
 
 const secimler = (o: OturumDetay): Secim => Object.fromEntries(o.ogrenciler.map((x) => [x.ogrenci_id, x.yoklama]));
 
+const sebepler = (o: OturumDetay): Sebepler => Object.fromEntries(o.ogrenciler.map((x) => [x.ogrenci_id, x.yoklama === "gelmedi" ? x.sebep ?? null : null]));
+const aciklamalar = (o: OturumDetay): Aciklamalar => Object.fromEntries(o.ogrenciler.map((x) => [x.ogrenci_id, x.aciklama ?? ""]));
+
 function hataYaz(e: unknown): string {
   if (e instanceof ApiHata && e.durum === 403) return "Bu derse erişim yetkiniz yok";
   return hataMesaji(e);
@@ -40,6 +47,10 @@ export default function Yoklama() {
   const [anlik, setAnlik] = useState(() => Date.now());
   const [o, setO] = useState<OturumDetay | null>(null);
   const [secim, setSecim] = useState<Secim>({});
+  const [sebep, setSebep] = useState<Sebepler>({});
+  const [aciklama, setAciklama] = useState<Aciklamalar>({});
+  const [aciklamaAcik, setAciklamaAcik] = useState<Record<string, boolean>>({});
+  const [denendi, setDenendi] = useState(false);
   const [hata, setHata] = useState<string | null>(null);
   const [bilgi, setBilgi] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
@@ -52,6 +63,8 @@ export default function Yoklama() {
         if (iptal) return;
         setO(v);
         setSecim(secimler(v));
+        setSebep(sebepler(v));
+        setAciklama(aciklamalar(v));
       })
       .catch((e) => !iptal && setHata(hataYaz(e)));
     return () => {
@@ -88,7 +101,15 @@ export default function Yoklama() {
   const sec = (ogrenciId: string, d: YoklamaDurum) => {
     setBilgi(null);
     setSecim((s) => ({ ...s, [ogrenciId]: d }));
+    // Geldi'ye dönülürse sebep ve açıklama silinir (sunucu geldi ile birlikte kabul etmez).
+    if (d === "geldi") {
+      setSebep((s) => ({ ...s, [ogrenciId]: null }));
+      setAciklama((s) => ({ ...s, [ogrenciId]: "" }));
+      setAciklamaAcik((s) => ({ ...s, [ogrenciId]: false }));
+    }
   };
+  const sebepsiz = (ogrenciId: string) => secim[ogrenciId] === "gelmedi" && !sebep[ogrenciId];
+  const sebepsizSayisi = Object.keys(secim).filter(sebepsiz).length;
   // Gelmedi işaretlenmiş öğrencilere dokunulmaz; yalnızca geri kalanlar geldi olur.
   const gelmediSayisi = Object.values(secim).filter((v) => v === "gelmedi").length;
   const geldiYapilacak = o.ogrenciler.filter((x) => secim[x.ogrenci_id] !== "gelmedi" && secim[x.ogrenci_id] !== "geldi").length;
@@ -101,9 +122,18 @@ export default function Yoklama() {
   };
 
   const kaydet = async () => {
+    if (sebepsizSayisi > 0) {
+      setDenendi(true);
+      setBilgi(null);
+      return;
+    }
     const kayitlar = Object.entries(secim)
       .filter((e): e is [string, YoklamaDurum] => e[1] !== null)
-      .map(([ogrenci_id, durum]) => ({ ogrenci_id, durum }));
+      .map(([ogrenci_id, durum]) => {
+        if (durum !== "gelmedi") return { ogrenci_id, durum };
+        const a = (aciklama[ogrenci_id] ?? "").trim();
+        return { ogrenci_id, durum, sebep: sebep[ogrenci_id] ?? undefined, ...(a ? { aciklama: a } : {}) };
+      });
     setMesgul(true);
     setHata(null);
     setBilgi(null);
@@ -111,6 +141,9 @@ export default function Yoklama() {
       const y = await yoklamaKaydet(o.id, kayitlar);
       setO(y);
       setSecim(secimler(y));
+      setSebep(sebepler(y));
+      setAciklama(aciklamalar(y));
+      setDenendi(false);
       setBilgi("Yoklama kaydedildi");
     } catch (e) {
       setHata(hataYaz(e));
@@ -142,6 +175,8 @@ export default function Yoklama() {
       const y = await oturumIptalEt(o.id);
       setO(y);
       setSecim(secimler(y));
+      setSebep(sebepler(y));
+      setAciklama(aciklamalar(y));
       setBildirimTeklifi(true);
     } catch (e) {
       setHata(hataYaz(e));
@@ -171,6 +206,11 @@ export default function Yoklama() {
       setMesgul(false);
     }
   };
+
+  const chipSinif = (aktif: boolean) =>
+    `min-h-11 rounded-[10px] border px-2 text-sm font-medium transition-colors disabled:opacity-40 ${
+      aktif ? "border-altin bg-altin/15 text-altin-metin" : "border-cizgi-guclu bg-yuzey text-metin-orta hover:border-metin-soluk"
+    }`;
 
   const butonSinif = (aktif: boolean, renk: "basari" | "hata") =>
     `min-h-12 rounded-[10px] border-2 px-2 text-base font-semibold transition-colors disabled:opacity-40 ${
@@ -253,7 +293,11 @@ export default function Yoklama() {
           </button>
           <ul className="grid gap-2 md:grid-cols-2 min-[1360px]:grid-cols-3 items-start">
             {o.ogrenciler.map((x) => (
-              <li key={x.ogrenci_id} className="rounded-[14px] border border-cizgi bg-yuzey p-3" aria-label={`${x.ad} ${x.soyad}`}>
+              <li
+                key={x.ogrenci_id}
+                className={`rounded-[14px] border bg-yuzey p-3 ${denendi && sebepsiz(x.ogrenci_id) ? "border-hata ring-1 ring-hata" : "border-cizgi"}`}
+                data-eksik={denendi && sebepsiz(x.ogrenci_id) ? "true" : undefined}
+                aria-label={`${x.ad} ${x.soyad}`}>
                 <div className="flex items-center gap-3">
                   <OgrenciFoto id={x.ogrenci_id} fotoVar={x.foto_var} ad={x.ad} soyad={x.soyad} boyut="kucuk" sinif="size-12 rounded-full" />
                   <div className="min-w-0 flex-1">
@@ -282,11 +326,69 @@ export default function Yoklama() {
                     Gelmedi
                   </button>
                 </div>
+                {secim[x.ogrenci_id] === "gelmedi" && (
+                  <div className="mt-3" data-testid="sebep-alani">
+                    <div role="group" aria-label="Devamsızlık sebebi" className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {SEBEPLER.map((b) => (
+                        <button
+                          key={b.anahtar}
+                          type="button"
+                          className={chipSinif(sebep[x.ogrenci_id] === b.anahtar)}
+                          aria-pressed={sebep[x.ogrenci_id] === b.anahtar}
+                          disabled={kilit || mesgul}
+                          onClick={() => {
+                            setBilgi(null);
+                            setSebep((s) => ({ ...s, [x.ogrenci_id]: b.anahtar }));
+                          }}
+                        >
+                          {b.ad}
+                        </button>
+                      ))}
+                    </div>
+                    {sebep[x.ogrenci_id] ? (
+                      <p className="mt-1.5 text-xs text-metin-soluk">
+                        {mazeretli(sebep[x.ogrenci_id] as Sebep) ? "Telafi bu ay içinde planlanmalı" : "Ders hakkı düşer"}
+                      </p>
+                    ) : (
+                      <p className={`mt-1.5 text-xs ${denendi ? "text-hata font-medium" : "text-metin-soluk"}`} role={denendi ? "alert" : undefined}>
+                        Devamsızlık sebebi seçin
+                      </p>
+                    )}
+                    {aciklamaAcik[x.ogrenci_id] || aciklama[x.ogrenci_id] ? (
+                      <label className="mt-2 block text-xs text-metin-soluk">
+                        Açıklama (yalnız antrenör ve yönetici görür)
+                        <textarea
+                          className="mt-1 w-full rounded-[10px] bg-zemin border border-cizgi-guclu px-3 py-2 text-sm text-metin outline-none focus:border-altin"
+                          rows={2}
+                          maxLength={SEBEP_ACIKLAMA_MAKS}
+                          value={aciklama[x.ogrenci_id] ?? ""}
+                          disabled={kilit || mesgul}
+                          onChange={(e) => setAciklama((s) => ({ ...s, [x.ogrenci_id]: e.target.value }))}
+                        />
+                        <span className="num block text-right">{(aciklama[x.ogrenci_id] ?? "").length}/{SEBEP_ACIKLAMA_MAKS}</span>
+                      </label>
+                    ) : (
+                      <button
+                        type="button"
+                        className="mt-1 min-h-11 text-[13px] font-semibold hover:text-altin-metin disabled:opacity-40"
+                        disabled={kilit || mesgul}
+                        onClick={() => setAciklamaAcik((s) => ({ ...s, [x.ogrenci_id]: true }))}
+                      >
+                        + Açıklama ekle
+                      </button>
+                    )}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
 
           <div className="sticky bottom-[var(--sekme-yuk,0px)] z-10 mt-4 -mx-4 md:-mx-8 bg-yuzey border-t border-cizgi px-4 md:px-8 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {denendi && sebepsizSayisi > 0 && (
+              <p role="alert" className="mb-2 text-[13px] font-medium text-hata">
+                Kaydedilemedi: {sebepsizSayisi} gelmedi öğrenci için devamsızlık sebebi seçilmeli.
+              </p>
+            )}
             {isaretli < toplam && isaretli > 0 && !kilit && (
               <p className="mb-2 text-xs text-uyari">
                 {toplam - isaretli} öğrenci işaretlenmedi; yalnızca işaretliler kaydedilir.

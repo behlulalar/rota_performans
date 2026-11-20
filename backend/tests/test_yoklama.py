@@ -81,8 +81,9 @@ async def uye_yap(ogrenci, grup, baslangic=date(2020, 1, 1), bitis=None):
     await kaydet(OgrenciGrup(ogrenci_id=ogrenci.id, grup_id=grup.id, baslangic=baslangic, bitis=bitis))
 
 
-def govde(*cift):
-    return [{"ogrenci_id": str(o.id), "durum": d} for o, d in cift]
+def govde(*cift, sebep="izinli"):
+    """Gelmedi için sebep zorunludur; testlerde varsayılan mazeretli (izinli)."""
+    return [{"ogrenci_id": str(o.id), "durum": d, **({"sebep": sebep} if d == "gelmedi" else {})} for o, d in cift]
 
 
 def sorgu(bas=None, bit=None):

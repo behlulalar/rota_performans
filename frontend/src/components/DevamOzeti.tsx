@@ -1,6 +1,7 @@
 import type { DevamOzeti as Ozet } from "../api/devam";
 import { tarihBicimle } from "../lib/dogrulama";
-import { rozetHata, rozetUyari } from "../lib/stil";
+import { SEBEP_AD, SEBEPLER, sebepRozeti } from "../lib/sebep";
+import { rozetHata, rozetNotr, rozetUyari } from "../lib/stil";
 
 /** Art arda bu kadar devamsızlıkta uyarı çıkar. */
 export const UYARI_ESIGI = 2;
@@ -20,7 +21,7 @@ export function DevamNoktalari({ d, buyuk = false }: { d: Ozet; buyuk?: boolean 
       {[...d.son_dersler].reverse().map((s, i) => (
         <span
           key={i}
-          title={`${tarihBicimle(s.tarih)} · ${s.durum === "geldi" ? "Geldi" : "Gelmedi"}${s.telafi_mi ? " (telafi)" : ""} · ${s.grup_ad}`}
+          title={`${tarihBicimle(s.tarih)} · ${s.durum === "geldi" ? "Geldi" : s.sebep ? `Gelmedi · ${SEBEP_AD[s.sebep]}` : "Gelmedi"}${s.telafi_mi ? " (telafi)" : ""} · ${s.grup_ad}`}
           className={`${boyut} rounded-full ${s.durum === "geldi" ? "bg-basari" : "bg-hata"} ${s.telafi_mi ? "ring-2 ring-altin ring-offset-1 ring-offset-yuzey" : ""}`}
         />
       ))}
@@ -67,6 +68,51 @@ export default function DevamOzeti({ d }: { d: Ozet }) {
         <DevamNoktalari d={d} buyuk />
       </div>
       <DevamUyarisi d={d} />
+      <GelmediSebepleri d={d} />
+      <SonDevamsizliklar d={d} />
+    </div>
+  );
+}
+
+/** Tüm gelmedi kayıtlarının sebebe göre dağılımı (API verdiyse). */
+function GelmediSebepleri({ d }: { d: Ozet }) {
+  const s = d.gelmedi_sebepleri;
+  if (!s || d.gelmedi === 0) return null;
+  return (
+    <div>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk mb-2">Gelmeme sebepleri</h3>
+      <ul className="flex flex-wrap gap-2" data-testid="gelmedi-sebepleri">
+        {SEBEPLER.map((x) => (
+          <li key={x.anahtar} className="rounded-[10px] border border-cizgi px-3 py-1.5 text-[13px]">
+            {x.ad} <span className="num font-semibold ml-1">{s[x.anahtar]}</span>
+          </li>
+        ))}
+        {s.bilinmiyor > 0 && (
+          <li className="rounded-[10px] border border-cizgi px-3 py-1.5 text-[13px] text-metin-soluk">
+            Bilinmiyor <span className="num font-semibold ml-1">{s.bilinmiyor}</span>
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
+/** Son derslerdeki devamsızlıklar ve sebepleri. */
+function SonDevamsizliklar({ d }: { d: Ozet }) {
+  const l = d.son_dersler.filter((x) => x.durum === "gelmedi");
+  if (l.length === 0) return null;
+  return (
+    <div>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk mb-2">Son devamsızlıklar</h3>
+      <ul className="divide-y divide-cizgi border-y border-cizgi" data-testid="son-devamsizliklar">
+        {l.map((x, i) => (
+          <li key={i} className="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="num">{tarihBicimle(x.tarih)} <span className="text-metin-soluk">· {x.grup_ad}</span></span>
+            <span className={x.sebep ? sebepRozeti(x.sebep) : rozetNotr}>{x.sebep ? SEBEP_AD[x.sebep] : "Sebep bilinmiyor"}</span>
+            {x.aciklama && <p className="basis-full text-xs text-metin-soluk" data-testid="devamsizlik-aciklama">{x.aciklama}</p>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

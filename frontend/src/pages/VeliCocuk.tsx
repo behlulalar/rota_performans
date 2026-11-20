@@ -12,12 +12,14 @@ import { paraBicimle } from "../lib/para";
 import { GUNLER, saat } from "../lib/program";
 import { dugme, listeSatiri, rozetBasari, rozetBirincil, rozetHata, rozetNotr, rozetUyari, uyariKutusu, hataKutusu } from "../lib/stil";
 import { gunEkle, haftaBasi, kisaTarih, tarihCoz, yyyyAyGun } from "../lib/tarih";
+import { SEBEP_AD } from "../lib/sebep";
 import { dersMetni } from "./VeliAna";
 
 const TUR_ETIKET: Record<HakTur, string> = {
   paket_yuklemesi: "Paket yüklendi",
   ders_kullanimi: "Derse katıldı",
   devamsizlik: "Devamsızlık (telafi hakkı doğdu)",
+  telafi_suresi_doldu: "Telafi süresi doldu",
   telafi_kullanimi: "Telafi dersine katıldı",
   manuel_duzeltme: "Kulüp düzeltmesi",
   iptal: "Düzeltme",
@@ -61,7 +63,7 @@ function DersSatiri({ d, yoklamaGoster = false }: { d: VeliDers; yoklamaGoster?:
           (d.yoklama === "geldi" ? (
             <span className={rozetBasari}>Geldi</span>
           ) : d.yoklama === "gelmedi" ? (
-            <span className={rozetHata}>Gelmedi</span>
+            <span className={rozetHata}>{d.sebep ? `Gelmedi · ${SEBEP_AD[d.sebep]}` : "Gelmedi"}</span>
           ) : (
             <span className={rozetNotr}>Kayıt yok</span>
           ))}
@@ -84,6 +86,7 @@ function YaklasanSatir({ d, grupGoster }: { d: VeliDers; grupGoster: boolean }) 
         {grupGoster && <div className="text-[13px] text-metin-soluk truncate">{d.grup_ad}</div>}
       </div>
       {d.telafi_mi && <span className={rozetBirincil}>Telafi</span>}
+      {d.yoklama === "gelmedi" && <span className={rozetHata}>{d.sebep ? `Gelmedi · ${SEBEP_AD[d.sebep]}` : "Gelmedi"}</span>}
     </li>
   );
 }
@@ -373,6 +376,9 @@ export default function VeliCocuk() {
                 <Sayi ad="Kullanılan" deger={o.telafi_kullanilan} />
                 <Sayi ad="Kalan" deger={Math.max(0, o.telafi_kalan)} ton="vurgu" alt={`${Math.max(0, h.kullanilabilir_telafi)} planlanabilir`} />
               </div>
+              {(o.telafi_yanan ?? 0) > 0 && (
+                <p className="px-6 pb-6 -mt-3 text-xs text-metin-soluk">{o.telafi_yanan} telafi hakkı ay sonunda süresi dolduğu için yandı.</p>
+              )}
             </Kart>
 
             <Kart bosluksuz>
@@ -395,6 +401,9 @@ export default function VeliCocuk() {
                           <span>
                             <span className="font-medium">{TUR_ETIKET[x.tur] ?? x.tur}</span>{" "}
                             <span className="text-metin-soluk">· {SAYAC_ETIKET[x.sayac]}</span>
+                            {x.son_kullanma && x.miktar > 0 && (
+                              <span className="num block text-xs text-metin-soluk">{tarihBicimle(x.son_kullanma)} tarihine kadar geçerli</span>
+                            )}
                           </span>
                           <span className="num flex items-center gap-3">
                             <span className="text-metin-soluk">{tarihBicimle(x.zaman)}</span>

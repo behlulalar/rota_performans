@@ -30,6 +30,20 @@ class YoklamaDurum(str, enum.Enum):
     gelmedi = "gelmedi"
 
 
+class DevamsizlikSebebi(str, enum.Enum):
+    """Gelmedi işaretinde zorunlu sebep. İlk üçü mazeretlidir (aile antrenöre haber verdi): telafi hakkı doğar.
+    `devamsiz` habersiz gelmemedir: ders yanar, telafi doğmaz."""
+
+    izinli = "izinli"
+    raporlu = "raporlu"
+    yarisma = "yarisma"
+    devamsiz = "devamsiz"
+
+
+MAZERETLI_SEBEPLER = frozenset({DevamsizlikSebebi.izinli, DevamsizlikSebebi.raporlu, DevamsizlikSebebi.yarisma})
+ACIKLAMA_EN_COK = 500
+
+
 class Sayac(str, enum.Enum):
     normal = "normal"
     telafi = "telafi"
@@ -42,6 +56,8 @@ class HareketTuru(str, enum.Enum):
     telafi_kullanimi = "telafi_kullanimi"
     manuel_duzeltme = "manuel_duzeltme"
     iptal = "iptal"
+    # Ay sonunda kullanılmayan telafi hakkı yanar (günlük işçi işi yazar).
+    telafi_suresi_doldu = "telafi_suresi_doldu"
 
 
 class Yoklama(Base):
@@ -55,6 +71,10 @@ class Yoklama(Base):
         UUID(as_uuid=True), ForeignKey("ogrenci.id", ondelete="RESTRICT"), index=True
     )
     durum: Mapped[YoklamaDurum] = mapped_column(enum_kolon(YoklamaDurum))
+    # Yalnız gelmedi için. API yeni kayıtta zorunlu tutar; eski (sebepsiz) gelmedi kayıtlarında boştur.
+    sebep: Mapped[DevamsizlikSebebi | None] = mapped_column(enum_kolon(DevamsizlikSebebi))
+    # Antrenör/yönetici iç notu. Veliye ve öğrenciye gösterilmez.
+    aciklama: Mapped[str | None] = mapped_column(Text)
     # Öğrenci bu derse kendi grubu için değil, telafi hakkıyla geldi.
     telafi_mi: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     isaretleyen_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -70,6 +90,8 @@ class Yoklama(Base):
 
     __table_args__ = (
         UniqueConstraint("oturum_id", "ogrenci_id", name="uq_yoklama_oturum_ogrenci"),
+        CheckConstraint("sebep IS NULL OR durum = 'gelmedi'", name="sebep_yalniz_gelmedi"),
+        CheckConstraint(f"aciklama IS NULL OR length(aciklama) <= {ACIKLAMA_EN_COK}", name="aciklama_uzunlugu"),
         # Arka plan işinin "işlenecekleri bul" sorgusu için küçük, hızlı indeks.
         Index(
             "ix_yoklama_islenecek",
@@ -114,7 +136,8 @@ class DersHakkiHareketi(Base):
         UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="RESTRICT")
     )
     zaman: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
-    # Telafi son kullanma kuralı belli olunca doldurulur.
+    # Telafi hakkının son kullanılabileceği gün (dahil): devamsızlık telafisinde dersin ayının son günü.
+    # Boşsa süresizdir (yöneticinin elle verdiği telafi hakkı).
     son_kullanma: Mapped[date | None] = mapped_column(Date)
 
     __table_args__ = (

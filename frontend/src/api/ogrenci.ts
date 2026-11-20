@@ -112,13 +112,14 @@ export const resitGecisiYap = (id: string, g: { telefon: string; ad_soyad?: stri
   api<OgrenciDetay>(`/api/ogrenciler/${id}/resit-gecisi`, { method: "POST", body: json(g) });
 
 export type Sayac = "normal" | "telafi";
-export type HakTur = "paket_yuklemesi" | "ders_kullanimi" | "devamsizlik" | "telafi_kullanimi" | "manuel_duzeltme" | "iptal";
+export type HakTur = "paket_yuklemesi" | "ders_kullanimi" | "devamsizlik" | "telafi_kullanimi" | "manuel_duzeltme" | "iptal" | "telafi_suresi_doldu";
 export type HakHareketi = {
   id: string;
   zaman: string;
   sayac: Sayac;
   miktar: number;
   tur: HakTur;
+  son_kullanma?: string | null;
   neden: string | null;
   oturum: { tarih: string; grup_ad: string } | null;
 };

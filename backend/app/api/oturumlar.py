@@ -16,7 +16,7 @@ from app.models.kullanici import Kullanici, Rol
 from app.api.ogrenciler import _ogrenci_al
 from app.models.ogrenci import Ogrenci, OgrenciDurum
 from app.models.program import Antrenor, DersOturumu, Grup, OgrenciGrup, OturumDurum, TelafiPlani
-from app.models.yoklama import Yoklama
+from app.models.yoklama import Yoklama, YoklamaDurum
 from app.oturumlar import bugun, oturumlari_uret, simdi, yoklama_acilis_zamani
 from app.schemas.oturum import (
     EN_COK_GUN,
@@ -162,17 +162,16 @@ async def _ogrenci_listesi(session: AsyncSession, ozet: OturumOzet) -> list[tupl
 async def _detay(session: AsyncSession, ozet: OturumOzet) -> OturumDetay:
     liste = await _ogrenci_listesi(session, ozet)
     idler = [o.id for o, _ in liste]
-    yoklamalar = {}
+    yoklamalar: dict[uuid.UUID, Yoklama] = {}
     if idler:
-        yoklamalar = dict(
-            (
+        yoklamalar = {
+            y.ogrenci_id: y
+            for y in (
                 await session.execute(
-                    select(Yoklama.ogrenci_id, Yoklama.durum).where(
-                        Yoklama.oturum_id == ozet.id, Yoklama.ogrenci_id.in_(idler)
-                    )
+                    select(Yoklama).where(Yoklama.oturum_id == ozet.id, Yoklama.ogrenci_id.in_(idler))
                 )
-            ).all()
-        )
+            ).scalars()
+        }
     bakiyeler = await ders_hakki.bakiyeler(session, idler)
     return OturumDetay(
         **ozet.model_dump(),
@@ -183,7 +182,9 @@ async def _detay(session: AsyncSession, ozet: OturumOzet) -> OturumDetay:
                 soyad=o.soyad,
                 foto_var=o.foto_anahtar is not None,
                 telafi_mi=telafi_mi,
-                yoklama=yoklamalar.get(o.id),
+                yoklama=y.durum if (y := yoklamalar.get(o.id)) else None,
+                sebep=y.sebep if y else None,
+                aciklama=y.aciklama if y else None,
                 bakiye=bakiyeler[o.id],
             )
             for o, telafi_mi in liste
@@ -262,6 +263,11 @@ async def yoklama_al(
     ).scalar_one()
     if durum == OturumDurum.iptal:
         raise HTTPException(422, "İptal edilmiş derse yoklama alınamaz")
+    for g in govde:
+        if g.durum == YoklamaDurum.gelmedi and g.sebep is None:
+            raise HTTPException(422, "Gelmedi işaretlenen her öğrenci için devamsızlık sebebi seçilmeli")
+        if g.durum == YoklamaDurum.geldi and (g.sebep is not None or g.aciklama is not None):
+            raise HTTPException(422, "Devamsızlık sebebi ve açıklama yalnız gelmedi için girilebilir")
     idler = [g.ogrenci_id for g in govde]
     if len(idler) != len(set(idler)):
         raise HTTPException(422, "Aynı öğrenci birden fazla kez gönderilmiş")
@@ -282,6 +288,9 @@ async def yoklama_al(
                 )
             ).scalars()
         }
+    # Öğrenci satırları (kimlik sırasıyla) kilitlenir: süre dolumu işi ve telafi planlama ile aynı kilit.
+    if idler:
+        await session.execute(select(Ogrenci.id).where(Ogrenci.id.in_(idler)).order_by(Ogrenci.id).with_for_update())
     for g in govde:
         y = mevcut.get(g.ogrenci_id)
         if y is None:
@@ -293,9 +302,11 @@ async def yoklama_al(
                 telafi_mi=liste[g.ogrenci_id],
                 isaretleyen_id=kullanici.id,
                 simdi=an,
+                sebep=g.sebep,
+                aciklama=g.aciklama,
             )
         else:
-            await ders_hakki.yoklama_uygula(session, y, g.durum, kullanici.id, an)
+            await ders_hakki.yoklama_uygula(session, y, g.durum, kullanici.id, an, sebep=g.sebep, aciklama=g.aciklama)
     await audit.kaydet(
         session, "yoklama_alindi", kullanici_id=kullanici.id, hedef_tur="ders_oturumu", hedef_id=str(oturum_id),
         ip=_ip(request),
@@ -346,9 +357,15 @@ async def oturum_iptal(
     yoklama_var = (await session.execute(select(Yoklama.id).where(Yoklama.oturum_id == oturum_id).limit(1))).first()
     if yoklama_var is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Yoklaması alınmış ders iptal edilemez")
-    silinen = (
-        await session.execute(delete(TelafiPlani).where(TelafiPlani.oturum_id == oturum_id))
-    ).rowcount
+    plan_ogrencileri = sorted(
+        (await session.execute(
+            delete(TelafiPlani).where(TelafiPlani.oturum_id == oturum_id).returning(TelafiPlani.ogrenci_id)
+        )).scalars()
+    )
+    silinen = len(plan_ogrencileri)
+    # Geçmiş tarihli bekleyen plan hak ayırıyor olabilir; kalkınca süre dolumu uzlaştırılır.
+    for ogrenci_id in plan_ogrencileri:
+        await ders_hakki.telafi_uzlastir(session, ogrenci_id, bugun())
     oturum.durum = OturumDurum.iptal
     neden = (govde.neden.strip() if govde and govde.neden else None) or None
     await audit.kaydet(
@@ -424,6 +441,13 @@ async def telafi_adaylari(
     )
     if not ozetler:
         return []
+    # Kullanılabilir hakkı varsa, son kullanması yetmeyen (hakkın ayından sonraki) tarihler listelenmez.
+    # Hiç hakkı yoksa liste eskisi gibi döner; planlama zaten "Kullanılabilir telafi hakkı yok" der.
+    if await ders_hakki.kullanilabilir_telafi(session, ogrenci_id) > 0:
+        uygun_gun = {
+            t: await ders_hakki.kullanilabilir_telafi(session, ogrenci_id, t) > 0 for t in {o.tarih for o in ozetler}
+        }
+        ozetler = [o for o in ozetler if uygun_gun[o.tarih]]
     kontenjan = dict(
         (await session.execute(select(Grup.id, Grup.kontenjan).where(Grup.id.in_({o.grup.id for o in ozetler})))).all()
     )
@@ -492,6 +516,11 @@ async def telafi_planla(
         raise HTTPException(status.HTTP_409_CONFLICT, "Öğrenci bu derse zaten telafi için eklendi")
     if await ders_hakki.kullanilabilir_telafi(session, ogrenci.id) <= 0:
         raise HTTPException(422, "Kullanılabilir telafi hakkı yok")
+    if await ders_hakki.kullanilabilir_telafi(session, ogrenci.id, ozet.tarih) <= 0:
+        raise HTTPException(
+            422,
+            "Telafi hakkı bu tarihe kadar geçerli değil: telafi, devamsızlığın olduğu ayın sonuna kadar kullanılabilir",
+        )
     if ozet.ogrenci_sayisi >= grup.kontenjan:
         raise HTTPException(status.HTTP_409_CONFLICT, "Bu derste boş yer yok")
     session.add(TelafiPlani(oturum_id=oturum_id, ogrenci_id=ogrenci.id, olusturan_id=yonetici.id))
@@ -534,6 +563,9 @@ async def telafi_iptal(
     if yoklama_var is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Yoklaması alınmış telafi geri alınamaz")
     await session.delete(plan)
+    await session.flush()
+    # Geçmiş tarihli bekleyen plan hak ayırıyordu; kalkınca süre dolumu uzlaştırılır.
+    await ders_hakki.telafi_uzlastir(session, ogrenci_id, bugun())
     await audit.kaydet(
         session, "telafi_iptal_edildi", kullanici_id=yonetici.id, hedef_tur="ders_oturumu", hedef_id=str(oturum_id),
         ip=_ip(request), detay={"ogrenci_id": str(ogrenci_id)},

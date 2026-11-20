@@ -4,19 +4,34 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from app.models.yoklama import DevamsizlikSebebi
+
 
 class DevamDersi(BaseModel):
     tarih: date
     durum: Literal["geldi", "gelmedi"]
+    sebep: DevamsizlikSebebi | None = None  # yalnız gelmedi; eski kayıtlarda boş
+    aciklama: str | None = None  # İÇ not: yalnız yönetim/antrenör uçları; veli şemalarına asla konmaz
     telafi_mi: bool
     grup_ad: str
 
 
+class GelmediSebepleri(BaseModel):
+    """`gelmedi` sayısının sebebe göre dağılımı (toplamı `gelmedi`ye eşittir). `bilinmiyor`: sebepsiz eski kayıtlar."""
+
+    izinli: int = 0
+    raporlu: int = 0
+    yarisma: int = 0
+    devamsiz: int = 0
+    bilinmiyor: int = 0
+
+
 class DevamOzeti(BaseModel):
-    """Oranlar yüzde (0–100); hiç yoklama yoksa None."""
+    """Oranlar yüzde (0–100); hiç yoklama yoksa None. Oran sebepten bağımsızdır: her gelmedi oranı düşürür."""
 
     katildi: int
     gelmedi: int
+    gelmedi_sebepleri: GelmediSebepleri
     oran: int | None
     son30_katildi: int
     son30_gelmedi: int

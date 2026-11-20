@@ -4,7 +4,7 @@ import {
   type DersHakkiDefteri, type HakTur, type OgrenciDetay, type Sayac, type TelafiAdayi, type TelafiPlani,
 } from "../api/ogrenci";
 import { telafiGeriAl, telafiPlanla } from "../api/takvim";
-import { hataMesaji } from "../lib/dogrulama";
+import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
 import { bugun, gunEkle, tarihCoz, yyyyAyGun } from "../lib/tarih";
 import { birincilDugme, dugme, girdi, rozetBasari, rozetHata, rozetNotr } from "../lib/stil";
 import Kart from "./Kart";
@@ -19,6 +19,7 @@ const TUR_ETIKET: Record<HakTur, string> = {
   telafi_kullanimi: "Telafi dersine katıldı",
   manuel_duzeltme: "Elle düzeltme",
   iptal: "Düzeltme (geri alındı)",
+  telafi_suresi_doldu: "Telafi süresi doldu",
 };
 const SAYAC_ETIKET: Record<Sayac, string> = { normal: "Kalan ders", telafi: "Telafi" };
 
@@ -92,7 +93,7 @@ function DuzeltmeFormu({ ogrenciId, onKapat, onTamam }: { ogrenciId: string; onK
   );
 }
 
-function TelafiPenceresi({ ogrenciId, onKapat, onTamam }: { ogrenciId: string; onKapat: () => void; onTamam: () => void }) {
+function TelafiPenceresi({ ogrenciId, sonKullanma, onKapat, onTamam }: { ogrenciId: string; sonKullanma: string | null; onKapat: () => void; onTamam: () => void }) {
   const [adaylar, setAdaylar] = useState<TelafiAdayi[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
@@ -121,6 +122,11 @@ function TelafiPenceresi({ ogrenciId, onKapat, onTamam }: { ogrenciId: string; o
   return (
     <Pencere baslik="Telafi planla" onKapat={onKapat}>
       {hata && <p role="alert" className="mb-3 text-sm text-hata">{hata}</p>}
+      {sonKullanma && (
+        <p className="mb-3 text-[13px] text-metin-soluk">
+          Telafi hakkı <span className="num font-medium text-metin">{tarihBicimle(sonKullanma)}</span> tarihine kadar geçerli.
+        </p>
+      )}
       {adaylar === null ? (
         !hata && <p className="text-sm text-metin-soluk">Yükleniyor…</p>
       ) : adaylar.length === 0 ? (
@@ -204,6 +210,12 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
   const planlanabilir = aktif && h.kullanilabilir_telafi > 0;
   const neden = !aktif ? "Öğrenci pasif olduğu için telafi planlanamaz." : h.kullanilabilir_telafi <= 0 ? "Planlanabilir telafi hakkı yok." : null;
   const fazla = Math.max(0, -h.normal);
+  // Süresi dolmamış, kullanılabilir telafi haklarından en yakın son kullanma günü (süresizler sayılmaz).
+  const enYakinSon =
+    (defter?.hareketler ?? [])
+      .filter((x) => x.sayac === "telafi" && x.miktar > 0 && x.son_kullanma && x.son_kullanma >= bugun())
+      .map((x) => x.son_kullanma as string)
+      .sort()[0] ?? null;
 
   const hucre = (etiket: string, deger: number) => (
     <div className="bg-yuzey px-6 py-4">
@@ -282,6 +294,9 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
                       {new Date(x.zaman).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}
                       {x.oturum && ` · ${x.oturum.tarih} · ${x.oturum.grup_ad}`}
                     </div>
+                    {x.son_kullanma && x.miktar > 0 && (
+                      <div className="num text-xs text-metin-soluk">{tarihBicimle(x.son_kullanma)} tarihine kadar geçerli</div>
+                    )}
                     {x.neden && <div className="text-xs mt-0.5">{x.neden}</div>}
                   </li>
                 ))}
@@ -292,7 +307,7 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
       </div>
 
       {pencere === "duzeltme" && <DuzeltmeFormu ogrenciId={id} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
-      {pencere === "telafi" && <TelafiPenceresi ogrenciId={id} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
+      {pencere === "telafi" && <TelafiPenceresi ogrenciId={id} sonKullanma={enYakinSon} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
     </Kart>
   );
 }

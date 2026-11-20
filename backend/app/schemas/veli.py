@@ -8,7 +8,7 @@ from app.models.kullanici import Rol
 from app.models.ogrenci import OgrenciDurum
 from app.models.paket import OdemeYontemi, OgrenciPaketiDurum
 from app.models.program import OturumDurum
-from app.models.yoklama import HareketTuru, Sayac, YoklamaDurum
+from app.models.yoklama import DevamsizlikSebebi, HareketTuru, Sayac, YoklamaDurum
 from app.schemas.ogrenci import DersHakkiDetay
 from app.schemas.paket import Tutar
 
@@ -29,6 +29,8 @@ class VeliDers(BaseModel):
     telafi_mi: bool
     durum: OturumDurum
     yoklama: YoklamaDurum | None = None
+    # Gelmedi sebebi. Antrenörün iç notu (açıklama) veliye hiçbir zaman gönderilmez.
+    sebep: DevamsizlikSebebi | None = None
 
 
 class VeliProgramSatiri(BaseModel):
@@ -77,6 +79,7 @@ class VeliHareket(BaseModel):
     sayac: Sayac
     miktar: int
     tur: HareketTuru
+    son_kullanma: date | None = None
 
 
 class DersOzeti(BaseModel):
@@ -88,6 +91,7 @@ class DersOzeti(BaseModel):
     kalan: int
     telafi_dogan: int
     telafi_kullanilan: int
+    telafi_yanan: int  # ay sonunda kullanılmadığı için düşen telafi hakları
     telafi_kalan: int
 
 

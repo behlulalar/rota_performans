@@ -1,9 +1,12 @@
 import { api } from "../lib/api";
+import type { Sebep } from "../lib/sebep";
 
-export type DevamDersi = { tarih: string; durum: "geldi" | "gelmedi"; telafi_mi: boolean; grup_ad: string };
+export type DevamDersi = { tarih: string; durum: "geldi" | "gelmedi"; sebep: Sebep | null; aciklama?: string | null; telafi_mi: boolean; grup_ad: string };
+export type GelmediSebepleri = Record<Sebep | "bilinmiyor", number>;
 export type DevamOzeti = {
   katildi: number;
   gelmedi: number;
+  gelmedi_sebepleri?: GelmediSebepleri;
   oran: number | null;
   son30_katildi: number;
   son30_gelmedi: number;

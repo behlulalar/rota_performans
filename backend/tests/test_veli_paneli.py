@@ -185,7 +185,7 @@ async def test_hareketler_neden_ve_kullanici_icermez(istemci):
                                    neden="Yönetici notu: gizli"))
     b = await baslik(istemci)
     d = (await istemci.get(f"/api/benim/cocuklar/{o.id}", headers=b)).json()
-    assert set(d["hareketler"][0]) == {"zaman", "sayac", "miktar", "tur"}
+    assert set(d["hareketler"][0]) == {"zaman", "sayac", "miktar", "tur", "son_kullanma"}
     assert "gizli" not in (await istemci.get(f"/api/benim/cocuklar/{o.id}", headers=b)).text
 
 
@@ -204,7 +204,7 @@ async def test_ders_ozeti_geri_alinan_kayitlari_saymaz(istemci):
     d = (await istemci.get(f"/api/benim/cocuklar/{o.id}", headers=b)).json()
     assert d["ders_ozeti"] == {
         "toplam": 8, "katildi": 3, "devamsiz": 1, "kalan": 4,
-        "telafi_dogan": 1, "telafi_kullanilan": 0, "telafi_kalan": 1,
+        "telafi_dogan": 1, "telafi_kullanilan": 0, "telafi_yanan": 0, "telafi_kalan": 1,
     }
 
 

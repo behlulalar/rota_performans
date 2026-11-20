@@ -108,7 +108,7 @@ async def _dersler(
     yoklama = aliased(Yoklama)
     sira = (DersOturumu.tarih.desc(), DersOturumu.baslangic.desc()) if ters else (DersOturumu.tarih, DersOturumu.baslangic)
     sorgu = (
-        select(DersOturumu, Grup.ad, telafi_mi, yoklama.durum)
+        select(DersOturumu, Grup.ad, telafi_mi, yoklama.durum, yoklama.sebep)
         .join(Grup, Grup.id == DersOturumu.grup_id)
         .outerjoin(yoklama, (yoklama.oturum_id == DersOturumu.id) & (yoklama.ogrenci_id == ogrenci_id))
         .where(or_(uye_mi, telafi_mi), *kosullar)
@@ -119,9 +119,9 @@ async def _dersler(
     return [
         VeliDers(
             oturum_id=o.id, tarih=o.tarih, baslangic=o.baslangic, bitis=o.bitis, grup_ad=grup_ad,
-            telafi_mi=bool(telafi), durum=o.durum, yoklama=durum,
+            telafi_mi=bool(telafi), durum=o.durum, yoklama=durum, sebep=sebep,
         )
-        for o, grup_ad, telafi, durum in (await session.execute(sorgu)).all()
+        for o, grup_ad, telafi, durum, sebep in (await session.execute(sorgu)).all()
     ]
 
 
@@ -286,6 +286,7 @@ async def _ders_ozeti(session: AsyncSession, ozet: CocukOzet) -> DersOzeti:
         kalan=ozet.ders_hakki.normal,
         telafi_dogan=telafi(HareketTuru.devamsizlik) + telafi(HareketTuru.manuel_duzeltme),
         telafi_kullanilan=-telafi(HareketTuru.telafi_kullanimi),
+        telafi_yanan=-telafi(HareketTuru.telafi_suresi_doldu),
         telafi_kalan=ozet.ders_hakki.telafi,
     )
 
@@ -293,7 +294,7 @@ async def _ders_ozeti(session: AsyncSession, ozet: CocukOzet) -> DersOzeti:
 async def _hareketler(session: AsyncSession, ogrenci_id: uuid.UUID) -> list[VeliHareket]:
     # Yönetici notları (neden) ve kullanıcı bilgisi veliye gösterilmez.
     return [
-        VeliHareket(zaman=h.zaman, sayac=h.sayac, miktar=h.miktar, tur=h.tur)
+        VeliHareket(zaman=h.zaman, sayac=h.sayac, miktar=h.miktar, tur=h.tur, son_kullanma=h.son_kullanma)
         for h in (
             await session.execute(
                 select(DersHakkiHareketi)

@@ -16,7 +16,7 @@ from app.models.ogrenci import (
 )
 from app.models.paket import Odeme, OdemeYontemi, OgrenciPaketi, OgrenciPaketiDurum, Paket, PaketTuru
 from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
-from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, Yoklama, YoklamaDurum
+from app.models.yoklama import DersHakkiHareketi, DevamsizlikSebebi, HareketTuru, Sayac, Yoklama, YoklamaDurum
 
 __all__ = [
     "Antrenor",
@@ -33,6 +33,7 @@ __all__ = [
     "DuyuruHedefTuru",
     "Grup",
     "GrupProgrami",
+    "DevamsizlikSebebi",
     "HareketTuru",
     "IletisimKisisi",
     "IletisimRolu",

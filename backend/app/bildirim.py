@@ -4,6 +4,7 @@ Kurallar:
 - Alıcı yalnızca öğrencinin birincil iletişim kişisidir.
 - Kuyruğa kişisel veri yazılmaz; metin gönderim anında `metin_olustur` ile kayıttan üretilir.
 - `ders_gelmedi` yanlış işarete karşı GERI_ALMA_SURESI kadar bekletilir, yoklama düzelirse iptal edilir.
+  Sebep bu sürede değişirse bekleyen bildirim yeni sebeple yeniden planlanır (metinde sebep ve sonucu yazar).
 - Bakiye olayları (`ders_hakki_azaldi`, `ders_hakki_bitti`) defter hareketi yazıldıktan sonra tetiklenir.
 Çağıran işlemi commit eder. Bu modül `ders_hakki`'nı içe aktarmaz (döngüyü önlemek için bakiyeyi kendisi okur)."""
 import uuid
@@ -38,9 +39,26 @@ DERS_HAKKI_AZALDI = "ders_hakki_azaldi"
 DERS_HAKKI_BITTI = "ders_hakki_bitti"
 DUYURU = "duyuru"
 
+# Devamsızlık sebebinin mesajdaki adı ve sonucu ({sebep}, {sonuc}). Sebepsiz eski kayıtlar eski metinle gider.
+SEBEP_ETIKETI = {"izinli": "İzinli", "raporlu": "Raporlu", "yarisma": "Yarışma", "devamsiz": "Habersiz"}
+MAZERETLI_SONUC = "Telafi hakkı tanımlanacaktır, ay sonuna kadar kullanılabilir."
+DEVAMSIZ_SONUC = "Habersiz devamsızlıkta ders hakkı kullanılmış sayılır, telafi tanımlanmaz."
+ESKI_SONUC = "Telafi hakkı tanımlanacaktır."
+
+
+def gelmedi_alanlari(sebep: str | None) -> dict[str, str]:
+    """`ders_gelmedi` metnindeki {sebep} ve {sonuc} alanları. Örn. " (Raporlu)" ve telafi cümlesi."""
+    if sebep not in SEBEP_ETIKETI:
+        return {"sebep": "", "sonuc": ESKI_SONUC}
+    return {
+        "sebep": f" ({SEBEP_ETIKETI[sebep]})",
+        "sonuc": DEVAMSIZ_SONUC if sebep == "devamsiz" else MAZERETLI_SONUC,
+    }
+
+
 # Şablon -> mesaj metni. {ad} ve {tarih} gibi alanlar gönderim anında doldurulur.
 SABLONLAR: dict[str, str] = {
-    DERS_GELMEDI: "Rota Performans Akademi: {ad}, {tarih} {saat} dersine katılmadı. Telafi hakkı tanımlanacaktır.",
+    DERS_GELMEDI: "Rota Performans Akademi: {ad}, {tarih} {saat} dersine katılmadı{sebep}. {sonuc}",
     DERS_HAKKI_AZALDI: "Rota Performans Akademi: {ad} için {bakiye} ders hakkı kaldı. Yeni paket için kulüple iletişime geçebilirsiniz.",
     DERS_HAKKI_BITTI: "Rota Performans Akademi: {ad} için ders hakkı bitti. Derslere devam için yeni paket almanız gerekir.",
     # Metin yöneticinin yazdığı duyurudur (`duyuru.metin`), `metin_olustur` doğrudan onu döndürür.
@@ -48,12 +66,13 @@ SABLONLAR: dict[str, str] = {
 }
 
 # WhatsApp için her kişisel şablonun aynı anlama gelen 3 söylenişi (mesajlar birebir aynı olmasın).
-# Seçim bildirim kimliğine göre deterministiktir: `soylenis_sec`. Link yoktur. {ad}, {tarih}, {saat}, {bakiye} doldurulur.
+# Seçim bildirim kimliğine göre deterministiktir: `soylenis_sec`. Link yoktur.
+# {ad}, {tarih}, {saat}, {bakiye}, {sebep}, {sonuc} doldurulur.
 SOYLENISLER: dict[str, list[str]] = {
     DERS_GELMEDI: [
-        "Rota Performans Akademi: {ad}, {tarih} {saat} dersine katılmadı. Telafi hakkı tanımlanacaktır.",
-        "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} {tarih} {saat} dersine gelemedi; telafi hakkı tanımlanacaktır.",
-        "Rota Performans Akademi bilgilendirmesi: {ad} {tarih} {saat} dersinde yoktu. Kendisi için telafi hakkı tanımlanacaktır.",
+        "Rota Performans Akademi: {ad}, {tarih} {saat} dersine katılmadı{sebep}. {sonuc}",
+        "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} {tarih} {saat} dersine gelemedi{sebep}. {sonuc}",
+        "Rota Performans Akademi bilgilendirmesi: {ad} {tarih} {saat} dersinde yoktu{sebep}. {sonuc}",
     ],
     DERS_HAKKI_AZALDI: [
         "Rota Performans Akademi: {ad} için {bakiye} ders hakkı kaldı. Yeni paket için kulüple iletişime geçebilirsiniz.",
@@ -172,6 +191,7 @@ async def yoklama_isaretlendi(session: AsyncSession, yoklama: Yoklama, simdi: da
                 "oturum_id": str(oturum.id),
                 "tarih": oturum.tarih.isoformat(),
                 "baslangic": oturum.baslangic.strftime("%H:%M"),
+                "sebep": yoklama.sebep.value if yoklama.sebep else None,
             },
             bekleme=geri_alma,
         )
@@ -261,6 +281,6 @@ async def metin_olustur(session: AsyncSession, bildirim: Bildirim, *, soylenis: 
     if p.get("tarih"):
         y, a, g = p["tarih"].split("-")
         tarih = f"{g}.{a}.{y}"
-    return sablon.format(ad=ogrenci.ad, tarih=tarih, saat=p.get("baslangic", ""), bakiye=p.get("bakiye", 0)).replace(
-        "  ", " "
-    )
+    return sablon.format(
+        ad=ogrenci.ad, tarih=tarih, saat=p.get("baslangic", ""), bakiye=p.get("bakiye", 0), **gelmedi_alanlari(p.get("sebep"))
+    ).replace("  ", " ")

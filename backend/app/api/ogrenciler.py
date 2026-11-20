@@ -29,7 +29,7 @@ from app.models.ogrenci import (
     RizaTuru,
 )
 from app.models.program import DersOturumu, Grup, OgrenciGrup
-from app.models.yoklama import DersHakkiHareketi, HareketTuru, Yoklama
+from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, Yoklama
 from app.schemas.ogrenci import (
     BirincilIletisim,
     FotoBoyut,
@@ -236,6 +236,9 @@ async def ders_hakki_duzelt(
             olusturan_id=yonetici.id,
         )
     )
+    if govde.sayac == Sayac.telafi:
+        await session.flush()
+        await ders_hakki.telafi_uzlastir(session, ogrenci_id, kulup_bugunu())
     # Neden metni kişisel veri içerebileceği için denetime yazılmaz.
     await audit.kaydet(
         session, "ders_hakki_duzeltildi", kullanici_id=yonetici.id, hedef_tur="ogrenci", hedef_id=str(ogrenci_id),
@@ -270,6 +273,7 @@ async def ders_hakki_getir(
         hareketler=[
             HareketYanit(
                 id=h.id, zaman=h.zaman, sayac=h.sayac, miktar=h.miktar, tur=h.tur, neden=h.neden,
+                son_kullanma=h.son_kullanma,
                 oturum=HareketOturum(tarih=tarih, grup_ad=grup_ad) if tarih is not None else None,
             )
             for h, tarih, grup_ad in satirlar

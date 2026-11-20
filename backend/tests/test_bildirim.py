@@ -184,9 +184,12 @@ async def test_http_yoklama_duzeltmesi_bekleyeni_iptal_eder(istemci, yonetici): 
     await uye_yap(await _ogrenci(ogr), g)
     ot = await oturum_olustur(g)
 
+    def govde_(ogr, durum):
+        return [{"ogrenci_id": str(ogr), "durum": durum, **({"sebep": "raporlu"} if durum == "gelmedi" else {})}]
+
     async def yoklama(durum):
         y = await istemci.put(
-            f"/api/oturumlar/{ot.id}/yoklama", json=[{"ogrenci_id": str(ogr), "durum": durum}], headers=yonetici
+            f"/api/oturumlar/{ot.id}/yoklama", json=govde_(ogr, durum), headers=yonetici
         )
         assert y.status_code == 200, y.text
 

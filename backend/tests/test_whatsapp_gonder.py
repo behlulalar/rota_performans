@@ -590,7 +590,7 @@ def test_soylenisler_ucer_tane_imzali_linksiz():
         assert sablon in bsvc.TERCIH_TURU and len(secenekler) == 3 and len(set(secenekler)) == 3
         for m in secenekler:
             assert "Rota Performans Akademi" in m and "{ad}" in m and "http" not in m and "www" not in m
-            dolu = m.format(ad="Deniz", tarih="02.11.2026", saat="17:00", bakiye=2)
+            dolu = m.format(ad="Deniz", tarih="02.11.2026", saat="17:00", bakiye=2, **bsvc.gelmedi_alanlari("raporlu"))
             assert "{" not in dolu and "Deniz" in dolu
         # Seçim kimliğe göre deterministik ve üç söylenişi de döndürür.
         assert [bsvc.soylenis_sec(sablon, i) for i in range(3)] == secenekler
@@ -615,7 +615,7 @@ async def test_metin_soylenisi_id_mod_3_ve_telefon_icermez(evolution):
     async with SessionLocal() as s:
         b = (await s.execute(select(Bildirim).where(Bildirim.kanal == BildirimKanal.push).order_by(Bildirim.id))).scalars().first()
         assert await bsvc.metin_olustur(s, b) == bsvc.SABLONLAR["ders_gelmedi"].format(
-            ad="Ada", tarih="02.11.2026", saat="17:00", bakiye=0
+            ad="Ada", tarih="02.11.2026", saat="17:00", bakiye=0, **bsvc.gelmedi_alanlari(None)
         ).replace("  ", " ")
 
 

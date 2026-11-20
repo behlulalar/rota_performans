@@ -19,7 +19,7 @@ Durum: 5 Kasım 2026. Uygulama bildirimi (push) ve WhatsApp gönderimi (Evolutio
 
 | Olay | Ne zaman | Kontrol |
 |---|---|---|
-| Devamsızlık (`ders_gelmedi`) | Öğrenci "gelmedi" işaretlenince | **Geri alma penceresi:** varsayılan 3 dk bekler (Ayarlar'dan 1–15 dk). Bu sürede yoklama düzeltilirse bildirim iptal olur, hiç gitmez. Telafi derslerinde oluşmaz |
+| Devamsızlık (`ders_gelmedi`) | Öğrenci "gelmedi" işaretlenince | **Geri alma penceresi:** varsayılan 3 dk bekler (Ayarlar'dan 1–15 dk). Bu sürede yoklama düzeltilirse bildirim iptal olur, hiç gitmez; sebep değiştirilirse aynı bildirim yeni sebeple yeniden bekletilir. Telafi derslerinde oluşmaz. Metin sebebi yazar: "… dersine katılmadı (Raporlu). Telafi hakkı tanımlanacaktır, ay sonuna kadar kullanılabilir." Habersiz (`devamsiz`): "… (Habersiz). Habersiz devamsızlıkta ders hakkı kullanılmış sayılır, telafi tanımlanmaz." Sebebi olmayan eski kayıtlar eski metinle gider. Antrenörün iç notu (açıklama) mesaja hiçbir zaman girmez |
 | Ders hakkı azaldı | Kalan ders eşiğe düşünce (varsayılan 2, Ayarlar'dan 1–5) | Aynı paket döneminde bir kez |
 | Ders hakkı bitti | Ödenmiş paketi olan öğrencinin hakkı 0 veya altına inince | Aynı paket döneminde bir kez; yeni paket yüklenince sıfırlanır |
 
