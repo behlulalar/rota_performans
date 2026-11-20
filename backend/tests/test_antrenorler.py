@@ -401,4 +401,4 @@ async def test_guncelle_denetim_detayi(istemci, yonetici):
     assert kayit.detay["alanlar"] == ["grup_idleri", "telefon"]
     assert kayit.detay["giris_degisti"] is True and kayit.detay["oturumlar_kapatildi"] is True
     assert kayit.detay["gruplar"]["onceki_antrenor"] == {g: b["id"]}
-    assert "533" not in json.dumps(kayit.detay)
+    assert "1112233" not in json.dumps(kayit.detay)  # telefon sızmamalı (UUID içinde rastlantı olmasın diye uzun parça)
