@@ -16,11 +16,6 @@ GECERLI_TC = "10000000146"
 IKINCI_TC = "10000001068"
 
 
-@pytest.fixture(autouse=True)
-def gecici_dizin(tmp_path, monkeypatch):
-    monkeypatch.setattr(settings, "dosya_dizini", str(tmp_path / "yuklemeler"))
-
-
 async def giris(istemci, eposta, rol):
     await kullanici_olustur(eposta, rol)
     yanit = await istemci.post("/api/auth/login", json={"giris": eposta, "sifre": SIFRE})

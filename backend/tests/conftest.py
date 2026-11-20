@@ -22,6 +22,12 @@ from app.config import settings  # noqa: E402
 from app.db import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Base, Kullanici, Rol  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def gecici_dosya_dizini(tmp_path, monkeypatch):
+    """Her test yüklemeleri kendi geçici klasörüne yazar (CI'da /app/uploads yok; gerçek klasöre dokunulmaz)."""
+    monkeypatch.setattr(settings, "dosya_dizini", str(tmp_path / "yuklemeler"))
 from app.security import sifre_ozeti  # noqa: E402
 
 SIFRE = "Dogru-sifre-123"
