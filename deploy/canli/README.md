@@ -18,6 +18,7 @@ Compose projesi `rota-canli`. Demo dağıtımının (`deploy/demo/`) kanıtlanm�
    (ilk denemede kendi numaranız; gerçek yayında `--izinsiz`). Yedek geri yüklenecekse eski kimlik anahtarlarını
    ortamdan verin: `KIMLIK_SIFRELEME_ANAHTARI=... KIMLIK_OZET_ANAHTARI=... bash env-uret.sh --izinsiz`.
    `.env` dosyasının yedeğini güvenli bir yere alın (anahtar kaybolursa T.C. numaraları okunamaz).
+> Not: isci (bildirim) ve evolution (WhatsApp) canlıya alma onayına kadar kapalı tutulur; güncellemelerde `docker compose up -d backend web` kullanılır, düz `up -d` hepsini başlatır.
 4. `docker compose build && docker compose up -d` (geçişler arka uç açılırken kendiliğinden çalışır).
 5. Nginx: `mkdir -p /var/www/rota-acme`; `nginx-rota.conf` dosyasını `/etc/nginx/sites-available/rotaperformans.com` olarak
    kopyalayıp `sites-enabled`'a bağla, **önce yalnız 80 bloğu** açık kalsın (443 blokları yorum satırı), `nginx -t && systemctl reload nginx`.
@@ -35,7 +36,7 @@ Sunucu dışından (kendi bilgisayarınızdan) port taraması: `nmap -Pn -p- <su
 
 ## Güncelleme
 Yerelden: `git archive HEAD | ssh rota 'tar -x -C /opt/rota'`, sonra sunucuda
-`cd /opt/rota/deploy/canli && docker compose build && docker compose up -d`.
+`cd /opt/rota/deploy/canli && docker compose build && docker compose up -d backend web`. isci ve evolution bilerek kapalıysa düz `up -d` kullanmayın: onları da başlatır.
 (`.env` arşivde olmadığından korunur. Güncellemeden önce yedeğin güncel olduğunu doğrulayın.)
 
 ## Panel alt alan adlarına geçiş
@@ -53,7 +54,7 @@ Sırayla (sunucuda; hepsini yerelden hazırlanan dosyalarla):
 7. Mevcut `.env` dosyasına (yeniden ÜRETMEYİN) şu iki satırı ekleyin/güncelleyin:
    `CORS_ORIGINS=https://veli.rotaperformans.com,https://yonetim.rotaperformans.com,https://antrenor.rotaperformans.com,https://destek.rotaperformans.com`
    ve `PANEL_ALANI_KATI=true`.
-8. `cd /opt/rota/deploy/canli && docker compose build && docker compose up -d`
+8. `cd /opt/rota/deploy/canli && docker compose build && docker compose up -d backend web`
 9. Duman testleri:
    - Her adreste manifest: `for h in veli yonetim antrenor destek; do curl -s https://$h.rotaperformans.com/manifest.webmanifest | grep -o '"short_name"[^,]*'; done` (dört farklı ad)
    - `curl -sI https://rotaperformans.com/` ve `http://rotaperformans.com/` -> 301, `Location: https://veli.rotaperformans.com/`
@@ -62,4 +63,4 @@ Sırayla (sunucuda; hepsini yerelden hazırlanan dosyalarla):
    - `curl -sI https://rotaperformans.com/api/auth/me` -> 301 (bu adreste API'ye ulaşılamaz)
    - `curl -s https://rotaperformans.com/sw.js` eski-sw.js içeriğini döndürmeli (eski PWA kendini kaldırır, veli adresine yönlenir).
 10. Geri alma: `cp rotaperformans.com.bak rotaperformans.com && nginx -t && systemctl reload nginx`;
-    `.env`'den `PANEL_ALANI_KATI` satırını silip CORS_ORIGINS'i eski değerine döndürün, `docker compose up -d`.
+    `.env`'den `PANEL_ALANI_KATI` satırını silip CORS_ORIGINS'i eski değerine döndürün, `docker compose up -d backend web`.
