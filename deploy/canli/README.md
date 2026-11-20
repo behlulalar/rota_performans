@@ -37,3 +37,29 @@ Sunucu dışından (kendi bilgisayarınızdan) port taraması: `nmap -Pn -p- <su
 Yerelden: `git archive HEAD | ssh rota 'tar -x -C /opt/rota'`, sonra sunucuda
 `cd /opt/rota/deploy/canli && docker compose build && docker compose up -d`.
 (`.env` arşivde olmadığından korunur. Güncellemeden önce yedeğin güncel olduğunu doğrulayın.)
+
+## Panel alt alan adlarına geçiş
+Adresler: `veli.` / `yonetim.` / `antrenor.` / `destek.rotaperformans.com`. Çıplak ve `www` veli paneline 301 verir.
+Sırayla (sunucuda; hepsini yerelden hazırlanan dosyalarla):
+1. DNS: dört alt alan adı için A kaydı (yapıldı).
+2. Sertifikayı genişlet:
+   `certbot certonly --webroot -w /var/www/rota-acme --cert-name rotaperformans.com --expand -d rotaperformans.com -d www.rotaperformans.com -d veli.rotaperformans.com -d yonetim.rotaperformans.com -d antrenor.rotaperformans.com -d destek.rotaperformans.com`
+3. `mkdir -p /etc/nginx/rota && cp eski-sw.js /etc/nginx/rota/eski-sw.js`
+4. Eski yapılandırmayı yedekle: `cp /etc/nginx/sites-available/rotaperformans.com /etc/nginx/sites-available/rotaperformans.com.bak`
+   (`.bak` sites-enabled dışında kalmalı), yenisini `nginx-rota.conf`'tan kopyala.
+   Çakışma denetimi: `grep -r default_server /etc/nginx/sites-enabled` (yeni dosya dışında `default_server` çıkmamalı; varsa oradan kaldırın).
+5. `nginx -t`
+6. `systemctl reload nginx`
+7. Mevcut `.env` dosyasına (yeniden ÜRETMEYİN) şu iki satırı ekleyin/güncelleyin:
+   `CORS_ORIGINS=https://veli.rotaperformans.com,https://yonetim.rotaperformans.com,https://antrenor.rotaperformans.com,https://destek.rotaperformans.com`
+   ve `PANEL_ALANI_KATI=true`.
+8. `cd /opt/rota/deploy/canli && docker compose build && docker compose up -d`
+9. Duman testleri:
+   - Her adreste manifest: `for h in veli yonetim antrenor destek; do curl -s https://$h.rotaperformans.com/manifest.webmanifest | grep -o '"short_name"[^,]*'; done` (dört farklı ad)
+   - `curl -sI https://rotaperformans.com/` ve `http://rotaperformans.com/` -> 301, `Location: https://veli.rotaperformans.com/`
+   - Tanımsız Host: `curl -sk --resolve x.rotaperformans.com:443:<sunucu-ip> https://x.rotaperformans.com/` -> bağlantı kesilir (TLS hatası); `curl -s -H 'Host: x.invalid' http://<sunucu-ip>/` -> boş yanıt
+   - `curl -s -o /dev/null -w '%{http_code}\n' https://veli.rotaperformans.com/api/saglik` -> 200
+   - `curl -sI https://rotaperformans.com/api/auth/me` -> 301 (bu adreste API'ye ulaşılamaz)
+   - `curl -s https://rotaperformans.com/sw.js` eski-sw.js içeriğini döndürmeli (eski PWA kendini kaldırır, veli adresine yönlenir).
+10. Geri alma: `cp rotaperformans.com.bak rotaperformans.com && nginx -t && systemctl reload nginx`;
+    `.env`'den `PANEL_ALANI_KATI` satırını silip CORS_ORIGINS'i eski değerine döndürün, `docker compose up -d`.
