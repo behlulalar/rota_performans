@@ -22,6 +22,12 @@ def simdi() -> datetime:
 
 
 YOKLAMA_ERKEN_ACILIS = timedelta(minutes=15)
+# Antrenör, yoklamanın ilk kaydından bu kadar süre sonra yoklamayı değiştiremez (yönetici değiştirebilir).
+YOKLAMA_KILIT_SURESI = timedelta(minutes=60)
+
+
+def yoklama_kilit_zamani(ilk_kayit: datetime | None) -> datetime | None:
+    return None if ilk_kayit is None else ilk_kayit + YOKLAMA_KILIT_SURESI
 
 
 def yoklama_acilis_zamani(tarih: date, baslangic: time) -> datetime:

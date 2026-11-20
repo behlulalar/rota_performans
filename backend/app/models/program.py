@@ -114,6 +114,8 @@ class DersOturumu(Base):
     )
     durum: Mapped[OturumDurum] = mapped_column(enum_kolon(OturumDurum), default=OturumDurum.planli)
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Yoklamanın İLK kaydedildiği an (sonraki düzeltmelerde değişmez). Antrenör için kilit süresi buradan sayılır.
+    yoklama_ilk_kayit: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint("bitis > baslangic", name="saat_sirasi"),

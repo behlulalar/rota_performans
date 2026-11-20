@@ -28,7 +28,9 @@ export type OturumOgrenci = {
   bakiye: { normal: number; telafi: number };
 };
 
-export type OturumDetay = OturumOzet & { ogrenciler: OturumOgrenci[] };
+// kilit_zamani: yoklamanın ilk kaydından 60 dk sonrası (hiç kaydedilmediyse null). kilitli sunucu saatine göre hesaplanır:
+// antrenör için salt okunur, yönetici düzeltebilir (denetim kaydına yazılır).
+export type OturumDetay = OturumOzet & { ogrenciler: OturumOgrenci[]; kilit_zamani: string | null; kilitli: boolean };
 
 export type YoklamaKaydi = { ogrenci_id: string; durum: YoklamaDurum; sebep?: Sebep; aciklama?: string };
 

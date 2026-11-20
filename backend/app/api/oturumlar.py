@@ -17,7 +17,7 @@ from app.api.ogrenciler import _ogrenci_al
 from app.models.ogrenci import Ogrenci, OgrenciDurum
 from app.models.program import Antrenor, DersOturumu, Grup, OgrenciGrup, OturumDurum, TelafiPlani
 from app.models.yoklama import Yoklama, YoklamaDurum
-from app.oturumlar import bugun, oturumlari_uret, simdi, yoklama_acilis_zamani
+from app.oturumlar import bugun, oturumlari_uret, simdi, yoklama_acilis_zamani, yoklama_kilit_zamani
 from app.schemas.oturum import (
     EN_COK_GUN,
     IptalGirdi,
@@ -173,8 +173,14 @@ async def _detay(session: AsyncSession, ozet: OturumOzet) -> OturumDetay:
             ).scalars()
         }
     bakiyeler = await ders_hakki.bakiyeler(session, idler)
+    ilk_kayit = (
+        await session.execute(select(DersOturumu.yoklama_ilk_kayit).where(DersOturumu.id == ozet.id))
+    ).scalar_one()
+    kilit = yoklama_kilit_zamani(ilk_kayit)
     return OturumDetay(
         **ozet.model_dump(),
+        kilit_zamani=kilit,
+        kilitli=kilit is not None and simdi() > kilit,
         ogrenciler=[
             OturumOgrenci(
                 ogrenci_id=o.id,
@@ -258,10 +264,10 @@ async def yoklama_al(
             yerel = acilis.astimezone(ZoneInfo(settings.saat_dilimi))
             raise HTTPException(422, f"Yoklama {yerel:%H:%M}'te açılır (ders başlamadan 15 dakika önce)")
     # Oturum satırı kilitlenir: aynı anda çalışan "dersi iptal et" ile yoklama birbirini atlamasın.
-    durum = (
-        await session.execute(select(DersOturumu.durum).where(DersOturumu.id == oturum_id).with_for_update())
+    oturum = (
+        await session.execute(select(DersOturumu).where(DersOturumu.id == oturum_id).with_for_update())
     ).scalar_one()
-    if durum == OturumDurum.iptal:
+    if oturum.durum == OturumDurum.iptal:
         raise HTTPException(422, "İptal edilmiş derse yoklama alınamaz")
     for g in govde:
         if g.durum == YoklamaDurum.gelmedi and g.sebep is None:
@@ -291,6 +297,26 @@ async def yoklama_al(
     # Öğrenci satırları (kimlik sırasıyla) kilitlenir: süre dolumu işi ve telafi planlama ile aynı kilit.
     if idler:
         await session.execute(select(Ogrenci.id).where(Ogrenci.id.in_(idler)).order_by(Ogrenci.id).with_for_update())
+    # Kilit: ilk kayıttan 60 dk sonra antrenör değişiklik yapamaz (yeni öğrenci eklemek de değişikliktir).
+    # Aynı değerlerin yeniden gönderilmesi değişiklik sayılmaz. Yönetici düzeltebilir, denetim kaydına yazılır.
+    degisenler = []
+    for g in govde:
+        y = mevcut.get(g.ogrenci_id)
+        gelmedi = g.durum == YoklamaDurum.gelmedi
+        if y is None:
+            degisenler.append({"ogrenci_id": str(g.ogrenci_id), "onceki": None, "yeni": g.durum.value})
+        elif (y.durum, y.sebep, y.aciklama) != (g.durum, g.sebep if gelmedi else None, g.aciklama if gelmedi else None):
+            degisenler.append({"ogrenci_id": str(g.ogrenci_id), "onceki": y.durum.value, "yeni": g.durum.value})
+    kilit = yoklama_kilit_zamani(oturum.yoklama_ilk_kayit)
+    kilitli = kilit is not None and an > kilit
+    if kilitli and degisenler and kullanici.rol == Rol.antrenor:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Yoklama kilitlendi. Düzeltme için yöneticiye başvurun.",
+            headers={"X-Hata-Kodu": "yoklama_kilitli"},
+        )
+    if oturum.yoklama_ilk_kayit is None and govde:
+        oturum.yoklama_ilk_kayit = an
     for g in govde:
         y = mevcut.get(g.ogrenci_id)
         if y is None:
@@ -316,6 +342,11 @@ async def yoklama_al(
             "gelmedi": sum(1 for g in govde if g.durum.value == "gelmedi"),
         },
     )
+    if kilitli and degisenler:
+        await audit.kaydet(
+            session, "yoklama_kilit_sonrasi_duzeltme", kullanici_id=kullanici.id, hedef_tur="ders_oturumu",
+            hedef_id=str(oturum_id), ip=_ip(request), detay={"degisen": degisenler},
+        )
     try:
         await session.commit()
     except IntegrityError:

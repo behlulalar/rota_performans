@@ -64,6 +64,10 @@ class OturumOgrenci(BaseModel):
 
 class OturumDetay(OturumOzet):
     ogrenciler: list[OturumOgrenci]
+    # Yoklamanın ilk kaydından 60 dk sonrası; hiç kaydedilmediyse boş. `kilitli` sunucu saatine göre hesaplanır
+    # (antrenör için değişiklik engeli; yönetici kilitli yoklamayı denetim kaydıyla düzeltebilir).
+    kilit_zamani: datetime | None = None
+    kilitli: bool = False
 
 
 class IptalGirdi(BaseModel):

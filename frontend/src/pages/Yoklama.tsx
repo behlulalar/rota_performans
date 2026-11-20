@@ -36,11 +36,12 @@ const sebepler = (o: OturumDetay): Sebepler => Object.fromEntries(o.ogrenciler.m
 const aciklamalar = (o: OturumDetay): Aciklamalar => Object.fromEntries(o.ogrenciler.map((x) => [x.ogrenci_id, x.aciklama ?? ""]));
 
 function hataYaz(e: unknown): string {
+  if (e instanceof ApiHata && e.durum === 403 && e.message.includes("kilitlendi")) return e.message;
   if (e instanceof ApiHata && e.durum === 403) return "Bu derse erişim yetkiniz yok";
   return hataMesaji(e);
 }
 
-type KayitOzeti = { geldi: number; gelmedi: number; sebepler: [Sebep, number][]; isaretsiz: number };
+type KayitOzeti = { kilitSaati: string | null; geldi: number; gelmedi: number; sebepler: [Sebep, number][]; isaretsiz: number };
 
 export default function Yoklama() {
   const { id } = useParams();
@@ -101,7 +102,12 @@ export default function Yoklama() {
   const iptal = o.durum === "iptal";
   const acilis = acilisZamani(o);
   const erken = kullanici?.rol === "antrenor" && !gelecek && anlik < acilis.getTime();
-  const kilit = gelecek || iptal || erken;
+  const yonetici = kullanici?.rol === "admin" || kullanici?.rol === "destek";
+  // Sunucu `kilitli` der ve kullanıcı antrenörse ekran salt okunurdur; yönetici düzeltebilir.
+  const antrenorKilitli = !yonetici && o.kilitli;
+  const yoneticiKilitli = yonetici && o.kilitli;
+  const duzenlemeSaati = o.kilit_zamani ? saatDakika(new Date(o.kilit_zamani)) : null;
+  const kilit = gelecek || iptal || erken || antrenorKilitli;
 
   const sec = (ogrenciId: string, d: YoklamaDurum) => {
     setBilgi(null);
@@ -146,6 +152,7 @@ export default function Yoklama() {
       const y = await yoklamaKaydet(o.id, kayitlar);
       const gelmediler = kayitlar.filter((k) => k.durum === "gelmedi");
       setOzet({
+        kilitSaati: y.kilit_zamani ? saatDakika(new Date(y.kilit_zamani)) : null,
         geldi: kayitlar.filter((k) => k.durum === "geldi").length,
         gelmedi: gelmediler.length,
         sebepler: SEBEPLER.map((b): [Sebep, number] => [b.anahtar, gelmediler.filter((k) => "sebep" in k && k.sebep === b.anahtar).length]).filter(([, n]) => n > 0),
@@ -158,13 +165,16 @@ export default function Yoklama() {
       setDenendi(false);
     } catch (e) {
       setHata(hataYaz(e));
+      // Sayfa açıkken kilit dolduysa ekran salt okunur görünüme geçsin.
+      if (e instanceof ApiHata && e.durum === 403 && e.message.includes("kilitlendi")) {
+        oturumGetir(o.id).then((y) => { setO(y); setSecim(secimler(y)); setSebep(sebepler(y)); setAciklama(aciklamalar(y)); }).catch(() => {});
+      }
     } finally {
       setMesgul(false);
     }
   };
 
   // Yalnız yönetici iptal edebilir; yoklaması alınmış ya da zaten iptal/yapıldı olan ders iptal edilemez.
-  const yonetici = kullanici?.rol === "admin" || kullanici?.rol === "destek";
   const iptalEdilebilir = yonetici && o.durum === "planli" && !o.yoklama_alindi;
   const geriAlinabilir = yonetici && iptal && o.tarih >= bugun();
   const telafiSayisi = o.ogrenciler.filter((x) => x.telafi_mi).length;
@@ -249,7 +259,13 @@ export default function Yoklama() {
               {ozet.isaretsiz > 0 && <li className="text-uyari">{ozet.isaretsiz} öğrenci işaretlenmedi</li>}
             </ul>
           </div>
-          <p className="mt-3 text-[13px] text-metin-soluk">Gelmedi işaretlemeleri 1 saat içinde düzeltilebilir.</p>
+          <p className="mt-3 text-[13px] text-metin-soluk">
+            {yonetici
+              ? "Yönetici olarak yoklamayı daha sonra da düzeltebilirsiniz."
+              : ozet.kilitSaati
+                ? `Yoklama ${ozet.kilitSaati}'e kadar düzeltilebilir.`
+                : "Yoklama 1 saat içinde düzeltilebilir."}
+          </p>
           <div className="mt-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <button type="button" className={dugme} onClick={() => gezin("/takvim")}>Takvime dön</button>
             <button type="button" className={birincilDugme} autoFocus onClick={() => setOzet(null)}>Tamam</button>
@@ -305,6 +321,19 @@ export default function Yoklama() {
               {geriAlinabilir && <button className={dugme} disabled={mesgul} onClick={() => void iptaliGeriAl()}>İptali geri al</button>}
             </span>
           )}
+        </p>
+      )}
+      {antrenorKilitli && (
+        <p role="status" data-testid="yoklama-kilitli" className={`mb-3 ${uyariKutusu}`}>
+          Yoklama kilitlendi · düzeltme için yöneticiye başvurun
+        </p>
+      )}
+      {!yonetici && !o.kilitli && duzenlemeSaati && !iptal && (
+        <p data-testid="yoklama-duzenleme-saati" className="mb-3 text-xs text-metin-soluk">Düzenleme {duzenlemeSaati}'e kadar açık</p>
+      )}
+      {yoneticiKilitli && (
+        <p data-testid="yoklama-yonetici-notu" className="mb-3 text-xs text-metin-soluk">
+          Kilit süresi doldu; yönetici olarak düzeltiyorsunuz (denetim kaydına yazılır)
         </p>
       )}
       <p className="mb-3 text-xs text-metin-soluk">
@@ -416,6 +445,7 @@ export default function Yoklama() {
             ))}
           </ul>
 
+          {!antrenorKilitli && (
           <div className="sticky bottom-[var(--sekme-yuk,0px)] z-10 mt-4 -mx-4 md:-mx-8 bg-yuzey border-t border-cizgi px-4 md:px-8 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {denendi && sebepsizSayisi > 0 && (
               <p role="alert" className="mb-2 text-[13px] font-medium text-hata">
@@ -435,6 +465,7 @@ export default function Yoklama() {
               {mesgul ? "Kaydediliyor…" : `Yoklamayı kaydet (${isaretli}/${toplam} işaretli)`}
             </button>
           </div>
+          )}
         </>
       )}
     </div>

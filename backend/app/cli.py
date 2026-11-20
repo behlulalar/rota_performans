@@ -160,6 +160,30 @@ async def e2e_tohum() -> int:
     return 0
 
 
+async def e2e_yoklama_kilidi_gecir(oturum_id: str) -> int:
+    """E2E: oturumun yoklama ilk kayıt zamanını 2 saat geriye çeker (antrenör kilidi dolmuş olur).
+    Yalnızca ENV=test veya ENV=e2e iken çalışır."""
+    import uuid
+    from datetime import timedelta
+
+    from sqlalchemy import func
+
+    from app.models.program import DersOturumu
+
+    if settings.env not in ("test", "e2e"):
+        print(f"e2e-yoklama-kilidi-gecir yalnızca ENV=test veya ENV=e2e iken çalışır (şu an ENV={settings.env}).", file=sys.stderr)
+        return 1
+    async with SessionLocal() as session:
+        sonuc = await session.execute(
+            update(DersOturumu)
+            .where(DersOturumu.id == uuid.UUID(oturum_id), DersOturumu.yoklama_ilk_kayit.is_not(None))
+            .values(yoklama_ilk_kayit=func.now() - timedelta(hours=2))
+        )
+        await session.commit()
+    print(f"{sonuc.rowcount} oturum güncellendi.")
+    return 0 if sonuc.rowcount else 1
+
+
 async def ornek_veri() -> int:
     """Geliştirme veritabanına örnek veri ekler (yalnızca ENV=dev|demo)."""
     from app import ornek_veri as modul
@@ -205,12 +229,16 @@ async def main() -> int:
     d2fa = alt.add_parser("destek-2fa-sifirla", help="Destek hesabının iki adımlı doğrulamasını sıfırlar")
     d2fa.add_argument("giris", help="Destek hesabının girişi")
     alt.add_parser("e2e-tohum", help="E2E test yöneticisini oluşturur (yalnız ENV=test|e2e)")
+    kilit = alt.add_parser("e2e-yoklama-kilidi-gecir", help="E2E: yoklama kilit süresini doldurur (yalnız ENV=test|e2e)")
+    kilit.add_argument("oturum_id")
     alt.add_parser("ornek-veri", help="Geliştirme veritabanına örnek veri ekler (yalnız ENV=dev|demo)")
     alt.add_parser("ornek-odeme-verisi", help="Örnek öğrencilere paket ve ödeme ekler (yalnız ENV=dev|demo)")
     alt.add_parser("vapid-uret", help="Web Push için VAPID anahtar çifti üretir")
     argumanlar = ayrac.parse_args()
 
     try:
+        if argumanlar.komut == "e2e-yoklama-kilidi-gecir":
+            return await e2e_yoklama_kilidi_gecir(argumanlar.oturum_id)
         if argumanlar.komut == "admin-olustur":
             return await admin_olustur(argumanlar.giris)
         if argumanlar.komut == "destek-olustur":
