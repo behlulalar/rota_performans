@@ -7,7 +7,7 @@ import InstagramTakip from "../components/InstagramTakip";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import Karsilama from "../components/Karsilama";
 import { ApiHata } from "../lib/api";
-import { PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
+import { alanPaneli, PANEL_YOLU, rolPaneli, type Panel } from "../lib/panel";
 import { gecerliMi, otomatikOdak } from "../lib/telefon";
 import { girisiBicimle, hatirlananiOku, hatirlananiSil, varsayilanHatirla } from "../lib/hatirla";
 import { BOSTA_DAKIKA } from "../lib/bosta";
@@ -168,7 +168,7 @@ export default function Giris({ panel = "veli" }: { panel?: GirisPaneli }) {
             </button>
           </form>
         )}
-        {DIGER[panel] && (
+        {!alanPaneli() && DIGER[panel] && (
           <p className="mt-5 text-center text-[13px] text-metin-soluk">
             <Link to={PANEL_YOLU[DIGER[panel]!]} className="underline underline-offset-4 hover:text-altin-metin">
               {BASLIK[DIGER[panel]!].baslik}

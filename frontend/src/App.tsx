@@ -1,8 +1,8 @@
-import { useRef } from "react";
-import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth, type Rol } from "./auth/AuthProvider";
 import { OnayProvider } from "./components/OnayPenceresi";
-import { PANEL_YOLU } from "./lib/panel";
+import { alanPaneli, girisYolu, rolPaneli, type Panel } from "./lib/panel";
 import YoneticiYerlesim from "./components/YoneticiYerlesim";
 import AntrenorListe from "./pages/AntrenorListe";
 import YoneticiListe from "./pages/YoneticiListe";
@@ -44,7 +44,7 @@ import Yoklama from "./pages/Yoklama";
 function KorumaliRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
-  if (!kullanici) return <Navigate to={PANEL_YOLU.veli} replace />;
+  if (!kullanici) return <Navigate to={girisYolu(alanPaneli() ?? "veli")} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin" || kullanici.rol === "destek") return <Navigate to="/genel-bakis" replace />;
   if (kullanici.rol === "antrenor") return <Navigate to="/bugun" replace />;
@@ -60,7 +60,7 @@ function YoneticiRota() {
   if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
   if (!kullanici) {
     const destek = sonRol.current === "destek" || pathname.startsWith("/destek/");
-    return <Navigate to={destek ? PANEL_YOLU.destek : PANEL_YOLU.yonetici} replace />;
+    return <Navigate to={destek ? girisYolu("destek") : girisYolu("yonetici")} replace />;
   }
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "admin" && kullanici.rol !== "destek") return <Navigate to="/" replace />;
@@ -77,7 +77,7 @@ function DestekRota() {
 function VeliRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
-  if (!kullanici) return <Navigate to={PANEL_YOLU.veli} replace />;
+  if (!kullanici) return <Navigate to={girisYolu(alanPaneli() ?? "veli")} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "veli" && kullanici.rol !== "ogrenci") return <Navigate to="/" replace />;
   return <VeliYerlesim />;
@@ -87,7 +87,7 @@ function VeliRota() {
 function AntrenorRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
-  if (!kullanici) return <Navigate to={PANEL_YOLU.antrenor} replace />;
+  if (!kullanici) return <Navigate to={girisYolu("antrenor")} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol !== "antrenor") return <Navigate to="/" replace />;
   return <AntrenorYerlesim />;
@@ -97,40 +97,73 @@ function AntrenorRota() {
 function TakvimRota() {
   const { kullanici, yukleniyor } = useAuth();
   if (yukleniyor) return <div className="min-h-[calc(100dvh/var(--olcek,1))] grid place-items-center text-metin-soluk">Yükleniyor…</div>;
-  if (!kullanici) return <Navigate to={PANEL_YOLU.antrenor} replace />;
+  if (!kullanici) return <Navigate to={girisYolu("antrenor")} replace />;
   if (kullanici.sifre_degistirmeli) return <Navigate to="/sifre-degistir" replace />;
   if (kullanici.rol === "admin" || kullanici.rol === "destek") return <YoneticiYerlesim />;
   if (kullanici.rol === "antrenor") return <AntrenorYerlesim />;
   return <Navigate to="/" replace />;
 }
 
+// Alt alan adında oturum açan rol o alanın paneline ait değilse (arka uç zaten engeller) oturum kapatılır.
+function AlanKoruma() {
+  const { kullanici, cikisYap } = useAuth();
+  const gezin = useNavigate();
+  const alan = alanPaneli();
+  const yanlis = !!alan && !!kullanici && rolPaneli(kullanici.rol) !== alan;
+  useEffect(() => {
+    if (yanlis) void cikisYap().finally(() => gezin("/giris", { replace: true }));
+  }, [yanlis, cikisYap, gezin]);
+  return null;
+}
+
 export default function App() {
+  const alan = alanPaneli();
+  const var_ = (...paneller: Panel[]) => !alan || paneller.includes(alan);
   return (
     <BrowserRouter>
       <AuthProvider>
         <OnayProvider>
+        <AlanKoruma />
         <Routes>
-          <Route path="/giris" element={<Giris panel="veli" />} />
-          <Route path="/antrenor-giris" element={<Giris panel="antrenor" />} />
-          <Route path="/yonetici-giris" element={<Giris panel="yonetici" />} />
-          <Route path="/destek-giris" element={<DestekGiris />} />
+          {alan ? (
+            <>
+              <Route path="/giris" element={alan === "destek" ? <DestekGiris /> : <Giris panel={alan} />} />
+              <Route path="/antrenor-giris" element={<Navigate to="/giris" replace />} />
+              <Route path="/yonetici-giris" element={<Navigate to="/giris" replace />} />
+              <Route path="/destek-giris" element={<Navigate to="/giris" replace />} />
+            </>
+          ) : (
+            <>
+              <Route path="/giris" element={<Giris panel="veli" />} />
+              <Route path="/antrenor-giris" element={<Giris panel="antrenor" />} />
+              <Route path="/yonetici-giris" element={<Giris panel="yonetici" />} />
+              <Route path="/destek-giris" element={<DestekGiris />} />
+            </>
+          )}
           <Route path="/sifre-degistir" element={<SifreDegistir />} />
           <Route path="/" element={<KorumaliRota />} />
+          {var_("antrenor") && (
           <Route element={<AntrenorRota />}>
             <Route path="/bugun" element={<AntrenorBugun />} />
             <Route path="/ogrencilerim" element={<AntrenorOgrencilerim />} />
             <Route path="/profilim" element={<AntrenorProfil />} />
           </Route>
+          )}
+          {var_("antrenor", "yonetici", "destek") && (
           <Route element={<TakvimRota />}>
             <Route path="/takvim" element={<Takvim />} />
             <Route path="/oturum/:id" element={<Yoklama />} />
           </Route>
+          )}
+          {var_("veli") && (
           <Route element={<VeliRota />}>
             <Route path="/panel" element={<VeliAna />} />
             <Route path="/panel/cocuk/:id" element={<VeliCocuk />} />
             <Route path="/profil" element={<VeliProfil />} />
             <Route path="/iletisim" element={<VeliIletisim />} />
           </Route>
+          )}
+          {var_("yonetici", "destek") && (
           <Route element={<YoneticiRota />}>
             <Route path="/genel-bakis" element={<GenelBakis />} />
             <Route path="/ogrenciler" element={<OgrenciListe />} />
@@ -152,13 +185,16 @@ export default function App() {
             <Route path="/gruplar/yeni" element={<GrupForm />} />
             <Route path="/gruplar/:id" element={<GrupDetay />} />
             <Route path="/gruplar/:id/duzenle" element={<GrupForm />} />
+            {var_("destek") && (
             <Route element={<DestekRota />}>
               <Route path="/destek/sistem-durumu" element={<DestekSistemDurumu />} />
               <Route path="/destek/hesaplar" element={<DestekHesaplar />} />
               <Route path="/destek/bildirimler" element={<DestekBildirimler />} />
               <Route path="/destek/denetim-kaydi" element={<DenetimKaydi />} />
             </Route>
+            )}
           </Route>
+          )}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </OnayProvider>

@@ -49,7 +49,7 @@ def ozet_yenilenmeli_mi(ozet: str) -> bool:
     return _hasher.check_needs_rehash(ozet)
 
 
-def erisim_belirteci_uret(kullanici_id: uuid.UUID, rol: Rol) -> str:
+def erisim_belirteci_uret(kullanici_id: uuid.UUID, rol: Rol, panel: str | None = None) -> str:
     simdi_ = simdi()
     yuk = {
         "sub": str(kullanici_id),
@@ -58,6 +58,9 @@ def erisim_belirteci_uret(kullanici_id: uuid.UUID, rol: Rol) -> str:
         "iat": simdi_,
         "exp": simdi_ + timedelta(minutes=settings.access_token_minutes),
     }
+    if panel is not None:
+        # Belirteç verildiği alan adının paneline bağlıdır; başka panelin alan adında geçmez.
+        yuk["pnl"] = panel
     return jwt.encode(yuk, settings.jwt_secret, algorithm=JWT_ALGORITMA)
 
 

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.models.kullanici import Kullanici, Rol
+from app.panel_alani import istek_paneli
 from app.security import erisim_belirteci_coz
 
 _bearer = HTTPBearer(auto_error=False)
@@ -23,6 +24,7 @@ def _yetkisiz() -> HTTPException:
 async def aktif_kullanici_serbest(
     kimlik: HTTPAuthorizationCredentials | None = Depends(_bearer),
     session: AsyncSession = Depends(get_session),
+    panel: str | None = Depends(istek_paneli),
 ) -> Kullanici:
     if kimlik is None:
         raise _yetkisiz()
@@ -30,6 +32,9 @@ async def aktif_kullanici_serbest(
         yuk = erisim_belirteci_coz(kimlik.credentials)
         kullanici_id = uuid.UUID(yuk["sub"])
     except (jwt.PyJWTError, KeyError, ValueError):
+        raise _yetkisiz()
+    if yuk.get("pnl") != panel:
+        # Bir panelin alan adında açılan oturum başka alan adında (ya da eşlenmeyen adda) kullanılamaz.
         raise _yetkisiz()
     # Rol her istekte veritabanından okunur, belirteçteki rol yetki için kullanılmaz.
     kullanici = await session.get(Kullanici, kullanici_id)

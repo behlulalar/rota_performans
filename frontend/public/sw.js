@@ -4,7 +4,7 @@
  * - /api/ ve diğer her şey: hiç dokunulmaz (önbelleğe alınmaz).
  * - Güncelleme: yeni sürüm bekler, kullanıcı onaylayınca (SKIP_WAITING) etkinleşir.
  */
-const SURUM = "v4";
+const SURUM = "v5";
 const ONBELLEK = `rota-statik-${SURUM}`;
 const OFFLINE_SAYFA = "/offline.html";
 const ON_YUKLEME = [OFFLINE_SAYFA, "/icon-192.png", "/manifest.webmanifest"];

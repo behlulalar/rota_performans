@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     hatirla_cerez_gun: int = 30
     cookie_secure: bool = True
     cors_origins: str = ""
+    # Panel alt alan adları (veli./yonetim./antrenor./destek.) zorunlu mu: açıkken panele eşlenmeyen
+    # alan adından gelen /api istekleri 421 ile reddedilir (/api/saglik hariç). Canlıda açık, demoda kapalı.
+    panel_alani_kati: bool = False
     # Yüklenen fotoğrafların kök dizini (herkese açık sunulmaz, yalnızca API üzerinden okunur).
     dosya_dizini: str = "/app/uploads"
     # "Bugün" ve ders saatleri bu saat dilimine göre hesaplanır.

@@ -21,6 +21,7 @@ from app.deps import aktif_kullanici_serbest
 from app.models.kullanici import Kullanici, Oturum, Rol
 from app.models.ogrenci import IletisimKisisi
 from app.models.program import Antrenor
+from app.panel_alani import istek_paneli
 from app.ratelimit import get_redis, izin_var_mi
 from app.security import (
     belirtec_ozeti,
@@ -155,6 +156,20 @@ def _cookie_yaz(response: Response, belirtec: str, hatirla: bool) -> None:
     )
 
 
+def _kaynak_uygun(request: Request) -> bool:
+    """Çerez kullanan uçlarda (yenile/etkinlik/çıkış) çapraz alt alan adı isteğini engeller.
+    Alt alan adları aynı "site" sayıldığından SameSite=strict çerez veli.'den yonetim.'e de gider.
+    Panel alan adında Origin varsa host'u (port dahil, şema hariç) isteğin Host'u ile aynı olmalı.
+    Origin yoksa (tarayıcı dışı istemci) izin verilir; eşlenmeyen alan adları değişmez."""
+    if istek_paneli(request) is None:
+        return True
+    kaynak = request.headers.get("origin")
+    if kaynak is None:
+        return True
+    kaynak_host = kaynak.split("://", 1)[-1].rstrip("/").lower()
+    return kaynak_host == (request.headers.get("host") or "").lower()
+
+
 def _cookie_sil(response: Response) -> None:
     response.delete_cookie(COOKIE_ADI, path=COOKIE_YOLU)
 
@@ -176,9 +191,9 @@ async def _oturum_ac(
     return belirtec
 
 
-def _belirtec_yaniti(kullanici: Kullanici) -> BelirtecYaniti:
+def _belirtec_yaniti(kullanici: Kullanici, alan_paneli: str | None) -> BelirtecYaniti:
     return BelirtecYaniti(
-        access_token=erisim_belirteci_uret(kullanici.id, kullanici.rol),
+        access_token=erisim_belirteci_uret(kullanici.id, kullanici.rol, alan_paneli),
         expires_in=settings.access_token_minutes * 60,
     )
 
@@ -190,6 +205,7 @@ async def login(
     response: Response,
     session: AsyncSession = Depends(get_session),
     redis: Redis = Depends(get_redis),
+    alan_paneli: str | None = Depends(istek_paneli),
 ):
     ip = _istemci_ip(request)
     if not await izin_var_mi(redis, f"rl:login:ip:{ip}", IP_LIMITI, 60):
@@ -219,11 +235,15 @@ async def login(
         await session.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, GENEL_HATA)
 
-    if govde.panel is None:
+    # Panel alt alan adından gelen girişte geçerli panel alan adınınkidir; gövdedeki panel çelişirse yanlış paneldir.
+    panel = alan_paneli or govde.panel
+    if alan_paneli is not None and govde.panel is not None and govde.panel != alan_paneli:
+        panel_uygun = False
+    elif panel is None:
         # Panel verilmeyen genel girişte destek hesabı reddedilir: yalnız destek panelinden girer.
         panel_uygun = kullanici.rol != Rol.destek
     else:
-        panel_uygun = kullanici.rol in PANEL_ROLLERI[govde.panel]
+        panel_uygun = kullanici.rol in PANEL_ROLLERI[panel]
     if not (sifre_dogru_mu(kullanici.sifre_ozeti, govde.sifre) and kullanici.aktif and panel_uygun):
         kullanici.basarisiz_deneme += 1
         detay = {"neden": "hatali_sifre" if panel_uygun else "yanlis_panel"}
@@ -240,28 +260,37 @@ async def login(
     if kullanici.rol == Rol.destek:
         # Şifre tek başına yetmez: sayaç sıfırlanmaz (yoksa 2. adım denemeleri sınırsız tekrarlanırdı),
         # oturum verilmez, kod doğrulanana kadar bekleyen belirteç döner.
-        bekleyen = await _bekleyen_olustur(redis, kullanici.id, govde.beni_hatirla)
+        bekleyen = await _bekleyen_olustur(redis, kullanici.id, govde.beni_hatirla, alan_paneli)
         await audit.kaydet(session, "giris_sifre_dogru_ikili_bekliyor", kullanici_id=kullanici.id, ip=ip)
         await session.commit()
         return IkiAdimYaniti(durum="dogrulama" if kullanici.totp_aktif else "kurulum", bekleyen_belirtec=bekleyen)
 
-    return await _tam_oturum(session, response, kullanici, govde.beni_hatirla, ip)
+    return await _tam_oturum(session, response, kullanici, govde.beni_hatirla, ip, alan_paneli)
 
 
 def _bekleyen_anahtar(belirtec: str) -> str:
     return f"2fa:bekleyen:{belirtec_ozeti(belirtec)}"
 
 
-async def _bekleyen_olustur(redis: Redis, kullanici_id: uuid.UUID, hatirla: bool) -> str:
+async def _bekleyen_olustur(redis: Redis, kullanici_id: uuid.UUID, hatirla: bool, alan_paneli: str | None) -> str:
     belirtec = secrets.token_urlsafe(32)
+    # Şifrenin girildiği alan adının paneli saklanır: 2. adım yalnız aynı panelin alan adında tamamlanır.
     await redis.set(
-        _bekleyen_anahtar(belirtec), json.dumps({"k": str(kullanici_id), "h": hatirla}), ex=BEKLEYEN_TTL
+        _bekleyen_anahtar(belirtec),
+        json.dumps({"k": str(kullanici_id), "h": hatirla, "p": alan_paneli}),
+        ex=BEKLEYEN_TTL,
     )
     return belirtec
 
 
 async def _tam_oturum(
-    session: AsyncSession, response: Response, kullanici: Kullanici, hatirla: bool, ip: str, ikili: bool = False
+    session: AsyncSession,
+    response: Response,
+    kullanici: Kullanici,
+    hatirla: bool,
+    ip: str,
+    alan_paneli: str | None,
+    ikili: bool = False,
 ) -> BelirtecYaniti:
     kullanici.basarisiz_deneme = 0
     kullanici.kilit_bitis = None
@@ -273,7 +302,7 @@ async def _tam_oturum(
     await session.commit()
 
     _cookie_yaz(response, belirtec, hatirla)
-    return _belirtec_yaniti(kullanici)
+    return _belirtec_yaniti(kullanici, alan_paneli)
 
 
 async def _bekleyen_coz(
@@ -290,6 +319,9 @@ async def _bekleyen_coz(
     if ham is None:
         raise suresi_doldu
     veri = json.loads(ham)
+    if veri.get("p") != istek_paneli(request):
+        # Şifre başka panelin alan adında girilmiş: 2. adım burada tamamlanamaz.
+        raise suresi_doldu
     kullanici = (
         await session.execute(select(Kullanici).where(Kullanici.id == uuid.UUID(veri["k"])).with_for_update())
     ).scalar_one_or_none()
@@ -363,7 +395,7 @@ async def ikili_kurulum_dogrula(
     kullanici.totp_kurtarma = ozetler
     await audit.kaydet(session, "ikili_kurulum_tamamlandi", kullanici_id=kullanici.id, ip=ip)
     await redis.delete(_bekleyen_anahtar(govde.bekleyen_belirtec))
-    yanit = await _tam_oturum(session, response, kullanici, hatirla, ip, ikili=True)
+    yanit = await _tam_oturum(session, response, kullanici, hatirla, ip, istek_paneli(request), ikili=True)
     return KurulumTamamYaniti(**yanit.model_dump(), kurtarma_kodlari=kodlar)
 
 
@@ -401,7 +433,7 @@ async def ikili_dogrula(
             detay={"kalan": len(kullanici.totp_kurtarma)},
         )
     await redis.delete(_bekleyen_anahtar(govde.bekleyen_belirtec))
-    return await _tam_oturum(session, response, kullanici, hatirla, ip, ikili=True)
+    return await _tam_oturum(session, response, kullanici, hatirla, ip, istek_paneli(request), ikili=True)
 
 
 @router.post("/refresh", response_model=BelirtecYaniti)
@@ -410,11 +442,15 @@ async def yenile(
     response: Response,
     session: AsyncSession = Depends(get_session),
     yenileme: str | None = Cookie(default=None, alias=COOKIE_ADI),
+    alan_paneli: str | None = Depends(istek_paneli),
 ):
     def reddet() -> HTTPException:
         _cookie_sil(response)
         return HTTPException(status.HTTP_401_UNAUTHORIZED, "Oturum süresi doldu, lütfen yeniden giriş yapın.")
 
+    if not _kaynak_uygun(request):
+        # Başka alt alan adından gelen istek: çerez silinmez ve döndürülmez (zorla çıkış yaptırılamasın).
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Oturum süresi doldu, lütfen yeniden giriş yapın.")
     if not yenileme:
         raise reddet()
 
@@ -438,6 +474,9 @@ async def yenile(
     kullanici = await session.get(Kullanici, oturum.kullanici_id)
     if kullanici is None or not kullanici.aktif:
         raise reddet()
+    if alan_paneli is not None and kullanici.rol not in PANEL_ROLLERI[alan_paneli]:
+        # Rolü bu panelin alan adına uymuyor (ör. rolü sonradan değişti): oturum burada sürdürülemez.
+        raise reddet()
 
     oturum.iptal = True
     # Bitiş korunur (eski uzun ömürlü oturumlar da en geç şimdi + boşta süresine indirilir).
@@ -445,17 +484,18 @@ async def yenile(
     await session.commit()
 
     _cookie_yaz(response, yeni, oturum.hatirla)
-    return _belirtec_yaniti(kullanici)
+    return _belirtec_yaniti(kullanici, alan_paneli)
 
 
 @router.post("/etkinlik", status_code=status.HTTP_204_NO_CONTENT)
 async def etkinlik(
+    request: Request,
     session: AsyncSession = Depends(get_session),
     yenileme: str | None = Cookie(default=None, alias=COOKIE_ADI),
 ):
     """Kullanıcı hareketi bildirimi: boşta süresini şimdiden yeniden başlatır. Yalnız geçerli oturumda çalışır."""
     oturum = None
-    if yenileme:
+    if yenileme and _kaynak_uygun(request):
         oturum = (
             await session.execute(select(Oturum).where(Oturum.token_ozeti == belirtec_ozeti(yenileme)).with_for_update())
         ).scalar_one_or_none()
@@ -468,10 +508,14 @@ async def etkinlik(
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def cikis(
+    request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
     yenileme: str | None = Cookie(default=None, alias=COOKIE_ADI),
 ):
+    if not _kaynak_uygun(request):
+        # Başka alt alan adından gelen istek oturuma ve çereze dokunmaz.
+        return
     if yenileme:
         await session.execute(
             update(Oturum).where(Oturum.token_ozeti == belirtec_ozeti(yenileme)).values(iptal=True)

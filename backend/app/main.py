@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import (
     ayarlar,
@@ -24,6 +25,7 @@ from app.api import (
     whatsapp,
 )
 from app.config import settings
+from app.panel_alani import host_paneli
 
 app = FastAPI(
     title="Rota Performans Akademi",
@@ -40,6 +42,20 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+
+@app.middleware("http")
+async def panel_alani_denetimi(request: Request, call_next):
+    # Katı modda API yalnız panel alt alan adlarından kullanılır; sağlık denetimi (docker) serbesttir.
+    yol = request.url.path
+    if (
+        settings.panel_alani_kati
+        and yol.startswith("/api")
+        and yol != "/api/saglik"
+        and host_paneli(request.headers.get("host")) is None
+    ):
+        return JSONResponse(status_code=421, content={"detail": "Bu adres bir panele ait değil"})
+    return await call_next(request)
 
 
 @app.middleware("http")
