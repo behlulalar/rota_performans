@@ -35,6 +35,7 @@ class OturumGrup(BaseModel):
 class OturumAntrenor(BaseModel):
     id: uuid.UUID
     ad_soyad: str
+    foto_var: bool = False
 
 
 class OturumOzet(BaseModel):

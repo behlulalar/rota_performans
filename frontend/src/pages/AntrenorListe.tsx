@@ -1,13 +1,18 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import { apiyeCevir, bicimle, gecerliMi, numaraCoz, TELEFON_HATA, telefonSec } from "../lib/telefon";
 import {
+  antrenorFotoSil,
+  antrenorFotoYukle,
   antrenorGuncelle,
   antrenorleriGetir,
   antrenorOlustur,
   sifreSifirla,
   type AntrenorOzet,
 } from "../api/antrenor";
+import AntrenorFoto from "../components/AntrenorFoto";
+import FotoKirpma from "../components/FotoKirpma";
+import { apiBlob } from "../lib/api";
 import GeciciSifreKutusu from "../components/GeciciSifreKutusu";
 import { gruplariGetir, type GrupOzet } from "../api/grup";
 import { hataMesaji } from "../lib/dogrulama";
@@ -29,6 +34,7 @@ export default function AntrenorListe() {
   const [sifre, setSifre] = useState<{ baslik: string; deger: string; giris?: string | null; telefon?: string | null } | null>(null);
   const [yeniAcik, setYeniAcik] = useState(false);
   const [duzenlenen, setDuzenlenen] = useState<AntrenorOzet | null>(null);
+  const [surum, setSurum] = useState(0); // fotoğraf değişince avatarlar yeniden yüklenir
 
   const yukle = useCallback(async () => {
     try {
@@ -111,7 +117,12 @@ export default function AntrenorListe() {
               <tbody>
                 {liste.map((a) => (
                   <tr key={a.id} className={satir}>
-                    <td className={`${td} font-medium`}>{a.ad_soyad}</td>
+                    <td className={`${td} font-medium`}>
+                      <span className="inline-flex items-center gap-3">
+                        <AntrenorFoto id={a.id} fotoVar={a.foto_var} adSoyad={a.ad_soyad} surum={surum} sinif="size-9 rounded-full" />
+                        {a.ad_soyad}
+                      </span>
+                    </td>
                     <td className={`${td} num text-metin-soluk`}>{a.telefon ? bicimle(a.telefon) : "—"}</td>
                     <td className={`${td} num`}>{a.grup_sayisi}</td>
                     <td className={td}><AktifRozeti aktif={a.aktif} /></td>
@@ -132,7 +143,10 @@ export default function AntrenorListe() {
             {liste.map((a) => (
               <li key={a.id} className="bg-yuzey border border-cizgi rounded-[14px] p-4 text-[13px]">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="font-medium">{a.ad_soyad}</span>
+                  <span className="inline-flex items-center gap-3 font-medium">
+                    <AntrenorFoto id={a.id} fotoVar={a.foto_var} adSoyad={a.ad_soyad} surum={surum} sinif="size-9 rounded-full" />
+                    {a.ad_soyad}
+                  </span>
                   <AktifRozeti aktif={a.aktif} />
                 </div>
                 <div className="num text-metin-soluk mt-1">{a.telefon ? bicimle(a.telefon) : "Telefon yok"}</div>
@@ -161,6 +175,11 @@ export default function AntrenorListe() {
       {duzenlenen && (
         <Duzenle
           antrenor={duzenlenen}
+          surum={surum}
+          onFotoDegisti={() => {
+            setSurum((s) => s + 1);
+            void yukle();
+          }}
           onKapat={() => setDuzenlenen(null)}
           onKaydedildi={() => {
             setDuzenlenen(null);
@@ -265,7 +284,83 @@ function YeniAntrenor({ onKapat, onOlustu }: { onKapat: () => void; onOlustu: (s
   );
 }
 
-function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; onKapat: () => void; onKaydedildi: () => void }) {
+function FotoBolumu({ antrenor, surum, onDegisti }: { antrenor: AntrenorOzet; surum: number; onDegisti: () => void }) {
+  const onayla = useOnay();
+  const dosyaGirdisi = useRef<HTMLInputElement>(null);
+  const [fotoVar, setFotoVar] = useState(antrenor.foto_var);
+  const [onay, setOnay] = useState(false);
+  const [kirpilacak, setKirpilacak] = useState<Blob | null>(null);
+  const [yerelSurum, setYerelSurum] = useState(0);
+  const [mesgul, setMesgul] = useState(false);
+  const [hata, setHata] = useState<string | null>(null);
+
+  const fotoSec = (dosya: File | undefined) => {
+    if (!dosya) return;
+    if (!dosya.type.startsWith("image/")) return setHata("Lütfen bir görsel dosyası seçin.");
+    setHata(null);
+    setKirpilacak(dosya);
+  };
+  const kaydet = async (blob: Blob) => {
+    await antrenorFotoYukle(antrenor.id, blob);
+    setFotoVar(true);
+    setYerelSurum((s) => s + 1);
+    setKirpilacak(null);
+    onDegisti();
+  };
+  async function ayarla() {
+    setMesgul(true);
+    setHata(null);
+    try {
+      setKirpilacak(await apiBlob(`/api/antrenorler/${antrenor.id}/foto?boyut=buyuk&v=${surum + yerelSurum}`));
+    } catch (e) {
+      setHata(hataMesaji(e));
+    } finally {
+      setMesgul(false);
+    }
+  }
+  async function kaldir() {
+    if (!(await onayla({ baslik: "Fotoğrafı sil", mesaj: "Fotoğraf silinsin mi?", onayYazisi: "Sil", tehlikeli: true }))) return;
+    setMesgul(true);
+    setHata(null);
+    try {
+      await antrenorFotoSil(antrenor.id);
+      setFotoVar(false);
+      setYerelSurum((s) => s + 1);
+      onDegisti();
+    } catch (e) {
+      setHata(hataMesaji(e));
+    } finally {
+      setMesgul(false);
+    }
+  }
+
+  return (
+    <fieldset className="block">
+      <legend className="text-[13px] text-metin-soluk">Fotoğraf</legend>
+      <div className="mt-1 flex items-center gap-4">
+        <AntrenorFoto id={antrenor.id} fotoVar={fotoVar} adSoyad={antrenor.ad_soyad} boyut="buyuk" surum={surum + yerelSurum} sinif="size-20 rounded-full text-2xl" />
+        <div className="space-y-2">
+          <input ref={dosyaGirdisi} type="file" accept="image/*" hidden data-testid="antrenor-foto-dosya" onChange={(e) => { fotoSec(e.target.files?.[0]); e.target.value = ""; }} />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={dugme} disabled={mesgul || !onay} onClick={() => dosyaGirdisi.current?.click()}>
+              {fotoVar ? "Değiştir" : "Fotoğraf ekle"}
+            </button>
+            {fotoVar && <button type="button" className={dugme} disabled={mesgul || !onay} onClick={() => void ayarla()}>Ayarla</button>}
+            {fotoVar && <button type="button" className={dugme} disabled={mesgul} onClick={() => void kaldir()}>Sil</button>}
+          </div>
+        </div>
+      </div>
+      <label className="mt-3 flex items-start gap-3 min-h-11 cursor-pointer text-[13px]">
+        <input type="checkbox" className="mt-0.5 size-4 shrink-0" checked={onay} onChange={(e) => setOnay(e.target.checked)} />
+        <span>Antrenörün fotoğraf kullanımı için onayı alındı</span>
+      </label>
+      {hata && <p role="alert" className="text-[13px] text-hata mt-1">{hata}</p>}
+      {kirpilacak && <FotoKirpma kaynak={kirpilacak} onKapat={() => setKirpilacak(null)} onTamam={kaydet} />}
+    </fieldset>
+  );
+}
+
+function Duzenle({ antrenor, surum, onFotoDegisti, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; surum: number; onFotoDegisti: () => void; onKapat: () => void; onKaydedildi: () => void }) {
   // Giriş telefonsa alan ondan doldurulur (kartın telefonu ayrışmış olabilir); değilse (eski e-posta girişi) kartın telefonundan.
   const girisTelefonu = antrenor.giris && !antrenor.giris.includes("@") ? telefonSec(antrenor.giris, null) : null;
   const ilkTelefon = numaraCoz(telefonSec(antrenor.giris, antrenor.telefon));
@@ -316,6 +411,7 @@ function Duzenle({ antrenor, onKapat, onKaydedildi }: { antrenor: AntrenorOzet; 
             </span>
           )}
         </label>
+        <FotoBolumu antrenor={antrenor} surum={surum} onDegisti={onFotoDegisti} />
         <GrupSecici secili={gruplar} onDegis={setGruplar} antrenorId={antrenor.id} />
         {hata && <p role="alert" className="text-[13px] text-hata">{hata}</p>}
         <button type="submit" disabled={gonderiliyor} className={birincilDugme}>

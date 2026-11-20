@@ -1,11 +1,9 @@
 import asyncio
-import io
 import re
 import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
-from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
@@ -16,6 +14,7 @@ from app import telefon as telefon_modulu
 from app.db import get_session
 from app.devam import devam_ozetleri
 from app.depolama import depolama
+from app.foto import FOTO_EN_COK_BAYT, foto_isle as _foto_isle
 from app.deps import kimlik_yetkisi, rol_gerekli
 from app.api.antrenorler import _giris_hazirla, _oturumlari_iptal_et, cakisma_denetle, gecici_sifre_uret
 from app.models.kullanici import Kullanici, Rol
@@ -54,13 +53,6 @@ from app.schemas.devam import DevamOzeti
 from app.security import sifre_ozeti
 
 router = APIRouter(prefix="/api/ogrenciler", tags=["ogrenciler"])
-
-FOTO_EN_COK_BAYT = 8 * 1024 * 1024
-FOTO_FORMATLARI = {"JPEG", "PNG", "WEBP"}
-BUYUK_KENAR = 800
-KUCUK_KENAR = 160
-JPEG_KALITE = 82
-Image.MAX_IMAGE_PIXELS = 60_000_000
 
 _PASAPORT = re.compile(r"^[A-Z0-9]{5,20}$")
 GECERSIZ_TC = "Geçersiz T.C. kimlik numarası"
@@ -636,36 +628,6 @@ async def kimlik_getir(
 async def devam_getir(ogrenci_id: uuid.UUID, _: Kullanici = Yonetici, session: AsyncSession = Depends(get_session)):
     await _ogrenci_al(session, ogrenci_id)
     return (await devam_ozetleri(session, [ogrenci_id], kulup_bugunu()))[ogrenci_id]
-
-
-def _foto_isle(veri: bytes) -> tuple[bytes, bytes]:
-    """Resmi doğrular; metadata'sız, yönü düzeltilmiş iki JPEG üretir (buyuk, kucuk)."""
-    try:
-        with Image.open(io.BytesIO(veri)) as resim:
-            if resim.format not in FOTO_FORMATLARI:
-                raise ValueError
-            resim.load()
-            resim = ImageOps.exif_transpose(resim)
-            if resim.mode in ("RGBA", "LA", "P"):
-                resim = resim.convert("RGBA")
-                zemin = Image.new("RGB", resim.size, (255, 255, 255))
-                zemin.paste(resim, mask=resim.getchannel("A"))
-                resim = zemin
-            else:
-                resim = resim.convert("RGB")
-    except (UnidentifiedImageError, ValueError, OSError, Image.DecompressionBombError):
-        raise _hata422("Geçerli bir JPEG, PNG veya WebP resmi yükleyin")
-
-    def kodla(r: Image.Image) -> bytes:
-        cikti = io.BytesIO()
-        # Yeni bir Image olduğundan EXIF/ICC vb. taşınmaz; exif parametresi de verilmez.
-        r.save(cikti, "JPEG", quality=JPEG_KALITE, optimize=True)
-        return cikti.getvalue()
-
-    buyuk = resim.copy()
-    buyuk.thumbnail((BUYUK_KENAR, BUYUK_KENAR), Image.LANCZOS)
-    kucuk = ImageOps.fit(resim, (KUCUK_KENAR, KUCUK_KENAR), Image.LANCZOS)
-    return kodla(buyuk), kodla(kucuk)
 
 
 @router.post("/{ogrenci_id}/foto", status_code=status.HTTP_204_NO_CONTENT)

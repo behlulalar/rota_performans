@@ -1,3 +1,4 @@
+import AntrenorFoto from "./AntrenorFoto";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
@@ -130,6 +131,11 @@ export default function Kabuk({
       return !g;
     });
   }
+  // Antrenör hesabında üst çubukta ad yanında profil fotoğrafı (yoksa baş harfler) görünür.
+  const hesapAvatari =
+    kullanici?.rol === "antrenor" && kullanici.antrenor_id ? (
+      <AntrenorFoto id={kullanici.antrenor_id} fotoVar={!!kullanici.foto_var} adSoyad={kullanici.ad_soyad || kullanici.giris} sinif="size-8 rounded-full text-[11px]" />
+    ) : null;
   const tumOgeler = menu.flatMap((b) => b.ogeler);
 
   useEffect(() => setCekmece(false), [pathname]);
@@ -188,6 +194,7 @@ export default function Kabuk({
           <div className={`${bp.masaustuSag} items-center gap-3 ml-auto`}>
             <YaziBoyutuDugmesi />
             <TemaDugmesi gorunum="serit" />
+            {hesapAvatari}
             <span className="max-w-[16rem] truncate text-[13px] text-serit-ikon" title={kullanici?.giris}>
               {kullanici?.ad_soyad || kullanici?.giris}
             </span>
@@ -267,6 +274,7 @@ export default function Kabuk({
                 ))}
               </div>
               <div className="p-3 border-t border-cizgi flex items-center gap-2">
+                {hesapAvatari}
                 <span className="flex-1 min-w-0 truncate text-[13px] text-metin-soluk" title={kullanici?.giris}>
                   {kullanici?.ad_soyad || kullanici?.giris}
                 </span>

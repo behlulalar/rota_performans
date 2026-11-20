@@ -4,6 +4,7 @@ import { YONTEM_ETIKET } from "../api/odeme";
 import type { HakTur, Sayac } from "../api/ogrenci";
 import { cocukGetir, type CocukDetay, type VeliDers, type VeliPaket } from "../api/veli";
 import Kart from "../components/Kart";
+import AntrenorFoto from "../components/AntrenorFoto";
 import OgrenciFoto from "../components/OgrenciFoto";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { ApiHata } from "../lib/api";
@@ -219,6 +220,19 @@ export default function VeliCocuk() {
           ) : undefined
         }
       />
+
+      {c.antrenorler.length > 0 && (
+        <Kart baslik={c.antrenorler.length > 1 ? "Antrenörleri" : "Antrenörü"} sinif="mb-5">
+          <ul className="flex flex-wrap gap-x-6 gap-y-3">
+            {c.antrenorler.map((a) => (
+              <li key={a.id} data-testid="veli-antrenor" className="flex items-center gap-3">
+                <AntrenorFoto id={a.id} fotoVar={a.foto_var} adSoyad={a.ad_soyad} sinif="size-12 rounded-full text-base" />
+                <span className="font-medium">{a.ad_soyad}</span>
+              </li>
+            ))}
+          </ul>
+        </Kart>
+      )}
 
       {bekleyenler.length > 0 && (
         <p role="status" className={`${uyariKutusu} mb-5`}>

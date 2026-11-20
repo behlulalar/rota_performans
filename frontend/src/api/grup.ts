@@ -5,7 +5,7 @@ export type ProgramSlot = { id?: string; gun: number; baslangic: string; bitis: 
 export type GrupOzet = {
   id: string;
   ad: string;
-  antrenor: { id: string; ad_soyad: string } | null;
+  antrenor: { id: string; ad_soyad: string; foto_var: boolean } | null;
   kontenjan: number;
   aktif: boolean;
   ogrenci_sayisi: number;

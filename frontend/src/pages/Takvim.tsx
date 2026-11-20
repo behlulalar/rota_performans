@@ -1,3 +1,4 @@
+import AntrenorFoto from "../components/AntrenorFoto";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
@@ -22,8 +23,15 @@ function OturumKarti({ o, bugunStr }: { o: OturumOzet; bugunStr: string }) {
         {saat(o.baslangic)}–{saat(o.bitis)}
       </div>
       <div className={`mt-0.5 text-sm ${iptal ? "line-through" : ""}`}>{o.grup.ad}</div>
-      <div className="num mt-1 text-xs text-metin-soluk">
-        {o.ogrenci_sayisi} öğrenci{o.antrenor ? ` · ${o.antrenor.ad_soyad}` : ""}
+      <div className="num mt-1 flex items-center gap-1.5 text-xs text-metin-soluk">
+        <span>{o.ogrenci_sayisi} öğrenci</span>
+        {o.antrenor && (
+          <>
+            <span aria-hidden="true">·</span>
+            <AntrenorFoto id={o.antrenor.id} fotoVar={o.antrenor.foto_var} adSoyad={o.antrenor.ad_soyad} sinif="size-5 rounded-full text-[9px]" />
+            <span>{o.antrenor.ad_soyad}</span>
+          </>
+        )}
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {iptal && <span className={rozetNotr}>İptal</span>}

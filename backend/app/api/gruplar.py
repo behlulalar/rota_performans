@@ -120,7 +120,10 @@ async def _ozetler(session: AsyncSession, kosullar: list) -> list[GrupOzet]:
         GrupOzet(
             id=g.id,
             ad=g.ad,
-            antrenor=GrupAntrenor(id=g.antrenor_id, ad_soyad=antrenorler[g.antrenor_id].ad_soyad)
+            antrenor=GrupAntrenor(
+                id=g.antrenor_id, ad_soyad=antrenorler[g.antrenor_id].ad_soyad,
+                foto_var=antrenorler[g.antrenor_id].foto_anahtar is not None,
+            )
             if g.antrenor_id in antrenorler
             else None,
             kontenjan=g.kontenjan,

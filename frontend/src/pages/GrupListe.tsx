@@ -1,3 +1,4 @@
+import AntrenorFoto from "../components/AntrenorFoto";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { gruplariGetir, type GrupOzet } from "../api/grup";
@@ -67,7 +68,14 @@ export default function GrupListe() {
                     <td className={`${td} font-medium`}>
                       <Link to={`/gruplar/${g.id}`} className="hover:text-altin-metin">{g.ad}</Link>
                     </td>
-                    <td className={`${td} text-metin-orta`}>{g.antrenor?.ad_soyad ?? "Antrenör atanmamış"}</td>
+                    <td className={`${td} text-metin-orta`}>
+                      {g.antrenor ? (
+                        <span className="inline-flex items-center gap-2">
+                          <AntrenorFoto id={g.antrenor.id} fotoVar={g.antrenor.foto_var} adSoyad={g.antrenor.ad_soyad} sinif="size-7 rounded-full text-[11px]" />
+                          {g.antrenor.ad_soyad}
+                        </span>
+                      ) : "Antrenör atanmamış"}
+                    </td>
                     <td className={`${td} num`}>{programOzeti(g.program)}</td>
                     <td className="px-4 py-1.5 h-[52px]"><DolulukCubugu dolu={g.ogrenci_sayisi} kontenjan={g.kontenjan} /></td>
                     <td className={td}><span className={g.aktif ? rozetBasari : rozetNotr}>{g.aktif ? "Aktif" : "Pasif"}</span></td>
@@ -88,7 +96,10 @@ export default function GrupListe() {
                     <span className="font-medium">{g.ad}</span>
                     <span className={g.aktif ? rozetBasari : rozetNotr}>{g.aktif ? "Aktif" : "Pasif"}</span>
                   </div>
-                  <div className="text-[13px] text-metin-soluk">{g.antrenor?.ad_soyad ?? "Antrenör atanmamış"}</div>
+                  <div className="flex items-center gap-2 text-[13px] text-metin-soluk">
+                    {g.antrenor && <AntrenorFoto id={g.antrenor.id} fotoVar={g.antrenor.foto_var} adSoyad={g.antrenor.ad_soyad} sinif="size-7 rounded-full text-[11px]" />}
+                    {g.antrenor?.ad_soyad ?? "Antrenör atanmamış"}
+                  </div>
                   <div className="num text-[13px]">{programOzeti(g.program)}</div>
                   <DolulukCubugu dolu={g.ogrenci_sayisi} kontenjan={g.kontenjan} />
                 </Link>

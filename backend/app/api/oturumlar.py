@@ -73,7 +73,7 @@ async def _ozetler(session: AsyncSession, kosullar: list) -> list[OturumOzet]:
     yoklama_var = exists().where(Yoklama.oturum_id == DersOturumu.id)
     satirlar = (
         await session.execute(
-            select(DersOturumu, Grup.ad, ant.id, ant.ad_soyad, yoklama_var)
+            select(DersOturumu, Grup.ad, ant.id, ant.ad_soyad, ant.foto_anahtar, yoklama_var)
             .join(Grup, Grup.id == DersOturumu.grup_id)
             .outerjoin(ant, ant.id == _etkin_antrenor())
             .where(*kosullar)
@@ -112,11 +112,11 @@ async def _ozetler(session: AsyncSession, kosullar: list) -> list[OturumOzet]:
             bitis=o.bitis,
             durum=o.durum,
             grup=OturumGrup(id=o.grup_id, ad=grup_ad),
-            antrenor=OturumAntrenor(id=ant_id, ad_soyad=ant_ad) if ant_id is not None else None,
+            antrenor=OturumAntrenor(id=ant_id, ad_soyad=ant_ad, foto_var=ant_foto is not None) if ant_id is not None else None,
             ogrenci_sayisi=sayilar.get(o.id, 0),
             yoklama_alindi=bool(var),
         )
-        for o, grup_ad, ant_id, ant_ad, var in satirlar
+        for o, grup_ad, ant_id, ant_ad, ant_foto, var in satirlar
     ]
 
 

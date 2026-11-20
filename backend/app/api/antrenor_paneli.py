@@ -119,7 +119,7 @@ async def bugun_dersleri(kullanici: Kullanici = Antrenor_, session: AsyncSession
 
 async def _profil(session: AsyncSession, kullanici: Kullanici) -> AntrenorProfil:
     antrenor = await _kendi_antrenor_kaydi(session, kullanici)
-    return AntrenorProfil(ad_soyad=antrenor.ad_soyad, telefon=antrenor.telefon, giris=kullanici.giris)
+    return AntrenorProfil(id=antrenor.id, foto_var=antrenor.foto_anahtar is not None, ad_soyad=antrenor.ad_soyad, telefon=antrenor.telefon, giris=kullanici.giris)
 
 
 @router.get("/ogrencilerim", response_model=list[GrupDevami])

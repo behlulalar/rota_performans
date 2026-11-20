@@ -43,7 +43,9 @@ class BugunYanit(BaseModel):
 
 
 class AntrenorProfil(BaseModel):
+    id: uuid.UUID
     ad_soyad: str
+    foto_var: bool = False
     telefon: str | None
     giris: str
 

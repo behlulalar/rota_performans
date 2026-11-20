@@ -5,7 +5,7 @@ import { useBostaKapanma } from "../lib/bosta";
 import { cikisIsaretle, cikisYapildiMi, hatirlananiKaydet, hatirlananiOku, hatirlananiSil } from "../lib/hatirla";
 
 export type Rol = "admin" | "destek" | "antrenor" | "veli" | "ogrenci";
-export type Kullanici = { id: string; rol: Rol; giris: string; ad_soyad: string | null; sifre_degistirmeli: boolean; telefon?: string | null };
+export type Kullanici = { id: string; rol: Rol; giris: string; ad_soyad: string | null; sifre_degistirmeli: boolean; telefon?: string | null; antrenor_id?: string | null; foto_var?: boolean };
 
 /** Teknik destek şifreyle girince oturum açılmaz; ikinci adım (kurulum ya da doğrulama) için bekleyen belirteç döner. */
 export type IkiAdim = { durum: "kurulum" | "dogrulama"; bekleyen_belirtec: string; expires_in: number };

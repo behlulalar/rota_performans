@@ -155,7 +155,7 @@ async def test_takvim_antrenor_kendi_oturumlari_yerine_bakan_ve_admin_filtresi(i
     gor_a = {o["id"]: o for o in (await istemci.get(sorgu(), headers=ba)).json()}
     assert set(gor_a) == {str(o_a.id), str(o_c_a.id)}
     assert str(o_a_b.id) not in gor_a  # asıl antrenör yerine bakılan oturumu görmez
-    assert gor_a[str(o_c_a.id)]["antrenor"] == {"id": str(a.id), "ad_soyad": "Hoca A"}
+    assert gor_a[str(o_c_a.id)]["antrenor"] == {"id": str(a.id), "ad_soyad": "Hoca A", "foto_var": False}
     # antrenor_id parametresi antrenörde yok sayılır.
     yok = (await istemci.get(sorgu() + f"&antrenor_id={b.id}", headers=ba)).json()
     assert {o["id"] for o in yok} == set(gor_a)

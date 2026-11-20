@@ -133,6 +133,9 @@ class KullaniciYaniti(BaseModel):
     ad_soyad: str | None = None
     sifre_degistirmeli: bool = False
     telefon: str | None = None
+    # Yalnız antrenör hesabı: üst çubuktaki avatar için.
+    antrenor_id: uuid.UUID | None = None
+    foto_var: bool = False
 
 
 def _istemci_ip(request: Request) -> str:
@@ -540,9 +543,19 @@ async def ben(kullanici: Kullanici = Depends(aktif_kullanici_serbest), session: 
                 .limit(1)
             )
         ).scalar_one_or_none()
+    antrenor_id, foto_var = None, False
+    if kullanici.rol == Rol.antrenor:
+        satir = (
+            await session.execute(
+                select(Antrenor.id, Antrenor.foto_anahtar).where(Antrenor.kullanici_id == kullanici.id).limit(1)
+            )
+        ).first()
+        if satir is not None:
+            antrenor_id, foto_var = satir[0], satir[1] is not None
     return KullaniciYaniti(
         id=kullanici.id, rol=kullanici.rol, giris=kullanici.giris, ad_soyad=ad or None,
         sifre_degistirmeli=kullanici.sifre_degistirmeli, telefon=kullanici.telefon,
+        antrenor_id=antrenor_id, foto_var=foto_var,
     )
 
 

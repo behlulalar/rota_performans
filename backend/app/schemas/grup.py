@@ -56,6 +56,7 @@ class OgrenciEkle(BaseModel):
 class GrupAntrenor(BaseModel):
     id: uuid.UUID
     ad_soyad: str
+    foto_var: bool = False
 
 
 class GrupOzet(BaseModel):

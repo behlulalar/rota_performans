@@ -31,6 +31,7 @@ class AntrenorOzet(BaseModel):
     aktif: bool
     giris: str | None
     grup_sayisi: int
+    foto_var: bool = False
     grup_idleri: list[uuid.UUID] = Field(default_factory=list)
 
 

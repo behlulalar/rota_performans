@@ -158,12 +158,12 @@ async def test_yetki(istemci, yol):
 async def test_profil_getir_ve_guncelle(istemci):
     baslik, ant = await antrenor_hesabi(istemci, "ben@kulup.com", "Ben Hoca")
     yanit = await istemci.get("/api/antrenor/profil", headers=baslik)
-    assert yanit.json() == {"ad_soyad": "Ben Hoca", "telefon": None, "giris": "ben@kulup.com"}
+    assert yanit.json() == {"id": str(ant.id), "foto_var": False, "ad_soyad": "Ben Hoca", "telefon": None, "giris": "ben@kulup.com"}
     yanit = await istemci.patch(
         "/api/antrenor/profil", json={"ad_soyad": "  ahmet YILMAZ "}, headers=baslik
     )
     assert yanit.status_code == 200
-    assert yanit.json() == {"ad_soyad": "Ahmet Yılmaz", "telefon": None, "giris": "ben@kulup.com"}
+    assert yanit.json() == {"id": str(ant.id), "foto_var": False, "ad_soyad": "Ahmet Yılmaz", "telefon": None, "giris": "ben@kulup.com"}
     async with SessionLocal() as s:
         a = await s.get(Antrenor, ant.id)
         k = (await s.execute(select(Kullanici).where(Kullanici.giris == "ben@kulup.com"))).scalar_one()

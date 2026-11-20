@@ -95,7 +95,16 @@ class DersOzeti(BaseModel):
     telafi_kalan: int
 
 
+class VeliAntrenor(BaseModel):
+    """Veliye yalnız ad ve fotoğraf gösterilir; telefon vb. verilmez."""
+
+    id: uuid.UUID
+    ad_soyad: str
+    foto_var: bool
+
+
 class CocukDetay(CocukOzet):
+    antrenorler: list[VeliAntrenor] = []
     program: list[VeliProgramSatiri]
     yaklasan_dersler: list[VeliDers]
     gecmis_dersler: list[VeliDers]

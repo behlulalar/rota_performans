@@ -19,7 +19,7 @@ from app.models.bildirim import BildirimTercihi, PushAbonelik
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import IletisimKisisi, Ogrenci
 from app.models.paket import Odeme, OgrenciPaketi, OgrenciPaketiDurum, Paket
-from app.models.program import DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
+from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
 from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, Yoklama
 from app.oturumlar import bugun
 from app.schemas.veli import (
@@ -33,6 +33,7 @@ from app.schemas.veli import (
     PushAbonelikSil,
     PushAnahtari,
     ProfilGuncelle,
+    VeliAntrenor,
     VeliDers,
     VeliGrup,
     VeliHareket,
@@ -213,8 +214,22 @@ async def cocuk_detay(ogrenci_id: uuid.UUID, kullanici: Kullanici = Veli, sessio
         session, ogrenci.id, [DersOturumu.tarih < bugun_, DersOturumu.durum != OturumDurum.iptal],
         ters=True, limit=GECMIS_DERS_SAYISI,
     )
+    antrenorler = [
+        VeliAntrenor(id=a.id, ad_soyad=a.ad_soyad, foto_var=a.foto_anahtar is not None)
+        for a in (
+            await session.execute(
+                select(Antrenor)
+                .join(Grup, Grup.antrenor_id == Antrenor.id)
+                .join(OgrenciGrup, OgrenciGrup.grup_id == Grup.id)
+                .where(OgrenciGrup.ogrenci_id == ogrenci.id, OgrenciGrup.bitis.is_(None), Grup.aktif.is_(True))
+                .distinct()
+                .order_by(Antrenor.ad_soyad, Antrenor.id)
+            )
+        ).scalars()
+    ]
     return CocukDetay(
         **ozet.model_dump(),
+        antrenorler=antrenorler,
         program=program,
         yaklasan_dersler=yaklasan,
         gecmis_dersler=gecmis,

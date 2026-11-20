@@ -1,3 +1,4 @@
+import AntrenorFoto from "../components/AntrenorFoto";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { grupGetir, grupGuncelle, ogrenciCikar, ogrenciEkle, type GrupDetay as Detay } from "../api/grup";
@@ -125,7 +126,15 @@ export default function GrupDetay() {
       <Kart baslik="Grup bilgileri">
         <div className="space-y-4">
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-            <dt className="text-metin-soluk">Antrenör</dt><dd>{g.antrenor?.ad_soyad ?? "Atanmamış"}</dd>
+            <dt className="text-metin-soluk">Antrenör</dt>
+            <dd>
+              {g.antrenor ? (
+                <span className="inline-flex items-center gap-2">
+                  <AntrenorFoto id={g.antrenor.id} fotoVar={g.antrenor.foto_var} adSoyad={g.antrenor.ad_soyad} sinif="size-8 rounded-full text-xs" />
+                  {g.antrenor.ad_soyad}
+                </span>
+              ) : "Atanmamış"}
+            </dd>
             <dt className="text-metin-soluk">Program</dt>
             <dd>
               {g.program.length === 0 ? "Program yok" : (

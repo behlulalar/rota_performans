@@ -64,7 +64,7 @@ async def test_grup_olusturma_ve_program_sirasi(istemci, yonetici):
             {"gun": 1, "baslangic": "09:00", "bitis": "10:00"},
         ],
     )
-    assert g["antrenor"] == {"id": a["id"], "ad_soyad": "Hoca Bir"}
+    assert g["antrenor"] == {"id": a["id"], "ad_soyad": "Hoca Bir", "foto_var": False}
     assert g["ogrenci_sayisi"] == 0 and g["ogrenciler"] == [] and g["aktif"] is True
     assert [(s["gun"], s["baslangic"]) for s in g["program"]] == [(1, "09:00"), (1, "18:00"), (3, "10:00")]
     assert all(s["id"] for s in g["program"])

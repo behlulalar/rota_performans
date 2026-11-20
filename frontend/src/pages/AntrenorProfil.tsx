@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { antrenorProfilGetir, antrenorProfilGuncelle, type AntrenorProfil as Profil } from "../api/antrenorPaneli";
 import { useAuth } from "../auth/AuthProvider";
+import AntrenorFoto from "../components/AntrenorFoto";
 import Kart from "../components/Kart";
 import SayfaBasligi from "../components/SayfaBasligi";
 import SifreKarti from "../components/SifreKarti";
@@ -40,6 +41,10 @@ function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil
   return (
     <Kart baslik="Bilgilerim" aciklama="Kulübün sizinle iletişim kurduğu bilgiler">
       <form onSubmit={gonder} noValidate className="space-y-4">
+        <div className="flex items-center gap-4">
+          <AntrenorFoto id={profil.id} fotoVar={profil.foto_var} adSoyad={profil.ad_soyad} boyut="buyuk" sinif="size-20 rounded-full text-2xl" />
+          <p className="text-xs text-metin-soluk">Profil fotoğrafınızı yönetici ekler ve değiştirir.</p>
+        </div>
         <label className="block">
           <span className="text-[13px] text-metin-soluk">{girisTelefon ? "Telefon (giriş bilgisi)" : "Giriş bilgisi"}</span>
           <input className={`${girdi} opacity-70`} value={girisTelefon ? bicimle(profil.giris) : profil.giris} readOnly aria-readonly="true" />

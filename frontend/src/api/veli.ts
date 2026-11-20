@@ -53,6 +53,7 @@ export type DersOzeti = {
 };
 
 export type CocukDetay = CocukOzet & {
+  antrenorler: { id: string; ad_soyad: string; foto_var: boolean }[];
   program: { grup_ad: string; gun: number; baslangic: string; bitis: string }[];
   yaklasan_dersler: VeliDers[];
   gecmis_dersler: VeliDers[];

@@ -11,7 +11,7 @@ export type OturumOzet = {
   bitis: string;
   durum: OturumDurum;
   grup: { id: string; ad: string };
-  antrenor: { id: string; ad_soyad: string } | null;
+  antrenor: { id: string; ad_soyad: string; foto_var: boolean } | null;
   ogrenci_sayisi: number;
   yoklama_alindi: boolean;
 };

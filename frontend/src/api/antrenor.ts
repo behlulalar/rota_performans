@@ -8,6 +8,7 @@ export type AntrenorOzet = {
   giris: string | null;
   grup_sayisi: number;
   grup_idleri: string[];
+  foto_var: boolean;
 };
 
 export type AntrenorOlusturYaniti = { antrenor: AntrenorOzet; gecici_sifre: string };
@@ -22,3 +23,12 @@ export const antrenorGuncelle = (id: string, g: { ad_soyad?: string; telefon?: s
   api<AntrenorOzet>(`/api/antrenorler/${id}`, { method: "PATCH", body: json(g) });
 export const sifreSifirla = (id: string) =>
   api<{ gecici_sifre: string }>(`/api/antrenorler/${id}/sifre-sifirla`, { method: "POST" });
+
+// Fotoğrafı yalnız yönetici yükler; onay, antrenörün fotoğraf kullanımı için onayının alındığını bildirir.
+export function antrenorFotoYukle(id: string, dosya: Blob) {
+  const form = new FormData();
+  form.append("dosya", dosya, "foto.jpg");
+  form.append("onay", "true");
+  return api<void>(`/api/antrenorler/${id}/foto`, { method: "POST", body: form });
+}
+export const antrenorFotoSil = (id: string) => api<void>(`/api/antrenorler/${id}/foto`, { method: "DELETE" });
