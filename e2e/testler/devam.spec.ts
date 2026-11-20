@@ -14,7 +14,10 @@ test.describe("Devam özeti", () => {
     await satir(o.gelmedi.ad).getByRole("button", { name: "Gelmedi", exact: true }).click();
     await satir(o.gelmedi.ad).getByRole("button", { name: "Raporlu", exact: true }).click();
     await page.getByRole("button", { name: "Yoklamayı kaydet (2/2 işaretli)" }).click();
-    await expect(page.getByRole("status")).toContainText("Yoklama kaydedildi");
+    const ozet = page.getByRole("dialog", { name: "Yoklama kaydedildi" });
+    await expect(ozet).toBeVisible();
+    await ozet.getByRole("button", { name: "Tamam" }).click();
+    await expect(ozet).toHaveCount(0);
 
     // Antrenör: Öğrencilerim
     await page.getByRole("navigation", { name: "Ana menü" }).getByRole("link", { name: "Öğrencilerim" }).click();

@@ -25,7 +25,15 @@ test.describe("Yoklama", () => {
     await satir(o.gelmedi.ad).getByRole("button", { name: "Raporlu", exact: true }).click();
     await page.getByRole("button", { name: "Yoklamayı kaydet (2/2 işaretli)" }).click();
 
-    await expect(page.getByRole("status")).toContainText("Yoklama kaydedildi");
+    const ozet = page.getByRole("dialog", { name: "Yoklama kaydedildi" });
+    await expect(ozet).toBeVisible();
+    await expect(ozet).toContainText("Geldi: 1");
+    await expect(ozet).toContainText("Gelmedi: 1 (Raporlu: 1)");
+    await expect(ozet).not.toContainText("işaretlenmedi");
+    await expect(ozet).toContainText("Gelmedi işaretlemeleri 1 saat içinde düzeltilebilir.");
+    await expect(ozet.getByRole("button", { name: "Tamam" })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(ozet).toHaveCount(0);
     await expect(page.getByText("Yoklama alındı")).toBeVisible();
     await expect(satir(o.geldi.ad).getByRole("button", { name: "Geldi", exact: true })).toHaveAttribute("aria-pressed", "true");
 

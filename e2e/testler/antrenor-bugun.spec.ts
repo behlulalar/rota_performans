@@ -29,6 +29,7 @@ test.describe("Antrenör: Bugün ve Profilim", () => {
     await expect(page.getByRole("heading", { name: o.grupAdi })).toBeVisible();
     await page.getByRole("button", { name: "Tümü geldi" }).click();
     await page.getByRole("button", { name: "Yoklamayı kaydet (2/2 işaretli)" }).click();
+    await page.getByRole("dialog", { name: "Yoklama kaydedildi" }).getByRole("button", { name: "Tamam" }).click();
     await expect(page.getByText("Yoklama alındı")).toBeVisible();
 
     // Bugün'e dönünce ders "Alındı" görünür; sıradaki ders kartı kalmaz.

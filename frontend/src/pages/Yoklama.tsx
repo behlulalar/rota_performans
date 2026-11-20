@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { ApiHata } from "../lib/api";
 import { oturumGetir, oturumIptalEt, oturumIptalGeriAl, yoklamaKaydet, type OturumDetay, type YoklamaDurum } from "../api/takvim";
+import Modal from "../components/Modal";
 import OgrenciFoto from "../components/OgrenciFoto";
 import { useOnay } from "../components/OnayPenceresi";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { basariKutusu, bilgiKutusu, birincilDugme, dugme, rozetBasari, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
 import { hataMesaji } from "../lib/dogrulama";
 import { saat } from "../lib/program";
-import { mazeretli, SEBEP_ACIKLAMA_MAKS, SEBEPLER, type Sebep } from "../lib/sebep";
+import { mazeretli, SEBEP_ACIKLAMA_MAKS, SEBEP_AD, SEBEPLER, type Sebep } from "../lib/sebep";
 import { gosterilenDers } from "../lib/dersHakki";
 import { bugun, uzunTarih } from "../lib/tarih";
 
@@ -39,6 +40,8 @@ function hataYaz(e: unknown): string {
   return hataMesaji(e);
 }
 
+type KayitOzeti = { geldi: number; gelmedi: number; sebepler: [Sebep, number][]; isaretsiz: number };
+
 export default function Yoklama() {
   const { id } = useParams();
   const { kullanici } = useAuth();
@@ -54,6 +57,8 @@ export default function Yoklama() {
   const [hata, setHata] = useState<string | null>(null);
   const [bilgi, setBilgi] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
+  const [ozet, setOzet] = useState<KayitOzeti | null>(null);
+  const gezin = useNavigate();
 
   useEffect(() => {
     if (!id) return;
@@ -139,12 +144,18 @@ export default function Yoklama() {
     setBilgi(null);
     try {
       const y = await yoklamaKaydet(o.id, kayitlar);
+      const gelmediler = kayitlar.filter((k) => k.durum === "gelmedi");
+      setOzet({
+        geldi: kayitlar.filter((k) => k.durum === "geldi").length,
+        gelmedi: gelmediler.length,
+        sebepler: SEBEPLER.map((b): [Sebep, number] => [b.anahtar, gelmediler.filter((k) => "sebep" in k && k.sebep === b.anahtar).length]).filter(([, n]) => n > 0),
+        isaretsiz: o.ogrenciler.length - kayitlar.length,
+      });
       setO(y);
       setSecim(secimler(y));
       setSebep(sebepler(y));
       setAciklama(aciklamalar(y));
       setDenendi(false);
-      setBilgi("Yoklama kaydedildi");
     } catch (e) {
       setHata(hataYaz(e));
     } finally {
@@ -223,6 +234,28 @@ export default function Yoklama() {
 
   return (
     <div>
+      {ozet && (
+        <Modal baslik="Yoklama kaydedildi" onKapat={() => setOzet(null)} kolayKapanir>
+          <div className="flex items-start gap-3" data-testid="yoklama-ozet">
+            <span className="size-9 shrink-0 rounded-full bg-basari-zemin text-basari grid place-items-center" aria-hidden="true">
+              <svg viewBox="0 0 16 16" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8.5l3.2 3.2L13 4.5" /></svg>
+            </span>
+            <ul className="text-sm space-y-1 pt-1.5">
+              <li>Geldi: <strong>{ozet.geldi}</strong></li>
+              <li>
+                Gelmedi: <strong>{ozet.gelmedi}</strong>
+                {ozet.sebepler.length > 0 && <span className="text-metin-soluk"> ({ozet.sebepler.map(([s, n]) => `${SEBEP_AD[s]}: ${n}`).join(", ")})</span>}
+              </li>
+              {ozet.isaretsiz > 0 && <li className="text-uyari">{ozet.isaretsiz} öğrenci işaretlenmedi</li>}
+            </ul>
+          </div>
+          <p className="mt-3 text-[13px] text-metin-soluk">Gelmedi işaretlemeleri 1 saat içinde düzeltilebilir.</p>
+          <div className="mt-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <button type="button" className={dugme} onClick={() => gezin("/takvim")}>Takvime dön</button>
+            <button type="button" className={birincilDugme} autoFocus onClick={() => setOzet(null)}>Tamam</button>
+          </div>
+        </Modal>
+      )}
       <div>
         <Link to="/takvim" className="inline-flex items-center min-h-11 md:min-h-0 text-[13px] text-metin-soluk hover:text-metin">← Takvim</Link>
       </div>

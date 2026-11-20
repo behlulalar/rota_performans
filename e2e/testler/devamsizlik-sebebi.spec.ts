@@ -36,7 +36,10 @@ test.describe("Devamsızlık sebebi", () => {
     await satir(o.gelmedi.ad).getByRole("button", { name: "+ Açıklama ekle" }).click();
     await satir(o.gelmedi.ad).getByRole("textbox").fill(AciklamaMetni);
     await page.getByRole("button", { name: /Yoklamayı kaydet/ }).click();
-    await expect(page.getByRole("status")).toContainText("Yoklama kaydedildi");
+    const ozet = page.getByRole("dialog", { name: "Yoklama kaydedildi" });
+    await expect(ozet).toBeVisible();
+    await ozet.getByRole("button", { name: "Tamam" }).click();
+    await expect(ozet).toHaveCount(0);
 
     // Kayıtlı sebep ve açıklama yeniden açılınca görünür.
     await page.reload();
