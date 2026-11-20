@@ -1,7 +1,7 @@
 import type { DevamOzeti as Ozet } from "../api/devam";
 import { tarihBicimle } from "../lib/dogrulama";
 import { SEBEP_AD, SEBEPLER, sebepRozeti } from "../lib/sebep";
-import { rozetHata, rozetNotr, rozetUyari } from "../lib/stil";
+import { rozetHata, rozetUyari } from "../lib/stil";
 
 /** Art arda bu kadar devamsızlıkta uyarı çıkar. */
 export const UYARI_ESIGI = 2;
@@ -87,11 +87,6 @@ function GelmediSebepleri({ d }: { d: Ozet }) {
             {x.ad} <span className="num font-semibold ml-1">{s[x.anahtar]}</span>
           </li>
         ))}
-        {s.bilinmiyor > 0 && (
-          <li className="rounded-[10px] border border-cizgi px-3 py-1.5 text-[13px] text-metin-soluk">
-            Bilinmiyor <span className="num font-semibold ml-1">{s.bilinmiyor}</span>
-          </li>
-        )}
       </ul>
     </div>
   );
@@ -108,7 +103,7 @@ function SonDevamsizliklar({ d }: { d: Ozet }) {
         {l.map((x, i) => (
           <li key={i} className="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="num">{tarihBicimle(x.tarih)} <span className="text-metin-soluk">· {x.grup_ad}</span></span>
-            <span className={x.sebep ? sebepRozeti(x.sebep) : rozetNotr}>{x.sebep ? SEBEP_AD[x.sebep] : "Sebep bilinmiyor"}</span>
+            {x.sebep && <span className={sebepRozeti(x.sebep)}>{SEBEP_AD[x.sebep]}</span>}
             {x.aciklama && <p className="basis-full text-xs text-metin-soluk" data-testid="devamsizlik-aciklama">{x.aciklama}</p>}
           </li>
         ))}
