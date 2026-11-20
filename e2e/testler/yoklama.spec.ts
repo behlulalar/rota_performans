@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
+import path from "node:path";
 import { arayuzdenGiris, expect, test, yoklamaOrtamiKur, YONETICI_GIRIS, YONETICI_SIFRE } from "../yardimci";
+
+// Backend test komutu: CI'da backend çalıştırıcının kendisinde (ENV=e2e iş ortamında), yerelde E2E konteynerinde çalışır.
+function backendKomutu(...arg: string[]) {
+  if (process.env.CI) execFileSync("python", ["-m", "app.cli", ...arg], { cwd: path.resolve(process.cwd(), "../backend") });
+  else execFileSync("docker", ["exec", "rota-e2e-backend", "python", "-m", "app.cli", ...arg]);
+}
 
 test.describe("Yoklama", () => {
   test("antrenör takvimden oturumu açar, yoklamayı alır; yönetici bakiyeyi düşmüş görür", async ({ page }) => {
@@ -67,7 +74,7 @@ test.describe("Yoklama", () => {
     await expect(page.getByRole("button", { name: /Yoklamayı kaydet/ })).toBeVisible();
 
     // Süre doldu (yalnız ENV=e2e konteynerinde çalışan test komutu).
-    execFileSync("docker", ["exec", "rota-e2e-backend", "python", "-m", "app.cli", "e2e-yoklama-kilidi-gecir", oturumId]);
+    backendKomutu("e2e-yoklama-kilidi-gecir", oturumId);
     await page.reload();
     await expect(page.getByTestId("yoklama-kilitli")).toContainText("Yoklama kilitlendi · düzeltme için yöneticiye başvurun");
     await expect(page.getByTestId("yoklama-duzenleme-saati")).toHaveCount(0);
