@@ -2,7 +2,8 @@
 # Rota Performans: şifreli tek paket yedek (veritabanı + yüklenen dosyalar + manifest).
 # shellcheck disable=SC2016  # tek tırnaklı sh -c ifadeleri bilerek konteyner içinde açılır
 # Kullanım:  bash yedek-al.sh <compose-dizini>
-# Ortam değişkenleri: YEDEK_DIZINI (/var/backups/rota), YEDEK_ALICI (/etc/rota/yedek-alici.txt), SAKLAMA_GUN (14)
+# Ortam değişkenleri: YEDEK_DIZINI (/var/backups/rota), YEDEK_ALICI (/etc/rota/yedek-alici.txt), SAKLAMA_GUN (14),
+#   RCLONE_HEDEF (boş = sunucu dışı yükleme kapalı; örn. rota-drive:RotaYedek), DRIVE_SAKLAMA_GUN (90)
 set -euo pipefail
 umask 077
 
@@ -12,10 +13,16 @@ COMPOSE_DIZINI="${1:-}"
 YEDEK_DIZINI="${YEDEK_DIZINI:-/var/backups/rota}"
 YEDEK_ALICI="${YEDEK_ALICI:-/etc/rota/yedek-alici.txt}"
 SAKLAMA_GUN="${SAKLAMA_GUN:-14}"
+RCLONE_HEDEF="${RCLONE_HEDEF:-}"
+DRIVE_SAKLAMA_GUN="${DRIVE_SAKLAMA_GUN:-90}"
 
 command -v age >/dev/null || { echo "HATA: 'age' kurulu değil (apt install age)." >&2; exit 1; }
 [ -s "$YEDEK_ALICI" ] || { echo "HATA: alıcı (genel anahtar) dosyası yok veya boş: $YEDEK_ALICI" >&2; exit 1; }
 case "$SAKLAMA_GUN" in ''|*[!0-9]*) echo "HATA: SAKLAMA_GUN sayı olmalı." >&2; exit 1;; esac
+case "$DRIVE_SAKLAMA_GUN" in ''|*[!0-9]*) echo "HATA: DRIVE_SAKLAMA_GUN sayı olmalı." >&2; exit 1;; esac
+if [ -n "$RCLONE_HEDEF" ]; then
+  command -v rclone >/dev/null || { echo "HATA: RCLONE_HEDEF tanımlı ama 'rclone' kurulu değil (README: Sunucu dışı kopya)." >&2; exit 1; }
+fi
 
 mkdir -p "$YEDEK_DIZINI"
 chmod 700 "$YEDEK_DIZINI"
@@ -86,3 +93,21 @@ find "$YEDEK_DIZINI" -maxdepth 1 -type f -name 'rota-*.tar.age' -mtime "+$SAKLAM
 
 BOYUT="$(du -h "$HEDEF" | cut -f1)"
 echo "Yedek hazır: $HEDEF ($BOYUT)"
+
+# İsteğe bağlı sunucu dışı kopya (Google Drive). Başarısızsa yerel yedek kalır, betik hata ile çıkar.
+if [ -n "$RCLONE_HEDEF" ]; then
+  DOSYA_ADI="$(basename "$HEDEF")"
+  YEREL_BOYUT="$(stat -c %s "$HEDEF")"
+  if ! rclone copy "$HEDEF" "$RCLONE_HEDEF" --retries 5 --low-level-retries 10; then
+    echo "HATA: Drive'a yükleme başarısız; yerel yedek duruyor: $HEDEF" >&2
+    exit 1
+  fi
+  UZAK_BOYUT="$(rclone lsf --format s --files-only --include "$DOSYA_ADI" "$RCLONE_HEDEF" 2>/dev/null | head -n1 || true)"
+  if [ "$UZAK_BOYUT" != "$YEREL_BOYUT" ]; then
+    echo "HATA: Drive'daki dosya boyutu uyuşmuyor (yerel=$YEREL_BOYUT, uzak=${UZAK_BOYUT:-yok}); eski Drive yedekleri silinmedi." >&2
+    exit 1
+  fi
+  echo "Drive'a gönderildi: $RCLONE_HEDEF/$DOSYA_ADI"
+  rclone delete "$RCLONE_HEDEF" --min-age "${DRIVE_SAKLAMA_GUN}d" --include 'rota-*.tar.age' \
+    || { echo "HATA: eski Drive yedekleri temizlenemedi." >&2; exit 1; }
+fi

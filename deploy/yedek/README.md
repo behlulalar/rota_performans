@@ -32,5 +32,16 @@ Ortam değişkenleri: `YEDEK_DIZINI` (varsayılan /var/backups/rota), `YEDEK_ALI
     systemctl list-timers rota-yedek.timer
     sudo systemctl start rota-yedek.service   # deneme
 
-## Sonraki adım
-Sunucu dışı kopya (rclone ile Google Drive) henüz yok; ayrı bir adım olarak eklenecek.
+## Sunucu dışı kopya (Google Drive)
+Her günlük yedek, istenirse rclone ile Google Drive'a da yüklenir; `DRIVE_SAKLAMA_GUN` günden eski uzak yedekler silinir. Yükleme veya boyut doğrulaması başarısızsa yerel yedek kalır, uzak temizlik yapılmaz ve servis başarısız (failed) olur. `RCLONE_HEDEF` boşsa yükleme kapalıdır.
+
+1. Sunucuda rclone kurun: `curl https://rclone.org/install.sh | sudo bash` (veya `sudo apt install rclone`).
+2. Kendi Mac'inizde yetkilendirin: `rclone authorize "drive" --drive-scope drive.file`. Tarayıcıda giriş yapınca terminale bir token (JSON) yazılır. `drive.file` kapsamında rclone yalnız kendi oluşturduğu dosyaları görür; Drive'ın geri kalanına erişemez.
+3. Sunucuda `sudo rclone config`: yeni remote adı `rota-drive`, tür `drive`, scope `drive.file`, "Use auto config?" sorusuna `n`, sonra Mac'te üretilen token'ı yapıştırın.
+4. `/etc/rota/yedek.env` dosyasını oluşturun ve `sudo chmod 600 /etc/rota/yedek.env` yapın:
+
+       RCLONE_HEDEF=rota-drive:RotaYedek
+       DRIVE_SAKLAMA_GUN=90
+5. Deneme: `sudo systemctl start rota-yedek.service && journalctl -u rota-yedek.service -n 20` ("Drive'a gönderildi" satırını arayın).
+
+Token bir sırdır: yalnız sunucu terminaline yapıştırın; sohbete, depoya veya e-postaya asla koymayın. rclone ayarı `/root/.config/rclone/rclone.conf` içindedir ve token'ı içerir; bu dosyayı da paylaşmayın.
