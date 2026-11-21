@@ -15,11 +15,12 @@ from app.models.ogrenci import (
     RizaTuru,
 )
 from app.models.paket import Odeme, OdemeYontemi, OgrenciPaketi, OgrenciPaketiDurum, Paket, PaketTuru
-from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
+from app.models.program import Antrenor, AntrenorFotoRizasi, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
 from app.models.yoklama import DersHakkiHareketi, DevamsizlikSebebi, HareketTuru, Sayac, Yoklama, YoklamaDurum
 
 __all__ = [
     "Antrenor",
+    "AntrenorFotoRizasi",
     "Base",
     "Bildirim",
     "BildirimDurum",

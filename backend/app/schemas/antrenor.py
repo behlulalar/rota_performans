@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 from app.metin import Baslik
@@ -32,6 +33,7 @@ class AntrenorOzet(BaseModel):
     giris: str | None
     grup_sayisi: int
     foto_var: bool = False
+    foto_rizasi: datetime | None = None
     grup_idleri: list[uuid.UUID] = Field(default_factory=list)
 
 

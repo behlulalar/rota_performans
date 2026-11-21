@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import TelefonGirdisi from "../components/TelefonGirdisi";
 import { apiyeCevir, bicimle, gecerliMi, numaraCoz, TELEFON_HATA, telefonSec } from "../lib/telefon";
 import {
+  antrenorFotoRizasiGeriCek,
+  antrenorFotoRizasiVer,
   antrenorFotoSil,
   antrenorFotoYukle,
   antrenorGuncelle,
@@ -288,7 +290,8 @@ function FotoBolumu({ antrenor, surum, onDegisti }: { antrenor: AntrenorOzet; su
   const onayla = useOnay();
   const dosyaGirdisi = useRef<HTMLInputElement>(null);
   const [fotoVar, setFotoVar] = useState(antrenor.foto_var);
-  const [onay, setOnay] = useState(false);
+  const [riza, setRiza] = useState<string | null>(antrenor.foto_rizasi);
+  const onay = riza !== null;
   const [kirpilacak, setKirpilacak] = useState<Blob | null>(null);
   const [yerelSurum, setYerelSurum] = useState(0);
   const [mesgul, setMesgul] = useState(false);
@@ -312,6 +315,32 @@ function FotoBolumu({ antrenor, surum, onDegisti }: { antrenor: AntrenorOzet; su
     setHata(null);
     try {
       setKirpilacak(await apiBlob(`/api/antrenorler/${antrenor.id}/foto?boyut=buyuk&v=${surum + yerelSurum}`));
+    } catch (e) {
+      setHata(hataMesaji(e));
+    } finally {
+      setMesgul(false);
+    }
+  }
+  async function rizaDegistir(isaretli: boolean) {
+    if (!isaretli) {
+      const tamam = await onayla({
+        baslik: "Rızayı geri çek",
+        mesaj: fotoVar ? "Rıza geri çekilirse antrenörün fotoğrafı da silinir. Devam edilsin mi?" : "Rıza kaydı geri çekilsin mi?",
+        onayYazisi: "Geri çek",
+        tehlikeli: true,
+      });
+      if (!tamam) return;
+    }
+    setMesgul(true);
+    setHata(null);
+    try {
+      const yeni = await (isaretli ? antrenorFotoRizasiVer(antrenor.id) : antrenorFotoRizasiGeriCek(antrenor.id));
+      setRiza(yeni.foto_rizasi);
+      if (!isaretli) {
+        setFotoVar(false);
+        setYerelSurum((s) => s + 1);
+      }
+      onDegisti();
     } catch (e) {
       setHata(hataMesaji(e));
     } finally {
@@ -351,9 +380,10 @@ function FotoBolumu({ antrenor, surum, onDegisti }: { antrenor: AntrenorOzet; su
         </div>
       </div>
       <label className="mt-3 flex items-start gap-3 min-h-11 cursor-pointer text-[13px]">
-        <input type="checkbox" className="mt-0.5 size-4 shrink-0" checked={onay} onChange={(e) => setOnay(e.target.checked)} />
-        <span>Antrenörün fotoğraf kullanımı için onayı alındı</span>
+        <input type="checkbox" className="mt-0.5 size-4 shrink-0" checked={onay} disabled={mesgul} onChange={(e) => void rizaDegistir(e.target.checked)} />
+        <span>Antrenörün fotoğraf kullanımı için rızası alındı</span>
       </label>
+      {riza && <p className="text-[12px] text-metin-soluk">Rıza kaydı: {new Date(riza).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" })}</p>}
       {hata && <p role="alert" className="text-[13px] text-hata mt-1">{hata}</p>}
       {kirpilacak && <FotoKirpma kaynak={kirpilacak} onKapat={() => setKirpilacak(null)} onTamam={kaydet} />}
     </fieldset>

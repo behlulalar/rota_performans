@@ -23,10 +23,10 @@
 - Soru: telafi kaç ay içinde kullanılmalı? Süre dolunca hak yanar mı, yoksa yönetici onayıyla uzatılabilir mi?
 
 ## 3. Yoklamada ek durumlar
-**Durum (Kasım 2026):** Gelmedi için sebep eklendi (izinli, raporlu, yarışma: telafi doğar, ay sonuna kadar geçerli; habersiz devamsız: ders yanar, telafi yok). Aşağıdaki "geç kaldı" hâlâ açık.
+**Karar verildi ve uygulandı (20 Kas 2026, kulüpten gelen bilgiyle):** Gelmedi için sebep zorunlu. İzinli/Raporlu/Yarışma: telafi doğar, ay sonuna kadar geçerli; Devamsız: ders yanar, telafi yok; ay sonunda kullanılmayan telafi yanar. İç açıklama veliye gitmez. Aşağıdaki "geç kaldı" hâlâ açık.
 - Sonra eklenecekler: mazeretli, raporlu, geç kaldı.
 - Her biri telafi hakkını farklı etkileyebilir (ör. raporlu → telafi doğar mı, normal ders yanar mı).
-- Müşteriden kural tablosu istenecek. Yoklama durumu bir listeden seçildiği için şema genişletmeye açık.
+- Kulüpten şu an kayıt tuttukları Excel örnekleri ve gelir raporu formatı istendi; henüz gelmedi. Yoklama durumu bir listeden seçildiği için şema genişletmeye açık.
 
 ## 4. 18 yaş geçişinin otomasyonu
 **Durum:** İlk sürümde yönetici onaylı.

@@ -31,7 +31,7 @@ Taslaktan farklar:
 | Tablo | Önemli alanlar | Not |
 |---|---|---|
 | `kullanici` | id (UUID), rol (`admin`/`antrenor`/`veli`/`ogrenci`), giris (telefon veya e-posta), sifre_ozeti, totp_gizli (yalnızca admin), aktif, son_giris | Şifre argon2. Admin için 2FA zorunlu |
-| `antrenor` | id, kullanici_id, ad_soyad, telefon | |
+| `antrenor` | id, kullanici_id, ad_soyad, telefon, aktif, foto_anahtar | Pasif olunca foto silinmez |
 
 ### Öğrenci ve iletişim
 | Tablo | Önemli alanlar | Not |
@@ -112,6 +112,7 @@ Alıcı her zaman öğrencinin birincil iletişim kişisidir. Birincil kişinin 
 |---|---|---|
 | `denetim_kaydi` | id, kullanici_id, islem, hedef_tur, hedef_id, zaman, ip | Admin işlemleri, T.C. no görüntüleme, silme, ders hakkı düzeltmesi. Kişisel veri içermez |
 | `riza` | id, ogrenci_id, tur (`aydinlatma`/`foto`/`whatsapp`), verildi_tarih, geri_cekildi_tarih | Rızanın alındığını kaydeder |
+| `antrenor_foto_rizasi` | id, antrenor_id, verildi, geri_cekildi (boş = aktif rıza), kaydeden_id, geri_ceken_id | Antrenör foto rızası. Aktif rıza en fazla bir. Yükleme aktif rıza ister; geri çekilince foto silinir |
 
 ## 3. Erişim kuralları
 | Veri | Admin | Antrenör | Panel hesabı sahibi (birincil veli veya reşit öğrenci) |
@@ -122,6 +123,9 @@ Alıcı her zaman öğrencinin birincil iletişim kişisidir. Birincil kişinin 
 | Acil durum kişisi | Evet | Kendi grubunun öğrencileri | Kendi öğrencisi |
 | Yoklama | Evet | Kendi grupları | Kendi öğrencisi |
 | Ders hakkı, aidat | Evet | Hayır | Kendi öğrencisi |
+| Antrenör fotoğrafı | Evet | Evet (tümü) | Evet |
+
+Antrenör fotoğrafını giriş yapmış herkes görür (destek/teknik destek dahil). Öğrenci ve antrenör fotoğrafı, öğrenci/antrenör pasif olunca **silinmez**. Fotoğraf yalnızca yönetici tarafından ya da (antrenörde) rıza geri çekilince silinir.
 
 ## 4. Açık sorular
 Kapananlar: gelmedi normal dersi telafiye çevirir (evet), panel hesabı yalnızca birincil kişide (evet), reşit öğrencide veli erişimi yok (evet).

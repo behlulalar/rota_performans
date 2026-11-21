@@ -122,7 +122,11 @@ Her dilim bir dalda geliştirilir: backend + frontend birlikte, testler geçince
 
 ### Faz 4.5: Sözleşme taahhütleri (teslim: en geç 11 Aralık 2026)
 Sözleşmede (Ek-1, Madde 2.2, 10.5) yazılı olup sistemde henüz bulunmayan işler. Teslimden önce bitmeli, yoksa sözleşme ile sistem ayrışır.
-- [ ] **Devamsızlık sebebi:** "gelmedi" işaretlenirken sebep seçilir/kaydedilir (sebep listesini müşteri verir; sebebin telafi hakkını etkileyip etkilemediği müşteriden sorulacak, bkz. [dusunulecekler.md](dusunulecekler.md) madde 3)
+- [x] **Devamsızlık sebebi:** "gelmedi" için sebep zorunlu. İzinli/Raporlu/Yarışma → telafi hakkı doğar, o ay sonuna kadar geçerli; Devamsız → ders yanar. İç açıklama isteğe bağlı, veliye gitmez. Ay sonunda kullanılmayan telafi yanar (bkz. [dusunulecekler.md](dusunulecekler.md) madde 3)
+- [x] **Yoklama özet penceresi:** yoklama kaydedilince geldi/gelmedi sayısı, sebep dağılımı, işaretlenmeyenler; Tamam / Takvime dön
+- [x] **Yoklama kilidi:** ilk kayıttan 1 saat sonra antrenöre kapanır (salt okunur), yönetici düzeltir, denetim kaydına yazılır
+- [x] **Antrenör fotoğrafı:** yalnız yönetici yükler/siler (kırpma), kalıcı rıza kaydı tutulur (rıza geri çekilince foto silinir), giriş yapmış herkes görür, antrenör pasif olunca silinmez
+- [x] **Foto önbelleği:** foto uçlarında `Cache-Control: private, no-cache` + ETag; fotoğraf değişince herkes hemen yenisini görür
 - [ ] **Şifre sıfırlama:** velinin kendisi sıfırlar (e-posta/SMTP veya telefon yöntemi seçilecek); yalnız yönetici sıfırlayabiliyor şu an
 - [ ] **Excel içe aktarma:** müşterinin dosyası gelince (en geç 25 Kas) sütun eşleme, önizleme, hata raporu (Dilim 1.4)
 - [ ] **Yönetici 2 adımlı doğrulama (TOTP):** Faz 0'dan taşındı, kurtarma kodlarıyla birlikte

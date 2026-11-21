@@ -1,9 +1,10 @@
 import asyncio
 import secrets
 import uuid
+from datetime import datetime, timezone
 
 from email_validator import EmailNotValidError, validate_email
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,8 +16,7 @@ from app.depolama import depolama
 from app.deps import rol_gerekli
 from app.foto import FOTO_EN_COK_BAYT, foto_isle
 from app.models.kullanici import Kullanici, Oturum, Rol
-from app.models.ogrenci import Ogrenci
-from app.models.program import Antrenor, Grup, OgrenciGrup
+from app.models.program import Antrenor, AntrenorFotoRizasi, Grup
 from app.schemas.ogrenci import FotoBoyut
 from app.schemas.antrenor import (
     AntrenorGuncelle,
@@ -39,6 +39,7 @@ _RAKAMLAR = "23456789"
 SIFRE_UZUNLUK = 14
 
 Yonetici = Depends(rol_gerekli(Rol.admin))
+# Fotoğrafı giriş yapmış her aktif kullanıcı görür.
 Goruntuleyen = Depends(rol_gerekli(Rol.admin, Rol.antrenor, Rol.veli, Rol.ogrenci))
 
 
@@ -110,10 +111,20 @@ async def _ozetler(session: AsyncSession, kosullar: list) -> list[AntrenorOzet]:
             .order_by(Grup.ad, Grup.id)
         ):
             gruplar.setdefault(aid, []).append(gid)
+    rizalar: dict[uuid.UUID, datetime] = {}
+    if satirlar:
+        rizalar = dict(
+            (await session.execute(
+                select(AntrenorFotoRizasi.antrenor_id, AntrenorFotoRizasi.verildi).where(
+                    AntrenorFotoRizasi.antrenor_id.in_([a.id for a, _, _ in satirlar]),
+                    AntrenorFotoRizasi.geri_cekildi.is_(None),
+                )
+            )).all()
+        )
     return [
         AntrenorOzet(
             id=a.id, ad_soyad=a.ad_soyad, telefon=a.telefon, aktif=a.aktif, giris=giris, grup_sayisi=sayi,
-            foto_var=a.foto_anahtar is not None,
+            foto_var=a.foto_anahtar is not None, foto_rizasi=rizalar.get(a.id),
             grup_idleri=gruplar.get(a.id, []),
         )
         for a, giris, sayi in satirlar
@@ -309,18 +320,68 @@ async def sifre_sifirla(
 # Yükleme/silme yalnız yöneticidir (antrenör kendi fotoğrafını değiştiremez).
 
 
+async def _aktif_riza(session: AsyncSession, antrenor_id: uuid.UUID) -> AntrenorFotoRizasi | None:
+    return (
+        await session.execute(
+            select(AntrenorFotoRizasi).where(
+                AntrenorFotoRizasi.antrenor_id == antrenor_id, AntrenorFotoRizasi.geri_cekildi.is_(None)
+            )
+        )
+    ).scalar_one_or_none()
+
+
+@router.post("/{antrenor_id}/foto-riza", response_model=AntrenorOzet)
+async def foto_riza_ver(
+    antrenor_id: uuid.UUID, request: Request, yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    antrenor = await _antrenor_al(session, antrenor_id)
+    if await _aktif_riza(session, antrenor.id) is None:
+        session.add(AntrenorFotoRizasi(antrenor_id=antrenor.id, kaydeden_id=yonetici.id))
+        await audit.kaydet(
+            session, "antrenor_foto_rizasi_verildi", kullanici_id=yonetici.id, hedef_tur="antrenor",
+            hedef_id=str(antrenor.id), ip=_ip(request),
+        )
+        try:
+            await session.commit()
+        except IntegrityError:  # eşzamanlı istek aynı rızayı zaten oluşturdu
+            await session.rollback()
+    return await _ozet(session, antrenor.id)
+
+
+@router.delete("/{antrenor_id}/foto-riza", response_model=AntrenorOzet)
+async def foto_riza_geri_cek(
+    antrenor_id: uuid.UUID, request: Request, yonetici: Kullanici = Yonetici,
+    session: AsyncSession = Depends(get_session),
+):
+    antrenor = await _antrenor_al(session, antrenor_id)
+    riza = await _aktif_riza(session, antrenor.id)
+    if riza is not None:
+        riza.geri_cekildi = datetime.now(timezone.utc)
+        riza.geri_ceken_id = yonetici.id
+        eski = antrenor.foto_anahtar
+        antrenor.foto_anahtar = None
+        await audit.kaydet(
+            session, "antrenor_foto_rizasi_geri_cekildi", kullanici_id=yonetici.id, hedef_tur="antrenor",
+            hedef_id=str(antrenor.id), ip=_ip(request), detay={"foto_silindi": eski is not None},
+        )
+        await session.commit()
+        if eski:
+            await asyncio.to_thread(depolama.sil, eski)
+    return await _ozet(session, antrenor.id)
+
+
 @router.post("/{antrenor_id}/foto", status_code=status.HTTP_204_NO_CONTENT)
 async def foto_yukle(
     antrenor_id: uuid.UUID,
     request: Request,
     dosya: UploadFile = File(...),
-    onay: bool = Form(...),
     yonetici: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
     antrenor = await _antrenor_al(session, antrenor_id)
-    if not onay:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Fotoğraf için antrenörün onayı gerekli")
+    if await _aktif_riza(session, antrenor.id) is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Fotoğraf için antrenörün rızası kaydedilmeli")
     veri = await dosya.read(FOTO_EN_COK_BAYT + 1)
     if len(veri) > FOTO_EN_COK_BAYT:
         raise HTTPException(413, "Dosya en fazla 8 MB olabilir")
@@ -333,7 +394,7 @@ async def foto_yukle(
     antrenor.foto_anahtar = anahtar
     await audit.kaydet(
         session, "antrenor_foto_yuklendi", kullanici_id=yonetici.id, hedef_tur="antrenor", hedef_id=str(antrenor.id),
-        ip=_ip(request), detay={"antrenor_onayi": True},
+        ip=_ip(request),
     )
     try:
         await session.commit()
@@ -345,28 +406,6 @@ async def foto_yukle(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-async def _gorebilir_mi(session: AsyncSession, kullanici: Kullanici, antrenor: Antrenor) -> bool:
-    """Yönetici/destek: herkes. Antrenör: kendisi. Veli/öğrenci: yalnız çocuğunun (kendisinin) şu an üyesi olduğu grubun antrenörü."""
-    if kullanici.rol in (Rol.admin, Rol.destek):
-        return True
-    if kullanici.rol == Rol.antrenor:
-        return antrenor.kullanici_id == kullanici.id
-    from app.api.veli import _benim_kosulu  # veli modülü bu modülü içe aktarmaz; döngüsel içe aktarmayı önler
-
-    return (
-        await session.execute(
-            select(Grup.id)
-            .join(OgrenciGrup, OgrenciGrup.grup_id == Grup.id)
-            .join(Ogrenci, Ogrenci.id == OgrenciGrup.ogrenci_id)
-            .where(
-                Grup.antrenor_id == antrenor.id, Grup.aktif.is_(True), OgrenciGrup.bitis.is_(None),
-                _benim_kosulu(kullanici), Ogrenci.sentetik.is_(False),
-            )
-            .limit(1)
-        )
-    ).first() is not None
-
-
 @router.get("/{antrenor_id}/foto")
 async def foto_getir(
     antrenor_id: uuid.UUID,
@@ -376,13 +415,12 @@ async def foto_getir(
     session: AsyncSession = Depends(get_session),
 ):
     antrenor = await session.get(Antrenor, antrenor_id)
-    # Yetkisiz için de 404: kaydın ya da fotoğrafın var olup olmadığı belli edilmez.
-    if antrenor is None or not await _gorebilir_mi(session, kullanici, antrenor):
+    if antrenor is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Fotoğraf bulunamadı")
     veri = await asyncio.to_thread(depolama.oku, antrenor.foto_anahtar, boyut) if antrenor.foto_anahtar else None
     if veri is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Fotoğraf bulunamadı")
-    basliklar = {"Cache-Control": "private, max-age=86400", "ETag": f'"{antrenor.foto_anahtar}-{boyut}"'}
+    basliklar = {"Cache-Control": "private, no-cache", "ETag": f'"{antrenor.foto_anahtar}-{boyut}"'}
     if request.headers.get("if-none-match") == basliklar["ETag"]:
         return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=basliklar)
     return Response(content=veri, media_type="image/jpeg", headers=basliklar)

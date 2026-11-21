@@ -14,7 +14,11 @@ test.describe("Antrenör fotoğrafı", () => {
     await satir.getByRole("button", { name: "Düzenle" }).click();
     const pencere = page.getByRole("dialog", { name: "Antrenörü düzenle" });
     await expect(pencere.getByRole("button", { name: "Fotoğraf ekle" })).toBeDisabled();
-    await pencere.getByLabel("Antrenörün fotoğraf kullanımı için onayı alındı").check();
+    // Kutu rıza sunucuya kaydedilince işaretlenir (kontrollü durum): tıkla ve işaretlenmesini bekle.
+    const rizaKutusu = pencere.getByLabel("Antrenörün fotoğraf kullanımı için rızası alındı");
+    await rizaKutusu.click();
+    await expect(rizaKutusu).toBeChecked();
+    await expect(pencere.getByText(/^Rıza kaydı: \d{2}\.\d{2}\.\d{4}$/)).toBeVisible();
     await expect(pencere.getByRole("button", { name: "Fotoğraf ekle" })).toBeEnabled();
     await pencere.getByTestId("antrenor-foto-dosya").setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: KUCUK_PNG });
     const kirpma = page.getByRole("dialog", { name: "Fotoğrafı ayarla" });

@@ -321,7 +321,7 @@ async def test_foto_yukleme_isleme_ve_getirme(istemci, yonetici, tmp_path):
     buyuk = await istemci.get(url + "?boyut=buyuk", headers=yonetici)
     kucuk = await istemci.get(url, headers=yonetici)
     assert buyuk.headers["content-type"] == "image/jpeg"
-    assert buyuk.headers["cache-control"] == "private, max-age=86400"
+    assert buyuk.headers["cache-control"] == "private, no-cache"
     assert buyuk.headers["etag"]
     gb, gk = Image.open(io.BytesIO(buyuk.content)), Image.open(io.BytesIO(kucuk.content))
     # EXIF yönü 6: 1200x600 resim dik (600x1200) olur, sonra en uzun kenar 800'e iner.

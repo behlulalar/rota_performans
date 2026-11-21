@@ -64,8 +64,8 @@ Faz: [faz-plani.md](faz-plani.md) içindeki faz numarası.
 | V8 | Silme/anonimleştirme yolu: pasif öğrenci ve sözleşme sonu verisi için | P1 | 3–5 | S |
 | V9 | Yönetici için tüm veriyi dışa aktarma (Excel/CSV), erişimi kayıt altında | P1 | 3 | S |
 | V10 | **T.C. kimlik no alan düzeyinde şifreli saklanır** (anahtar veritabanından ayrı tutulur). Listelerde maskeli gösterilir, tam değer yalnızca yetkili yönetici ekranında ve erişim kayıt altında | P0 | 0–1 | S |
-| V11 | **Fotoğraflar herkese açık adreste değil**, özel depolamada. Yalnızca yetkili kullanıcıya süreli bağlantıyla sunulur. Yüklemede tür/boyut kontrolü, EXIF/konum bilgisi silinir, yeniden boyutlandırılır | P0 | 1 | S |
-| V12 | Fotoğraf için **veli açık rızası ayrı alan** olarak tutulur. Rıza geri çekilirse fotoğraf silinir. Sosyal medya/tanıtım kullanımı bu sistemin dışında, ayrı izinle | P0 | 1 | |
+| V11 | **Fotoğraflar herkese açık adreste değil**, özel depolamada. Yalnızca giriş yapmış kullanıcıya, kimlik doğrulamalı API ucundan sunulur (`Cache-Control: private, no-cache` + ETag); imzalı/süreli bağlantı kullanılmaz. Yüklemede tür/boyut kontrolü, EXIF/konum bilgisi silinir, yeniden boyutlandırılır | P0 | 1 | S |
+| V12 | Fotoğraf için **veli açık rızası ayrı alan** olarak tutulur. Rıza geri çekilirse fotoğraf silinir. Sosyal medya/tanıtım kullanımı bu sistemin dışında, ayrı izinle. Antrenör fotoğraf rızası `antrenor_foto_rizasi` tablosunda tutulur; yükleme aktif rıza ister, geri çekilince fotoğraf silinir, işlem denetim kaydına yazılır. (Antrenör tarafı plan yazıldıktan sonra eklendi, Kasım 2026; ayrıca değişebilir) | P0 | 1 | |
 | V13 | Fotoğraflar ve T.C. no şifreli yedeklere dahil. Test ve geliştirme ortamlarında **gerçek fotoğraf ve kimlik no yok** | P0 | 5 | S |
 
 ## 5. WhatsApp ve bildirimler

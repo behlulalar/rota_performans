@@ -336,7 +336,7 @@ async def cocuk_foto(
     veri = await asyncio.to_thread(depolama.oku, ogrenci.foto_anahtar, boyut) if ogrenci.foto_anahtar else None
     if veri is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Fotoğraf bulunamadı")
-    basliklar = {"Cache-Control": "private, max-age=86400", "ETag": f'"{ogrenci.foto_anahtar}-{boyut}"'}
+    basliklar = {"Cache-Control": "private, no-cache", "ETag": f'"{ogrenci.foto_anahtar}-{boyut}"'}
     if request.headers.get("if-none-match") == basliklar["ETag"]:
         return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=basliklar)
     return Response(content=veri, media_type="image/jpeg", headers=basliklar)

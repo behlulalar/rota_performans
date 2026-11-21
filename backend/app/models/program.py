@@ -44,6 +44,31 @@ class Antrenor(Base):
     olusturma: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class AntrenorFotoRizasi(Base):
+    """Antrenörün fotoğraf kullanımı rızası. Aktif rıza: geri_cekildi boş olan kayıt (en fazla bir tane)."""
+
+    __tablename__ = "antrenor_foto_rizasi"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    antrenor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("antrenor.id", ondelete="CASCADE"), index=True
+    )
+    verildi: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    geri_cekildi: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    kaydeden_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="SET NULL")
+    )
+    geri_ceken_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="SET NULL")
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_antrenor_foto_rizasi_aktif", "antrenor_id", unique=True, postgresql_where=text("geri_cekildi IS NULL")
+        ),
+    )
+
+
 class Grup(Base):
     """Takım / ders grubu."""
 
