@@ -67,6 +67,6 @@ test.describe("Telafi", () => {
 
     await plan.getByRole("button", { name: "Geri al" }).click();
     await expect(deger("Kullanılabilir telafi")).toHaveText("1");
-    await expect(page.getByText("Planlanmış telafi dersi yok.")).toBeVisible();
+    await expect(page.getByText("Planlanmış telafi veya ek ders yok.")).toBeVisible();
   });
 });
