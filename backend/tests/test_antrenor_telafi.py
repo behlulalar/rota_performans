@@ -222,6 +222,7 @@ async def test_planlar_iptal_edilebilir_adaylar_ve_ogrenci_telafisi(istemci, yon
     gr = (await istemci.get("/api/antrenor/ogrencilerim", headers=ba)).json()
     satir = next(s for g in gr for s in g["ogrenciler"] if s["ogrenci_id"] == str(o.id))
     assert satir["telafi_bakiyesi"] == 3  # 4 hak - 1 kullanılan (yoklamalı geldi)
+    assert satir["telafi_planlanabilir"] == d["kullanilabilir"] == 1  # bekleyen planlar düşülmüş
 
 
 # ---------- bildirimler ----------

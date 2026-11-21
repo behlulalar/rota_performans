@@ -46,16 +46,15 @@ test.describe("Ek ders", () => {
     await arayuzdenGiris(page, o.antrenor.giris, o.antrenor.sifre);
     await expect(page).toHaveURL(/\/bugun$/);
     await page.goto("/ogrencilerim");
-    await page.getByRole("button", { name: new RegExp(`${o.geldi.ad} ${o.geldi.soyad}: `) }).click();
-    const sheet = page.getByRole("dialog", { name: new RegExp(o.geldi.ad) });
-    await sheet.getByRole("button", { name: "Ek ders ekle" }).click();
-    const adaylar = page.getByRole("dialog", { name: "Ek ders ekle" });
-    const aday = adaylar.getByRole("listitem").filter({ hasText: grupBAdi }).first();
+    await page.getByRole("link", { name: `Ders planla: ${o.geldi.ad} ${o.geldi.soyad}` }).click();
+    await page.getByRole("button", { name: "Ek ders ekle" }).click();
+    await expect(page.getByRole("heading", { name: "Ek ders ekle" })).toBeVisible();
+    const aday = page.getByRole("listitem").filter({ hasText: grupBAdi }).first();
     await expect(aday).toBeVisible();
     await aday.getByRole("button", { name: /^Seç/ }).click();
 
     // Plan listesinde "Ek ders" rozeti.
-    const plan = sheet.getByRole("listitem").filter({ hasText: grupBAdi });
+    const plan = page.getByRole("listitem").filter({ hasText: grupBAdi });
     await expect(plan).toBeVisible();
     await expect(plan).toContainText("Ek ders");
     await expect(plan.getByRole("button", { name: "Taşı" })).toBeVisible();

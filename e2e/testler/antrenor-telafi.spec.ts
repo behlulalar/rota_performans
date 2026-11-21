@@ -39,29 +39,31 @@ test.describe("Antrenör telafi planlama", () => {
     await arayuzdenGiris(page, o.antrenor.giris, o.antrenor.sifre);
     await expect(page).toHaveURL(/\/bugun$/);
     await page.goto("/ogrencilerim");
-    const satir = page.getByRole("button", { name: new RegExp(`${o.geldi.ad} ${o.geldi.soyad}: telafi`) });
+    const satir = page.getByRole("listitem").filter({ hasText: `${o.geldi.ad} ${o.geldi.soyad}` });
     await expect(satir).toContainText("Telafi 1");
 
-    // Alt pencere: boş liste, planla.
-    await satir.click();
-    const sheet = page.getByRole("dialog", { name: new RegExp(o.geldi.ad) });
-    await expect(sheet.getByText("Planlı telafi veya ek ders yok.")).toBeVisible();
-    await expect(sheet.getByText(/Planlanabilir:\s*1/)).toBeVisible();
-    await sheet.getByRole("button", { name: "Telafi planla" }).click();
+    // Ders planla sayfası: boş liste, planlanabilir 1, planla.
+    await satir.getByRole("link", { name: `Ders planla: ${o.geldi.ad} ${o.geldi.soyad}` }).click();
+    await expect(page).toHaveURL(/\/ogrencilerim\/[^/]+\/planla$/);
+    await expect(page.getByText("Planlı telafi veya ek ders yok.")).toBeVisible();
+    await expect(page.getByText("telafi planlanabilir")).toBeVisible();
+    await page.getByRole("button", { name: "Telafi planla" }).click();
+    await expect(page.getByRole("heading", { name: "Telafi planla" })).toBeVisible();
 
-    const aday = page.getByRole("dialog", { name: "Telafi planla" }).getByRole("listitem").filter({ hasText: grupBAdi }).first();
+    const aday = page.getByRole("listitem").filter({ hasText: grupBAdi }).first();
     await expect(aday).toBeVisible();
     await aday.getByRole("button", { name: /^Seç/ }).click();
 
-    // Plan sheet'te Taşı / Kaldır ile görünür.
-    const plan = sheet.getByRole("listitem").filter({ hasText: grupBAdi });
+    // Özete dönülür; plan Taşı / Kaldır ile görünür.
+    await expect(page.getByRole("status")).toContainText("Telafi planlandı");
+    const plan = page.getByRole("listitem").filter({ hasText: grupBAdi });
     await expect(plan).toBeVisible();
     await expect(plan.getByRole("button", { name: "Taşı" })).toBeVisible();
-    await expect(sheet.getByText(/Planlanabilir:\s*0/)).toBeVisible();
+    await expect(page.getByText("Telafi hakkı yok", { exact: true })).toBeVisible();
 
     // Kaldır: onay penceresi çıkar (test yardımcısı otomatik onaylar), plan gider ve hak iade edilir.
     await plan.getByRole("button", { name: "Kaldır" }).click();
-    await expect(sheet.getByText("Planlı telafi veya ek ders yok.")).toBeVisible();
-    await expect(sheet.getByText(/Planlanabilir:\s*1/)).toBeVisible();
+    await expect(page.getByText("Planlı telafi veya ek ders yok.")).toBeVisible();
+    await expect(page.getByText("telafi planlanabilir")).toBeVisible();
   });
 });

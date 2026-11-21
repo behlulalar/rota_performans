@@ -8,25 +8,16 @@ import { dugme } from "../lib/stil";
 export const gunMetni = (s: string) => tarihCoz(s).toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" });
 export const saat = (s: string) => s.slice(0, 5);
 
-/** Ortak pencere. `alt`: dar ekranda alttan açılan sayfa (antrenör; alt sekme çubuğunun [z-40] üstünde, z-50), geniş ekranda ortada. */
-export function Pencere({ baslik, onKapat, children, alt, geri, altBolum }: {
-  baslik: string; onKapat: () => void; children: React.ReactNode; alt?: boolean; geri?: () => void; altBolum?: React.ReactNode;
-}) {
+/** Ortak pencere (yönetici). */
+export function Pencere({ baslik, onKapat, children }: { baslik: string; onKapat: () => void; children: React.ReactNode }) {
   return (
-    <div
-      className={`fixed inset-0 bg-black/70 grid ${alt ? "z-50 place-items-end sm:place-items-center sm:p-4" : "z-30 place-items-center p-4"}`}
-      role="dialog" aria-modal="true" aria-label={baslik}
-    >
-      <div className={`w-full max-w-md flex flex-col bg-yuzey border border-cizgi-guclu ${alt ? "max-h-[85dvh] rounded-t-[14px] sm:rounded-[14px]" : "max-h-full rounded-[14px]"} overflow-hidden`}>
+    <div className="fixed inset-0 z-30 bg-black/70 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={baslik}>
+      <div className="w-full max-w-md flex flex-col bg-yuzey border border-cizgi-guclu max-h-full rounded-[14px] overflow-hidden">
         <div className="flex items-center justify-between px-4 min-h-11 border-b border-cizgi shrink-0">
-          <div className="flex items-center gap-1 min-w-0">
-            {geri && <button onClick={geri} className="pr-2 min-h-11 text-[13px] text-metin-soluk hover:text-metin">Geri</button>}
-            <h2 className="font-display text-[19px] leading-6">{baslik}</h2>
-          </div>
+          <h2 className="font-display text-[19px] leading-6 min-w-0">{baslik}</h2>
           <button onClick={onKapat} className="px-2 min-h-11 text-[13px] text-metin-soluk hover:text-metin" aria-label="Kapat">Kapat</button>
         </div>
         <div className="p-4 overflow-y-auto min-h-0 flex-1">{children}</div>
-        {altBolum && <div className="shrink-0 border-t border-cizgi bg-yuzey p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">{altBolum}</div>}
       </div>
     </div>
   );
@@ -41,21 +32,21 @@ type Icerik = {
   tur?: "telafi" | "ek_ders";
   onTamam: () => void;
 };
-type Props = Icerik & { alt?: boolean; onKapat: () => void; onGeri?: () => void };
+type Props = Icerik & { onKapat: () => void };
 
 export const telafiBasligi = (tasinan?: TelafiPlani, tur: "telafi" | "ek_ders" = "telafi") =>
   tur === "ek_ders" ? (tasinan ? "Ek dersi taşı" : "Ek ders ekle") : tasinan ? "Telafiyi taşı" : "Telafi planla";
 
 /** Telafi planlama / taşıma penceresi (yönetici ve antrenör ortak). Adaylar 14 günlüktür. */
-export default function TelafiPlanla({ alt, onKapat, onGeri, ...r }: Props) {
+export default function TelafiPlanla({ onKapat, ...r }: Props) {
   return (
-    <Pencere baslik={telafiBasligi(r.tasinan, r.tur)} onKapat={onKapat} alt={alt} geri={onGeri}>
+    <Pencere baslik={telafiBasligi(r.tasinan, r.tur)} onKapat={onKapat}>
       <TelafiAdaylari {...r} />
     </Pencere>
   );
 }
 
-/** Aday listesi (pencere içeriği); başka bir pencerenin içinde adım olarak da kullanılır. */
+/** Aday listesi: yönetici penceresinde ve antrenör planlama sayfasında ortak. */
 export function TelafiAdaylari({ ogrenciId, sonKullanma, tasinan, tur = "telafi", onTamam }: Icerik) {
   const ek = tur === "ek_ders";
   const [adaylar, setAdaylar] = useState<TelafiAdayi[] | null>(null);

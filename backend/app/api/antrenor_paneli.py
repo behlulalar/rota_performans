@@ -134,7 +134,15 @@ async def ogrencilerim(kullanici: Kullanici = Antrenor_, session: AsyncSession =
     gruplar = (
         await session.execute(select(Grup).where(Grup.antrenor_id == antrenor.id, Grup.aktif.is_(True)).order_by(Grup.ad))
     ).scalars().all()
-    return await grup_devamlari(session, list(gruplar), bugun())
+    sonuc = await grup_devamlari(session, list(gruplar), bugun())
+    # Planlanabilir telafi: öğrenci başına hesap (açık hak/plan eşleştirmesi toplu yazılması karmaşık; grup boyutları küçük).
+    hesap: dict[uuid.UUID, int] = {}
+    for g in sonuc:
+        for s in g.ogrenciler:
+            if s.ogrenci_id not in hesap:
+                hesap[s.ogrenci_id] = await ders_hakki.kullanilabilir_telafi(session, s.ogrenci_id)
+            s.telafi_planlanabilir = hesap[s.ogrenci_id]
+    return sonuc
 
 
 @router.get("/ogrenciler/{ogrenci_id}/telafi", response_model=OgrenciTelafisi)

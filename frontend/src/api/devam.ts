@@ -14,7 +14,7 @@ export type DevamOzeti = {
   ard_arda_gelmedi: number;
   son_dersler: DevamDersi[];
 };
-export type DevamSatiri = { ogrenci_id: string; ad: string; soyad: string; devam: DevamOzeti; telafi_bakiyesi?: number };
+export type DevamSatiri = { ogrenci_id: string; ad: string; soyad: string; devam: DevamOzeti; telafi_bakiyesi?: number; telafi_planlanabilir?: number };
 export type GrupDevami = { grup_id: string; grup_ad: string; ogrenciler: DevamSatiri[] };
 
 export const ogrenciDevamGetir = (id: string) => api<DevamOzeti>(`/api/ogrenciler/${id}/devam`);
