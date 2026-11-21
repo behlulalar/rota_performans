@@ -139,6 +139,8 @@ class TelafiAdayi(BaseModel):
 
 class TelafiPlanGirdi(BaseModel):
     ogrenci_id: uuid.UUID
+    # Verilirse eski plan aynı işlemde silinir (taşıma).
+    tasinan_oturum_id: uuid.UUID | None = None
 
 
 class TelafiPlanYanit(BaseModel):
@@ -148,3 +150,4 @@ class TelafiPlanYanit(BaseModel):
     bitis: time
     grup: OturumGrup
     yoklama: YoklamaDurum | None
+    iptal_edilebilir: bool = False

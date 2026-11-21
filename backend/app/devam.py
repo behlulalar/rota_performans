@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import ders_hakki
 from app.models.ogrenci import Ogrenci
 from app.models.program import DersOturumu, Grup, OgrenciGrup, OturumDurum
 from app.models.yoklama import Yoklama, YoklamaDurum
@@ -76,11 +77,13 @@ async def grup_devamlari(session: AsyncSession, gruplar: list[Grup], bugun: date
             .order_by(Ogrenci.ad, Ogrenci.soyad, Ogrenci.id)
         )
     ).all()
-    ozetler = await devam_ozetleri(session, list({u[1] for u in uyeler}), bugun)
+    idler = list({u[1] for u in uyeler})
+    ozetler = await devam_ozetleri(session, idler, bugun)
+    bakiyeler = await ders_hakki.bakiyeler(session, idler)
     return [
         GrupDevami(
             grup_id=g.id, grup_ad=g.ad,
-            ogrenciler=[DevamSatiri(ogrenci_id=oid, ad=ad, soyad=soyad, devam=ozetler[oid]) for gid, oid, ad, soyad in uyeler if gid == g.id],
+            ogrenciler=[DevamSatiri(ogrenci_id=oid, ad=ad, soyad=soyad, devam=ozetler[oid], telafi_bakiyesi=max(bakiyeler[oid]['telafi'], 0)) for gid, oid, ad, soyad in uyeler if gid == g.id],
         )
         for g in gruplar
     ]

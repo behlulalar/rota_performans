@@ -590,7 +590,8 @@ def test_soylenisler_ucer_tane_imzali_linksiz():
         assert sablon in bsvc.TERCIH_TURU and len(secenekler) == 3 and len(set(secenekler)) == 3
         for m in secenekler:
             assert "Rota Performans Akademi" in m and "{ad}" in m and "http" not in m and "www" not in m
-            dolu = m.format(ad="Deniz", tarih="02.11.2026", saat="17:00", bakiye=2, **bsvc.gelmedi_alanlari("raporlu"))
+            dolu = m.format(ad="Deniz", tarih="02.11.2026", saat="17:00", bakiye=2, grup="U10",
+                           eski_tarih="01.11.2026", eski_saat="16:00", eski_grup="U8", **bsvc.gelmedi_alanlari("raporlu"))
             assert "{" not in dolu and "Deniz" in dolu
         # Seçim kimliğe göre deterministik ve üç söylenişi de döndürür.
         assert [bsvc.soylenis_sec(sablon, i) for i in range(3)] == secenekler

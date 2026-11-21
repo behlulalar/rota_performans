@@ -50,8 +50,12 @@ export const oturumGetir = (id: string) => api<OturumDetay>(`/api/oturumlar/${id
 export const yoklamaKaydet = (id: string, kayitlar: YoklamaKaydi[]) =>
   api<OturumDetay>(`/api/oturumlar/${id}/yoklama`, { method: "PUT", body: json(kayitlar) });
 
-export const telafiPlanla = (oturumId: string, ogrenciId: string) =>
-  api<OturumDetay>(`/api/oturumlar/${oturumId}/telafi`, { method: "POST", body: json({ ogrenci_id: ogrenciId }) });
+/** `tasinanOturumId` verilirse eski plan aynı işlemde silinir (taşıma). */
+export const telafiPlanla = (oturumId: string, ogrenciId: string, tasinanOturumId?: string) =>
+  api<OturumDetay>(`/api/oturumlar/${oturumId}/telafi`, {
+    method: "POST",
+    body: json({ ogrenci_id: ogrenciId, ...(tasinanOturumId ? { tasinan_oturum_id: tasinanOturumId } : {}) }),
+  });
 export const telafiGeriAl = (oturumId: string, ogrenciId: string) =>
   api<OturumDetay>(`/api/oturumlar/${oturumId}/telafi/${ogrenciId}`, { method: "DELETE" });
 

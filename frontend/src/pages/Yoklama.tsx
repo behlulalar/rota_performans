@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { ApiHata } from "../lib/api";
-import { oturumGetir, oturumIptalEt, oturumIptalGeriAl, yoklamaKaydet, type OturumDetay, type YoklamaDurum } from "../api/takvim";
+import { oturumGetir, oturumIptalEt, oturumIptalGeriAl, telafiGeriAl, yoklamaKaydet, type OturumDetay, type YoklamaDurum } from "../api/takvim";
+import { ogrencilerimGetir } from "../api/devam";
 import Modal from "../components/Modal";
 import OgrenciFoto from "../components/OgrenciFoto";
 import { useOnay } from "../components/OnayPenceresi";
@@ -60,6 +61,16 @@ export default function Yoklama() {
   const [mesgul, setMesgul] = useState(false);
   const [ozet, setOzet] = useState<KayitOzeti | null>(null);
   const gezin = useNavigate();
+  // Antrenör yalnız kendi gruplarındaki öğrencinin telafisini kaldırabilir (sunucu 403 verir); liste bir kez yüklenir.
+  const [kendiOgrenciler, setKendiOgrenciler] = useState<Set<string> | null>(null);
+  const antrenorMu = kullanici?.rol === "antrenor";
+  const telafiVar = !!o?.ogrenciler.some((x) => x.telafi_mi);
+  useEffect(() => {
+    if (!antrenorMu || !telafiVar || kendiOgrenciler) return;
+    ogrencilerimGetir()
+      .then((g) => setKendiOgrenciler(new Set(g.flatMap((x) => x.ogrenciler.map((s) => s.ogrenci_id)))))
+      .catch(() => setKendiOgrenciler(new Set()));
+  }, [antrenorMu, telafiVar, kendiOgrenciler]);
 
   useEffect(() => {
     if (!id) return;
@@ -178,6 +189,25 @@ export default function Yoklama() {
   const iptalEdilebilir = yonetici && o.durum === "planli" && !o.yoklama_alindi;
   const geriAlinabilir = yonetici && iptal && o.tarih >= bugun();
   const telafiSayisi = o.ogrenciler.filter((x) => x.telafi_mi).length;
+
+  const telafiKaldir = async (x: OturumDetay["ogrenciler"][number]) => {
+    if (!(await onayla({ baslik: "Telafiyi kaldır", mesaj: `${x.ad} ${x.soyad} bu telafi dersinden kaldırılsın mı? Telafi hakkı iade edilir.`, onayYazisi: "Kaldır", tehlikeli: true }))) return;
+    setMesgul(true);
+    setHata(null);
+    setBilgi(null);
+    try {
+      const y = await telafiGeriAl(o.id, x.ogrenci_id);
+      setO(y);
+      const cikar = <T,>(m: Record<string, T>) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== x.ogrenci_id)) as Record<string, T>;
+      setSecim(cikar);
+      setSebep(cikar);
+      setAciklama(cikar);
+    } catch (e) {
+      setHata(hataYaz(e));
+    } finally {
+      setMesgul(false);
+    }
+  };
 
   const dersiIptalEt = async () => {
     const tamam = await onayla({
@@ -366,6 +396,9 @@ export default function Yoklama() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{x.ad} {x.soyad}</span>
                       {x.telafi_mi && <span className={rozetUyari}>Telafi</span>}
+                      {x.telafi_mi && x.yoklama === null && o.durum === "planli" && !antrenorKilitli && (yonetici || kendiOgrenciler?.has(x.ogrenci_id)) && (
+                        <button className={`${dugme} min-h-11`} disabled={mesgul} aria-label={`Telafiyi kaldır: ${x.ad} ${x.soyad}`} onClick={() => void telafiKaldir(x)}>Kaldır</button>
+                      )}
                     </div>
                     <div className="num text-xs text-metin-soluk">Kalan: {gosterilenDers(x.bakiye.normal)} · Telafi: {gosterilenDers(x.bakiye.telafi)}</div>
                   </div>

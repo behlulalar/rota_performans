@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
-  dersHakkiDuzelt, dersHakkiGetir, ogrenciGetir, telafiAdaylariGetir, telafiPlanlariGetir,
-  type DersHakkiDefteri, type HakTur, type OgrenciDetay, type Sayac, type TelafiAdayi, type TelafiPlani,
+  dersHakkiDuzelt, dersHakkiGetir, ogrenciGetir, telafiPlanlariGetir,
+  type DersHakkiDefteri, type HakTur, type OgrenciDetay, type Sayac, type TelafiPlani,
 } from "../api/ogrenci";
-import { telafiGeriAl, telafiPlanla } from "../api/takvim";
+import { telafiGeriAl } from "../api/takvim";
 import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
-import { bugun, gunEkle, tarihCoz, yyyyAyGun } from "../lib/tarih";
+import { bugun } from "../lib/tarih";
 import { birincilDugme, dugme, girdi, rozetBasari, rozetHata, rozetNotr } from "../lib/stil";
 import Kart from "./Kart";
+import TelafiPlanla, { Pencere, gunMetni, saat } from "./TelafiPlanla";
 import { gosterilenDers } from "../lib/dersHakki";
 import { useOnay } from "../components/OnayPenceresi";
 
@@ -22,23 +23,6 @@ const TUR_ETIKET: Record<HakTur, string> = {
   telafi_suresi_doldu: "Telafi süresi doldu",
 };
 const SAYAC_ETIKET: Record<Sayac, string> = { normal: "Kalan ders", telafi: "Telafi" };
-
-const gunMetni = (s: string) => tarihCoz(s).toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" });
-const saat = (s: string) => s.slice(0, 5);
-
-function Pencere({ baslik, onKapat, children }: { baslik: string; onKapat: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-30 bg-black/70 grid place-items-center p-4" role="dialog" aria-modal="true" aria-label={baslik}>
-      <div className="w-full max-w-md max-h-full overflow-y-auto bg-yuzey border border-cizgi-guclu rounded-[14px]">
-        <div className="flex items-center justify-between px-4 min-h-11 border-b border-cizgi">
-          <h2 className="font-display text-[19px] leading-6">{baslik}</h2>
-          <button onClick={onKapat} className="px-2 min-h-11 text-[13px] text-metin-soluk hover:text-metin" aria-label="Kapat">Kapat</button>
-        </div>
-        <div className="p-4">{children}</div>
-      </div>
-    </div>
-  );
-}
 
 function DuzeltmeFormu({ ogrenciId, onKapat, onTamam }: { ogrenciId: string; onKapat: () => void; onTamam: () => void }) {
   const [sayac, setSayac] = useState<Sayac>("normal");
@@ -93,63 +77,6 @@ function DuzeltmeFormu({ ogrenciId, onKapat, onTamam }: { ogrenciId: string; onK
   );
 }
 
-function TelafiPenceresi({ ogrenciId, sonKullanma, onKapat, onTamam }: { ogrenciId: string; sonKullanma: string | null; onKapat: () => void; onTamam: () => void }) {
-  const [adaylar, setAdaylar] = useState<TelafiAdayi[] | null>(null);
-  const [hata, setHata] = useState<string | null>(null);
-  const [mesgul, setMesgul] = useState(false);
-
-  useEffect(() => {
-    let iptal = false;
-    const b = new Date();
-    telafiAdaylariGetir(ogrenciId, bugun(), yyyyAyGun(gunEkle(b, 14)))
-      .then((v) => !iptal && setAdaylar(v))
-      .catch((e) => !iptal && setHata(hataMesaji(e)));
-    return () => { iptal = true; };
-  }, [ogrenciId]);
-
-  async function sec(a: TelafiAdayi) {
-    setMesgul(true);
-    setHata(null);
-    try {
-      await telafiPlanla(a.oturum.id, ogrenciId);
-      onTamam();
-    } catch (err) {
-      setHata(hataMesaji(err));
-      setMesgul(false);
-    }
-  }
-
-  return (
-    <Pencere baslik="Telafi planla" onKapat={onKapat}>
-      {hata && <p role="alert" className="mb-3 text-sm text-hata">{hata}</p>}
-      {sonKullanma && (
-        <p className="mb-3 text-[13px] text-metin-soluk">
-          Telafi hakkı <span className="num font-medium text-metin">{tarihBicimle(sonKullanma)}</span> tarihine kadar geçerli.
-        </p>
-      )}
-      {adaylar === null ? (
-        !hata && <p className="text-sm text-metin-soluk">Yükleniyor…</p>
-      ) : adaylar.length === 0 ? (
-        <p className="text-sm text-metin-soluk">Önümüzdeki 14 günde uygun ders yok</p>
-      ) : (
-        <ul className="space-y-2">
-          {adaylar.map((a) => (
-            <li key={a.oturum.id} className="rounded-[10px] border border-cizgi px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
-              <div className="text-sm min-w-0">
-                <div className="font-medium">{gunMetni(a.oturum.tarih)} · {saat(a.oturum.baslangic)}–{saat(a.oturum.bitis)}</div>
-                <div className="text-metin-soluk">
-                  {a.oturum.grup.ad}{a.oturum.antrenor ? ` · ${a.oturum.antrenor.ad_soyad}` : ""} · {a.bos_yer} boş yer
-                </div>
-              </div>
-              <button className={dugme} disabled={mesgul} aria-label={`Seç: ${a.oturum.grup.ad} ${a.oturum.tarih}`} onClick={() => void sec(a)}>Seç</button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Pencere>
-  );
-}
-
 const YOKLAMA_ROZET = {
   null: { ad: "Bekliyor", sinif: rozetNotr },
   geldi: { ad: "Geldi", sinif: rozetBasari },
@@ -164,6 +91,7 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
   const [defter, setDefter] = useState<DersHakkiDefteri | null>(null);
   const [planlar, setPlanlar] = useState<TelafiPlani[] | null>(null);
   const [pencere, setPencere] = useState<"duzeltme" | "telafi" | null>(null);
+  const [tasinan, setTasinan] = useState<TelafiPlani | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
 
@@ -202,6 +130,7 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
 
   async function bitti() {
     setPencere(null);
+    setTasinan(null);
     setHata(null);
     await yukle();
   }
@@ -261,6 +190,7 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
                   <span className="num">{gunMetni(p.tarih)} · {saat(p.baslangic)}–{saat(p.bitis)} · {p.grup.ad}</span>
                   <span className="flex items-center gap-2">
                     <span className={r.sinif}>{r.ad}</span>
+                    {p.yoklama === null && p.iptal_edilebilir && <button className={dugme} disabled={mesgul} onClick={() => setTasinan(p)}>Taşı</button>}
                     {p.yoklama === null && <button className={dugme} disabled={mesgul} onClick={() => void geriAl(p)}>Geri al</button>}
                   </span>
                 </li>
@@ -307,7 +237,8 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
       </div>
 
       {pencere === "duzeltme" && <DuzeltmeFormu ogrenciId={id} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
-      {pencere === "telafi" && <TelafiPenceresi ogrenciId={id} sonKullanma={enYakinSon} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
+      {pencere === "telafi" && <TelafiPlanla ogrenciId={id} sonKullanma={enYakinSon} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
+      {tasinan && <TelafiPlanla ogrenciId={id} sonKullanma={enYakinSon} tasinan={tasinan} onKapat={() => setTasinan(null)} onTamam={() => void bitti()} />}
     </Kart>
   );
 }

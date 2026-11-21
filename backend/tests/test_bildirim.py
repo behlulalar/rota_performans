@@ -311,7 +311,10 @@ async def test_metin_olustur_her_sablon():
         assert "Deniz" in m and "2 ders hakkı kaldı" in m
         m = await bsvc.metin_olustur(s, b("ders_hakki_bitti", {"bakiye": 0}))
         assert "Deniz" in m and "bitti" in m
-    assert set(bsvc.SABLONLAR) == {"ders_gelmedi", "ders_hakki_azaldi", "ders_hakki_bitti", "duyuru"}
+    assert set(bsvc.SABLONLAR) == {
+        "ders_gelmedi", "ders_hakki_azaldi", "ders_hakki_bitti", "duyuru",
+        "telafi_planlandi", "telafi_tasindi", "telafi_iptal_edildi",
+    }
 
 
 # ---------- API ----------

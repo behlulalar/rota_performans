@@ -1,4 +1,5 @@
 """Antrenör paneli: bugünün dersleri, kendi öğrencilerinin devamı ve kendi profili. Yalnız antrenör rolü; yöneticinin kendi ekranları vardır."""
+import uuid
 from datetime import timedelta
 from zoneinfo import ZoneInfo
 
@@ -6,13 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import audit
-from app.api.oturumlar import _antrenor_kosulu, _kendi_antrenor_kaydi, _ozetler
+from app import audit, ders_hakki
+from app.api.oturumlar import _antrenor_kosulu, _kendi_antrenor_kaydi, _kendi_grubunda_mi, _ozetler, _telafi_planlari
 from app.config import settings
 from app.devam import grup_devamlari
 from app.db import get_session
 from app.deps import rol_gerekli
 from app.models.kullanici import Kullanici, Rol
+from app.models.ogrenci import Ogrenci
 from app.models.program import DersOturumu, Grup, OturumDurum, TelafiPlani
 from app.models.yoklama import Yoklama
 from app.oturumlar import bugun, simdi, yoklama_acilis_zamani
@@ -22,6 +24,7 @@ from app.schemas.antrenor_paneli import (
     BugunDers,
     BugunOzet,
     BugunYanit,
+    OgrenciTelafisi,
 )
 from app.schemas.devam import GrupDevami
 from app.schemas.oturum import OturumOzet
@@ -130,6 +133,22 @@ async def ogrencilerim(kullanici: Kullanici = Antrenor_, session: AsyncSession =
         await session.execute(select(Grup).where(Grup.antrenor_id == antrenor.id, Grup.aktif.is_(True)).order_by(Grup.ad))
     ).scalars().all()
     return await grup_devamlari(session, list(gruplar), bugun())
+
+
+@router.get("/ogrenciler/{ogrenci_id}/telafi", response_model=OgrenciTelafisi)
+async def ogrenci_telafisi(
+    ogrenci_id: uuid.UUID, kullanici: Kullanici = Antrenor_, session: AsyncSession = Depends(get_session)
+):
+    """Kendi grubundaki öğrencinin telafi durumu: planlanabilir hak, son gün ve tüm planlar."""
+    antrenor = await _kendi_antrenor_kaydi(session, kullanici)
+    ogrenci = await session.get(Ogrenci, ogrenci_id)
+    if ogrenci is None or ogrenci.sentetik or not await _kendi_grubunda_mi(session, antrenor.id, ogrenci_id):
+        raise HTTPException(404, "Öğrenci bulunamadı")
+    return OgrenciTelafisi(
+        kullanilabilir=await ders_hakki.kullanilabilir_telafi(session, ogrenci_id),
+        son_kullanma=await ders_hakki.telafi_son_kullanma(session, ogrenci_id),
+        planlar=await _telafi_planlari(session, ogrenci_id, antrenor),
+    )
 
 
 @router.get("/profil", response_model=AntrenorProfil)

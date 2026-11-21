@@ -45,6 +45,7 @@ class DevamSatiri(BaseModel):
     ad: str
     soyad: str
     devam: DevamOzeti
+    telafi_bakiyesi: int = 0  # defterdeki telafi sayacı (ders_hakki.bakiyeler); eksiye düşmez
 
 
 class GrupDevami(BaseModel):

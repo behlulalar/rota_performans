@@ -33,6 +33,9 @@ SABLON_ETIKETLERI = {
     "ders_gelmedi": "Derse gelmedi",
     "ders_hakki_azaldi": "Ders hakkı azaldı",
     "ders_hakki_bitti": "Ders hakkı bitti",
+    "telafi_planlandi": "Telafi planlandı",
+    "telafi_tasindi": "Telafi taşındı",
+    "telafi_iptal_edildi": "Telafi kaldırıldı",
     "duyuru": "Duyuru",
 }
 

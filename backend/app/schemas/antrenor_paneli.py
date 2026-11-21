@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.metin import Baslik
 from app.models.program import OturumDurum
-from app.schemas.oturum import OturumGrup
+from app.schemas.oturum import OturumGrup, TelafiPlanYanit
 
 # "iptal": iptal edilmiş derste yoklama beklenmez.
 YoklamaDurumu = Literal["bekliyor", "alindi", "eksik", "iptal"]
@@ -54,3 +54,9 @@ class AntrenorProfilGuncelle(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     ad_soyad: Baslik | None = Field(default=None, min_length=1, max_length=200)
+
+
+class OgrenciTelafisi(BaseModel):
+    kullanilabilir: int
+    son_kullanma: date | None
+    planlar: list[TelafiPlanYanit]

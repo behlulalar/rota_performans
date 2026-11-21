@@ -16,7 +16,7 @@ import uuid
 from collections.abc import Callable
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import and_, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import bildirim
@@ -140,19 +140,35 @@ async def _plan_gunleri(session: AsyncSession, ogrenci_id: uuid.UUID, kosul) -> 
     )
 
 
-async def kullanilabilir_telafi(session: AsyncSession, ogrenci_id: uuid.UUID, tarih: date | None = None) -> int:
+async def kullanilabilir_telafi(
+    session: AsyncSession, ogrenci_id: uuid.UUID, tarih: date | None = None, haric_oturum_id: uuid.UUID | None = None
+) -> int:
     """`tarih` (varsayılan bugün) günlü bir derse planlanabilecek telafi sayısı.
 
     Eksiler kendi günlerinde geçerli en eski haktan düşülür; süresi dolmuş haklar kullanılamaz. İleri tarihli
     (bugün dahil) bekleyen planlar da aynı kuralla hak ayırır. Kalanlardan son kullanması `tarih`e yetenler sayılır.
-    Karşılığı olmayan eksiler ve planlar sonuçtan düşülür (negatif olabilir)."""
+    Karşılığı olmayan eksiler ve planlar sonuçtan düşülür (negatif olabilir).
+    `haric_oturum_id`: bu oturumdaki plan yokmuş gibi hesaplanır (taşıma adayları; veritabanına yazılmaz)."""
     bugun_ = bugun()
     hedef = max(tarih or bugun_, bugun_)
     kalan, borclar, _ = await _telafi_satirlari(session, ogrenci_id)
     acik = _ayir(kalan, borclar)
     kalan = [k for k in kalan if k is None or k >= bugun_]
-    karsiliksiz = _ayir(kalan, await _plan_gunleri(session, ogrenci_id, DersOturumu.tarih >= bugun_))
+    kosul = DersOturumu.tarih >= bugun_
+    if haric_oturum_id is not None:
+        kosul = and_(kosul, DersOturumu.id != haric_oturum_id)
+    karsiliksiz = _ayir(kalan, await _plan_gunleri(session, ogrenci_id, kosul))
     return sum(1 for k in kalan if k is None or k >= hedef) - karsiliksiz - acik
+
+
+async def telafi_son_kullanma(session: AsyncSession, ogrenci_id: uuid.UUID) -> date | None:
+    """Planlanabilir telafi haklarından en erken bitenin son kullanma günü (hak yoksa ya da süresizse None)."""
+    bugun_ = bugun()
+    kalan, borclar, _ = await _telafi_satirlari(session, ogrenci_id)
+    _ayir(kalan, borclar)
+    kalan = [k for k in kalan if k is None or k >= bugun_]
+    _ayir(kalan, await _plan_gunleri(session, ogrenci_id, DersOturumu.tarih >= bugun_))
+    return kalan[0] if kalan else None
 
 
 async def telafi_uzlastir(session: AsyncSession, ogrenci_id: uuid.UUID, bugun_: date) -> int:
