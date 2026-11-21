@@ -15,7 +15,7 @@ from app.db import get_session
 from app.deps import rol_gerekli
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import Ogrenci
-from app.models.program import DersOturumu, Grup, OturumDurum, TelafiPlani
+from app.models.program import DersOturumu, Grup, KatilimTuru, OturumDurum, TelafiPlani
 from app.models.yoklama import Yoklama
 from app.oturumlar import bugun, simdi, yoklama_acilis_zamani
 from app.schemas.antrenor_paneli import (
@@ -51,15 +51,16 @@ async def _dersler(session: AsyncSession, ozetler: list[OturumOzet], an) -> list
             )
         ).all()
     )
-    telafi = dict(
-        (
+    planlar = {
+        (oturum_id, tur): sayi
+        for oturum_id, tur, sayi in (
             await session.execute(
-                select(TelafiPlani.oturum_id, func.count())
+                select(TelafiPlani.oturum_id, TelafiPlani.tur, func.count())
                 .where(TelafiPlani.oturum_id.in_(idler))
-                .group_by(TelafiPlani.oturum_id)
+                .group_by(TelafiPlani.oturum_id, TelafiPlani.tur)
             )
         ).all()
-    )
+    }
     sonuc = []
     for o in ozetler:
         n = alinan.get(o.id, 0)
@@ -76,7 +77,8 @@ async def _dersler(session: AsyncSession, ozetler: list[OturumOzet], an) -> list
                 id=o.id, tarih=o.tarih, grup=o.grup, baslangic=o.baslangic, bitis=o.bitis, durum=o.durum,
                 beklenen_ogrenci=o.ogrenci_sayisi, yoklama_alinan=n, yoklama_durumu=durum,
                 yoklama_acik=an >= yoklama_acilis_zamani(o.tarih, o.baslangic),
-                telafi_sayisi=telafi.get(o.id, 0),
+                telafi_sayisi=planlar.get((o.id, KatilimTuru.telafi), 0),
+                ek_ders_sayisi=planlar.get((o.id, KatilimTuru.ek_ders), 0),
             )
         )
     return sonuc

@@ -3,7 +3,7 @@ from datetime import date, datetime, time
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.models.program import OturumDurum
+from app.models.program import KatilimTuru, OturumDurum
 from app.models.yoklama import ACIKLAMA_EN_COK, DevamsizlikSebebi, HareketTuru, Sayac, YoklamaDurum
 from app.schemas.ogrenci import DersHakki
 
@@ -56,6 +56,7 @@ class OturumOgrenci(BaseModel):
     soyad: str
     foto_var: bool
     telafi_mi: bool
+    ek_ders_mi: bool = False
     yoklama: YoklamaDurum | None
     # Yalnız gelmedi için; eski kayıtlarda boş olabilir. Açıklama iç nottur (antrenör ve yönetici görür).
     sebep: DevamsizlikSebebi | None = None
@@ -151,3 +152,4 @@ class TelafiPlanYanit(BaseModel):
     grup: OturumGrup
     yoklama: YoklamaDurum | None
     iptal_edilebilir: bool = False
+    tur: KatilimTuru = KatilimTuru.telafi

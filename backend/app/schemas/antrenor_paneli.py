@@ -24,6 +24,7 @@ class BugunDers(BaseModel):
     yoklama_durumu: YoklamaDurumu
     yoklama_acik: bool
     telafi_sayisi: int
+    ek_ders_sayisi: int = 0
 
 
 class BugunOzet(BaseModel):

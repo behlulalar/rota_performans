@@ -117,4 +117,6 @@ class BildirimTercihi(Base):
     push: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     ders_gelmedi: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     ders_hakki: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    # Telafi ve ek ders planlama bildirimleri (planlandı / taşındı / kaldırıldı / ders iptali).
+    ders_plani: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     guncelleme: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

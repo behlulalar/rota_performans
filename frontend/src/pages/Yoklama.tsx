@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { ApiHata } from "../lib/api";
-import { oturumGetir, oturumIptalEt, oturumIptalGeriAl, telafiGeriAl, yoklamaKaydet, type OturumDetay, type YoklamaDurum } from "../api/takvim";
+import { ekDersCikar, oturumGetir, oturumIptalEt, oturumIptalGeriAl, telafiGeriAl, yoklamaKaydet, type OturumDetay, type YoklamaDurum } from "../api/takvim";
 import { ogrencilerimGetir } from "../api/devam";
 import Modal from "../components/Modal";
 import OgrenciFoto from "../components/OgrenciFoto";
 import { useOnay } from "../components/OnayPenceresi";
 import SayfaBasligi from "../components/SayfaBasligi";
-import { basariKutusu, bilgiKutusu, birincilDugme, dugme, rozetBasari, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
+import { basariKutusu, bilgiKutusu, birincilDugme, dugme, rozetBasari, rozetBirincil, rozetNotr, rozetUyari, uyariKutusu } from "../lib/stil";
 import { hataMesaji } from "../lib/dogrulama";
 import { saat } from "../lib/program";
 import { mazeretli, SEBEP_ACIKLAMA_MAKS, SEBEP_AD, SEBEPLER, type Sebep } from "../lib/sebep";
@@ -64,7 +64,7 @@ export default function Yoklama() {
   // Antrenör yalnız kendi gruplarındaki öğrencinin telafisini kaldırabilir (sunucu 403 verir); liste bir kez yüklenir.
   const [kendiOgrenciler, setKendiOgrenciler] = useState<Set<string> | null>(null);
   const antrenorMu = kullanici?.rol === "antrenor";
-  const telafiVar = !!o?.ogrenciler.some((x) => x.telafi_mi);
+  const telafiVar = !!o?.ogrenciler.some((x) => x.telafi_mi || x.ek_ders_mi);
   useEffect(() => {
     if (!antrenorMu || !telafiVar || kendiOgrenciler) return;
     ogrencilerimGetir()
@@ -191,12 +191,15 @@ export default function Yoklama() {
   const telafiSayisi = o.ogrenciler.filter((x) => x.telafi_mi).length;
 
   const telafiKaldir = async (x: OturumDetay["ogrenciler"][number]) => {
-    if (!(await onayla({ baslik: "Telafiyi kaldır", mesaj: `${x.ad} ${x.soyad} bu telafi dersinden kaldırılsın mı? Telafi hakkı iade edilir.`, onayYazisi: "Kaldır", tehlikeli: true }))) return;
+    const ek = !!x.ek_ders_mi;
+    if (!(await onayla(ek
+      ? { baslik: "Ek dersi kaldır", mesaj: `${x.ad} ${x.soyad} bu ek dersten kaldırılsın mı?`, onayYazisi: "Kaldır", tehlikeli: true }
+      : { baslik: "Telafiyi kaldır", mesaj: `${x.ad} ${x.soyad} bu telafi dersinden kaldırılsın mı? Telafi hakkı iade edilir.`, onayYazisi: "Kaldır", tehlikeli: true }))) return;
     setMesgul(true);
     setHata(null);
     setBilgi(null);
     try {
-      const y = await telafiGeriAl(o.id, x.ogrenci_id);
+      const y = await (ek ? ekDersCikar : telafiGeriAl)(o.id, x.ogrenci_id);
       setO(y);
       const cikar = <T,>(m: Record<string, T>) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== x.ogrenci_id)) as Record<string, T>;
       setSecim(cikar);
@@ -396,8 +399,9 @@ export default function Yoklama() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{x.ad} {x.soyad}</span>
                       {x.telafi_mi && <span className={rozetUyari}>Telafi</span>}
-                      {x.telafi_mi && x.yoklama === null && o.durum === "planli" && !antrenorKilitli && (yonetici || kendiOgrenciler?.has(x.ogrenci_id)) && (
-                        <button className={`${dugme} min-h-11`} disabled={mesgul} aria-label={`Telafiyi kaldır: ${x.ad} ${x.soyad}`} onClick={() => void telafiKaldir(x)}>Kaldır</button>
+                      {x.ek_ders_mi && <span className={rozetBirincil}>Ek ders</span>}
+                      {(x.telafi_mi || x.ek_ders_mi) && x.yoklama === null && o.durum === "planli" && !antrenorKilitli && (yonetici || kendiOgrenciler?.has(x.ogrenci_id)) && (
+                        <button className={`${dugme} min-h-11`} disabled={mesgul} aria-label={`${x.ek_ders_mi ? "Ek dersi" : "Telafiyi"} kaldır: ${x.ad} ${x.soyad}`} onClick={() => void telafiKaldir(x)}>Kaldır</button>
                       )}
                     </div>
                     <div className="num text-xs text-metin-soluk">Kalan: {gosterilenDers(x.bakiye.normal)} · Telafi: {gosterilenDers(x.bakiye.telafi)}</div>
@@ -442,7 +446,7 @@ export default function Yoklama() {
                     </div>
                     {sebep[x.ogrenci_id] ? (
                       <p className="mt-1.5 text-xs text-metin-soluk">
-                        {mazeretli(sebep[x.ogrenci_id] as Sebep) ? "Telafi bu ay içinde planlanmalı" : "Ders hakkı düşer"}
+                        {x.ek_ders_mi ? "Ek ders ücretsizdir, ders hakkını etkilemez" : mazeretli(sebep[x.ogrenci_id] as Sebep) ? "Telafi bu ay içinde planlanmalı" : "Ders hakkı düşer"}
                       </p>
                     ) : (
                       <p className={`mt-1.5 text-xs ${denendi ? "text-hata font-medium" : "text-metin-soluk"}`} role={denendi ? "alert" : undefined}>

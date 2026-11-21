@@ -310,10 +310,10 @@ async def test_bildirim_gonderilmis_planin_kaldirilmasi(istemci, yonetici):
 async def test_bildirim_tercih_ve_kisi_kurallari(istemci, yonetici):
     ba, a, _, _, a1, a2, _ = await kurulum(istemci)
     ot = await oturum_olustur(a2, gun(2))
-    # ders_hakki tercihi kapalıysa bildirim yok.
+    # ders_plani tercihi kapalıysa bildirim yok (ders_hakki ayrı kategoridir).
     ogr_id, kul_id, _ = await ortam(ad="Tercih")
     async with SessionLocal() as s:
-        s.add(BildirimTercihi(kullanici_id=kul_id, ders_hakki=False))
+        s.add(BildirimTercihi(kullanici_id=kul_id, ders_plani=False))
         o = await s.get(Ogrenci, ogr_id)
         await s.commit()
     await uye_yap(o, a1)

@@ -12,7 +12,7 @@ function oranRengi(oran: number | null): string {
   return oran >= 80 ? "text-basari" : oran >= 60 ? "text-uyari" : "text-hata";
 }
 
-/** Son dersler: soldan sağa eskiden yeniye; yeşil geldi, kırmızı gelmedi; telafi halkalı. */
+/** Son dersler: soldan sağa eskiden yeniye; yeşil geldi, kırmızı gelmedi; telafi sarı, ek ders mavi halkalı. */
 export function DevamNoktalari({ d, buyuk = false }: { d: Ozet; buyuk?: boolean }) {
   if (d.son_dersler.length === 0) return null;
   const boyut = buyuk ? "size-3.5" : "size-2.5";
@@ -21,8 +21,8 @@ export function DevamNoktalari({ d, buyuk = false }: { d: Ozet; buyuk?: boolean 
       {[...d.son_dersler].reverse().map((s, i) => (
         <span
           key={i}
-          title={`${tarihBicimle(s.tarih)} · ${s.durum === "geldi" ? "Geldi" : s.sebep ? `Gelmedi · ${SEBEP_AD[s.sebep]}` : "Gelmedi"}${s.telafi_mi ? " (telafi)" : ""} · ${s.grup_ad}`}
-          className={`${boyut} rounded-full ${s.durum === "geldi" ? "bg-basari" : "bg-hata"} ${s.telafi_mi ? "ring-2 ring-altin ring-offset-1 ring-offset-yuzey" : ""}`}
+          title={`${tarihBicimle(s.tarih)} · ${s.durum === "geldi" ? "Geldi" : s.sebep ? `Gelmedi · ${SEBEP_AD[s.sebep]}` : "Gelmedi"}${s.telafi_mi ? " (telafi)" : s.ek_ders_mi ? " (ek ders)" : ""} · ${s.grup_ad}`}
+          className={`${boyut} rounded-full ${s.durum === "geldi" ? "bg-basari" : "bg-hata"} ${s.telafi_mi ? "ring-2 ring-altin ring-offset-1 ring-offset-yuzey" : s.ek_ders_mi ? "ring-2 ring-birincil ring-offset-1 ring-offset-yuzey" : ""}`}
         />
       ))}
     </span>

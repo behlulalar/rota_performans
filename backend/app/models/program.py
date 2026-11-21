@@ -152,8 +152,14 @@ class DersOturumu(Base):
     )
 
 
+class KatilimTuru(str, enum.Enum):
+    telafi = "telafi"
+    ek_ders = "ek_ders"
+
+
 class TelafiPlani(Base):
-    """Öğrencinin kendi grubu dışındaki bir derse telafi için eklenmesi."""
+    """Ders katılım planı: öğrencinin kendi grubu dışındaki bir derse telafi ya da ek ders için eklenmesi.
+    Tablo adı geçmişten `telafi_plani` kalır. Ek ders ücretsizdir: defteri etkilemez, telafi hakkı ayırmaz."""
 
     __tablename__ = "telafi_plani"
 
@@ -163,6 +169,9 @@ class TelafiPlani(Base):
     )
     ogrenci_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("ogrenci.id", ondelete="CASCADE"), index=True
+    )
+    tur: Mapped[KatilimTuru] = mapped_column(
+        enum_kolon(KatilimTuru), default=KatilimTuru.telafi, server_default=KatilimTuru.telafi.value
     )
     olusturan_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="SET NULL")

@@ -314,6 +314,7 @@ async def test_metin_olustur_her_sablon():
     assert set(bsvc.SABLONLAR) == {
         "ders_gelmedi", "ders_hakki_azaldi", "ders_hakki_bitti", "duyuru",
         "telafi_planlandi", "telafi_tasindi", "telafi_iptal_edildi",
+        "ek_ders_planlandi", "ek_ders_tasindi", "ek_ders_iptal_edildi",
     }
 
 
@@ -334,8 +335,8 @@ async def test_tercih_api_gidis_donus_ve_denetim(istemci):
     y = await istemci.post("/api/auth/login", json={"giris": "ece@veli.com", "sifre": SIFRE})
     b = {"Authorization": f"Bearer {y.json()['access_token']}"}
     varsayilan = (await istemci.get("/api/benim/bildirim-tercihleri", headers=b)).json()
-    assert varsayilan == {"ders_gelmedi": True, "ders_hakki": True, "whatsapp": True, "push": True, "whatsapp_izni_var": False}
-    yeni = {"ders_gelmedi": False, "ders_hakki": True, "whatsapp": False, "push": True}
+    assert varsayilan == {"ders_gelmedi": True, "ders_hakki": True, "ders_plani": True, "whatsapp": True, "push": True, "whatsapp_izni_var": False}
+    yeni = {"ders_gelmedi": False, "ders_hakki": True, "ders_plani": False, "whatsapp": False, "push": True}
     y = await istemci.put("/api/benim/bildirim-tercihleri", json=yeni, headers=b)
     assert y.status_code == 200 and y.json() == {**yeni, "whatsapp_izni_var": False}
     assert (await istemci.get("/api/benim/bildirim-tercihleri", headers=b)).json() == y.json()

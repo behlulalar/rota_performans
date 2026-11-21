@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import bildirim
 from app.config import settings
 from app.models.ogrenci import Ogrenci
-from app.models.program import DersOturumu, OturumDurum, TelafiPlani
+from app.models.program import DersOturumu, KatilimTuru, OturumDurum, TelafiPlani
 from app.models.yoklama import (
     MAZERETLI_SEBEPLER,
     DersHakkiHareketi,
@@ -119,9 +119,10 @@ def _ayir(kalan: list[date | None], gunler: list[date]) -> int:
 
 
 def _bekleyen_plan_kosullari(ogrenci_id: uuid.UUID) -> list:
-    """İptal edilmemiş ve öğrencinin yoklaması henüz alınmamış telafi planları."""
+    """İptal edilmemiş ve öğrencinin yoklaması henüz alınmamış telafi planları. Ek ders planları hak ayırmaz."""
     return [
         TelafiPlani.ogrenci_id == ogrenci_id,
+        TelafiPlani.tur == KatilimTuru.telafi,
         DersOturumu.durum != OturumDurum.iptal,
         ~exists().where(Yoklama.oturum_id == DersOturumu.id, Yoklama.ogrenci_id == ogrenci_id),
     ]
@@ -293,6 +294,11 @@ async def _acik_hareketleri_iptal_et(session: AsyncSession, yoklama: Yoklama) ->
 
 def _durumun_etkisi(session: AsyncSession, yoklama: Yoklama, simdi: datetime) -> None:
     """Yeni durumun hareketini yazar ya da 1 saatlik beklemeyi planlar."""
+    if yoklama.ek_ders_mi:
+        # Ek ders ücretsizdir: ne gelince ders düşer ne gelmeyince telafi doğar.
+        yoklama.hareket_planli_zaman = None
+        yoklama.hareket_islendi = True
+        return
     if yoklama.durum == YoklamaDurum.geldi:
         if yoklama.telafi_mi:
             session.add(_hareket(yoklama, Sayac.telafi, -1, HareketTuru.telafi_kullanimi))
@@ -320,6 +326,7 @@ async def yoklama_olustur(
     simdi: datetime,
     sebep: DevamsizlikSebebi | None = None,
     aciklama: str | None = None,
+    ek_ders_mi: bool = False,
 ) -> Yoklama:
     """İlk kez yoklama alınan öğrenci için kayıt ve (varsa) hareket oluşturur.
     Sebep ve açıklama yalnız gelmedi için saklanır (zorunluluk uç noktada denetlenir)."""
@@ -332,6 +339,7 @@ async def yoklama_olustur(
         sebep=sebep if gelmedi else None,
         aciklama=aciklama if gelmedi else None,
         telafi_mi=telafi_mi,
+        ek_ders_mi=ek_ders_mi,
         isaretleyen_id=isaretleyen_id,
         zaman=simdi,
         surum=0,
@@ -404,7 +412,7 @@ async def bekleyen_devamsizliklari_isle(session: AsyncSession, simdi: datetime) 
     hakki_dusenler = []
     for y, ders_tarihi in bekleyenler:
         # Süre içinde düzeltildiyse (artık gelmedi değilse) hak doğmaz.
-        if y.durum == YoklamaDurum.gelmedi and not y.telafi_mi:
+        if y.durum == YoklamaDurum.gelmedi and not y.telafi_mi and not y.ek_ders_mi:
             session.add(_hareket(y, Sayac.normal, -1, HareketTuru.devamsizlik))
             # Habersiz devamsızlıkta ders yanar, telafi doğmaz. Sebebi olmayan eski kayıtlar mazeretli sayılır.
             if y.sebep is None or y.sebep in MAZERETLI_SEBEPLER:

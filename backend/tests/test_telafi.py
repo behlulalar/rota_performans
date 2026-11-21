@@ -257,7 +257,7 @@ async def test_planlama_basarili_detay_takvim_ve_denetim(istemci, yonetici):
     planlar = (await istemci.get(f"/api/ogrenciler/{o.id}/telafi-planlari", headers=yonetici)).json()
     assert planlar == [{
         "oturum_id": str(ot.id), "tarih": str(gun(2)), "baslangic": "00:00:00", "bitis": "01:30:00",
-        "grup": {"id": str(g.id), "ad": "DIGER"}, "yoklama": None, "iptal_edilebilir": True,
+        "grup": {"id": str(g.id), "ad": "DIGER"}, "yoklama": None, "iptal_edilebilir": True, "tur": "telafi",
     }]
 
 

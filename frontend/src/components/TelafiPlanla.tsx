@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { telafiAdaylariGetir, type TelafiAdayi, type TelafiPlani } from "../api/ogrenci";
-import { telafiPlanla } from "../api/takvim";
+import { ekDersAdaylariGetir, telafiAdaylariGetir, type TelafiAdayi, type TelafiPlani } from "../api/ogrenci";
+import { ekDersEkle, telafiPlanla } from "../api/takvim";
 import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
 import { bugun, gunEkle, tarihCoz, yyyyAyGun } from "../lib/tarih";
 import { dugme } from "../lib/stil";
@@ -17,7 +17,7 @@ export function Pencere({ baslik, onKapat, children, alt, geri, altBolum }: {
       className={`fixed inset-0 bg-black/70 grid ${alt ? "z-50 place-items-end sm:place-items-center sm:p-4" : "z-30 place-items-center p-4"}`}
       role="dialog" aria-modal="true" aria-label={baslik}
     >
-      <div className={`w-full max-w-md flex flex-col bg-yuzey border border-cizgi-guclu ${alt ? "max-h-[85dvh] rounded-t-[14px] sm:rounded-[14px]" : "max-h-full rounded-[14px]"}`}>
+      <div className={`w-full max-w-md flex flex-col bg-yuzey border border-cizgi-guclu ${alt ? "max-h-[85dvh] rounded-t-[14px] sm:rounded-[14px]" : "max-h-full rounded-[14px]"} overflow-hidden`}>
         <div className="flex items-center justify-between px-4 min-h-11 border-b border-cizgi shrink-0">
           <div className="flex items-center gap-1 min-w-0">
             {geri && <button onClick={geri} className="pr-2 min-h-11 text-[13px] text-metin-soluk hover:text-metin">Geri</button>}
@@ -37,40 +37,44 @@ type Icerik = {
   sonKullanma: string | null;
   /** Verilirse "Taşı" kipi: seçilen derse planlanırken bu plan aynı işlemde silinir. */
   tasinan?: TelafiPlani;
+  /** Varsayılan "telafi". "ek_ders": ücretsiz, ders hakkı bilgisi yok. */
+  tur?: "telafi" | "ek_ders";
   onTamam: () => void;
 };
 type Props = Icerik & { alt?: boolean; onKapat: () => void; onGeri?: () => void };
 
-export const telafiBasligi = (tasinan?: TelafiPlani) => (tasinan ? "Telafiyi taşı" : "Telafi planla");
+export const telafiBasligi = (tasinan?: TelafiPlani, tur: "telafi" | "ek_ders" = "telafi") =>
+  tur === "ek_ders" ? (tasinan ? "Ek dersi taşı" : "Ek ders ekle") : tasinan ? "Telafiyi taşı" : "Telafi planla";
 
 /** Telafi planlama / taşıma penceresi (yönetici ve antrenör ortak). Adaylar 14 günlüktür. */
 export default function TelafiPlanla({ alt, onKapat, onGeri, ...r }: Props) {
   return (
-    <Pencere baslik={telafiBasligi(r.tasinan)} onKapat={onKapat} alt={alt} geri={onGeri}>
+    <Pencere baslik={telafiBasligi(r.tasinan, r.tur)} onKapat={onKapat} alt={alt} geri={onGeri}>
       <TelafiAdaylari {...r} />
     </Pencere>
   );
 }
 
 /** Aday listesi (pencere içeriği); başka bir pencerenin içinde adım olarak da kullanılır. */
-export function TelafiAdaylari({ ogrenciId, sonKullanma, tasinan, onTamam }: Icerik) {
+export function TelafiAdaylari({ ogrenciId, sonKullanma, tasinan, tur = "telafi", onTamam }: Icerik) {
+  const ek = tur === "ek_ders";
   const [adaylar, setAdaylar] = useState<TelafiAdayi[] | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
 
   useEffect(() => {
     let iptal = false;
-    telafiAdaylariGetir(ogrenciId, bugun(), yyyyAyGun(gunEkle(new Date(), 14)), tasinan?.oturum_id)
+    (ek ? ekDersAdaylariGetir : telafiAdaylariGetir)(ogrenciId, bugun(), yyyyAyGun(gunEkle(new Date(), 14)), tasinan?.oturum_id)
       .then((v) => !iptal && setAdaylar(v))
       .catch((e) => !iptal && setHata(hataMesaji(e)));
     return () => { iptal = true; };
-  }, [ogrenciId, tasinan?.oturum_id]);
+  }, [ogrenciId, tasinan?.oturum_id, ek]);
 
   async function sec(a: TelafiAdayi) {
     setMesgul(true);
     setHata(null);
     try {
-      await telafiPlanla(a.oturum.id, ogrenciId, tasinan?.oturum_id);
+      await (ek ? ekDersEkle : telafiPlanla)(a.oturum.id, ogrenciId, tasinan?.oturum_id);
       onTamam();
     } catch (err) {
       setHata(hataMesaji(err));
@@ -88,7 +92,8 @@ export function TelafiAdaylari({ ogrenciId, sonKullanma, tasinan, onTamam }: Ice
           Şu an: <span className="num font-medium text-metin">{gunMetni(tasinan.tarih)} · {saat(tasinan.baslangic)}</span>. Yeni dersi seçin; eski plan kaldırılır.
         </p>
       )}
-      {sonKullanma && (
+      {ek && <p className="mb-3 text-[13px] text-metin-soluk">Ücretsiz, ders hakkını etkilemez.</p>}
+      {!ek && sonKullanma && (
         <p className="mb-3 text-[13px] text-metin-soluk">
           Telafi hakkı <span className="num font-medium text-metin">{tarihBicimle(sonKullanma)}</span> tarihine kadar geçerli.
         </p>

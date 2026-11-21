@@ -1,5 +1,6 @@
 """Devam özeti: öğrencinin alınmış yoklamalarından (geldi / gelmedi) hesaplanır.
-Yoklaması alınmamış ve iptal edilmiş dersler sayılmaz. Telafiyle girilen dersler de sayılır."""
+Yoklaması alınmamış ve iptal edilmiş dersler sayılmaz. Telafiyle girilen dersler de sayılır.
+Ek dersler oran, sayı ve sebep dağılımına girmez (isteğe bağlı ek çalışma oranı düşürmesin); yalnız son derslerde görünür."""
 import uuid
 from collections import defaultdict
 from datetime import date, timedelta
@@ -25,6 +26,8 @@ def _oran(geldi: int, gelmedi: int) -> int | None:
 def _ozet(satirlar: list[DevamDersi], bugun: date) -> DevamOzeti:
     """`satirlar` en yeniden eskiye sıralıdır."""
     sinir = bugun - timedelta(days=SON_GUN)
+    tum = satirlar
+    satirlar = [s for s in tum if not s.ek_ders_mi]
     geldi = sum(s.durum == "geldi" for s in satirlar)
     son = [s for s in satirlar if s.tarih > sinir]
     son_geldi = sum(s.durum == "geldi" for s in son)
@@ -42,7 +45,7 @@ def _ozet(satirlar: list[DevamDersi], bugun: date) -> DevamOzeti:
         katildi=geldi, gelmedi=len(satirlar) - geldi, oran=_oran(geldi, len(satirlar) - geldi),
         gelmedi_sebepleri=sebepler,
         son30_katildi=son_geldi, son30_gelmedi=len(son) - son_geldi, son30_oran=_oran(son_geldi, len(son) - son_geldi),
-        ard_arda_gelmedi=ard_arda, son_dersler=satirlar[:SON_DERS_SAYISI],
+        ard_arda_gelmedi=ard_arda, son_dersler=tum[:SON_DERS_SAYISI],
     )
 
 
@@ -50,16 +53,16 @@ async def devam_ozetleri(session: AsyncSession, ogrenci_idler: list[uuid.UUID], 
     if not ogrenci_idler:
         return {}
     sorgu = (
-        select(Yoklama.ogrenci_id, Yoklama.durum, Yoklama.sebep, Yoklama.aciklama, Yoklama.telafi_mi, DersOturumu.tarih, DersOturumu.baslangic, Grup.ad)
+        select(Yoklama.ogrenci_id, Yoklama.durum, Yoklama.sebep, Yoklama.aciklama, Yoklama.telafi_mi, Yoklama.ek_ders_mi, DersOturumu.tarih, DersOturumu.baslangic, Grup.ad)
         .join(DersOturumu, DersOturumu.id == Yoklama.oturum_id)
         .join(Grup, Grup.id == DersOturumu.grup_id)
         .where(Yoklama.ogrenci_id.in_(ogrenci_idler), DersOturumu.durum != OturumDurum.iptal)
         .order_by(DersOturumu.tarih.desc(), DersOturumu.baslangic.desc())
     )
     gruplu: dict[uuid.UUID, list[DevamDersi]] = defaultdict(list)
-    for oid, durum, sebep, aciklama, telafi, tarih, _, grup_ad in (await session.execute(sorgu)).all():
+    for oid, durum, sebep, aciklama, telafi, ek_ders, tarih, _, grup_ad in (await session.execute(sorgu)).all():
         gruplu[oid].append(DevamDersi(
-            tarih=tarih, durum="geldi" if durum == YoklamaDurum.geldi else "gelmedi", sebep=sebep, aciklama=aciklama if durum == YoklamaDurum.gelmedi else None, telafi_mi=telafi,
+            tarih=tarih, durum="geldi" if durum == YoklamaDurum.geldi else "gelmedi", sebep=sebep, aciklama=aciklama if durum == YoklamaDurum.gelmedi else None, telafi_mi=telafi, ek_ders_mi=ek_ders,
             grup_ad=grup_ad,
         ))
     return {oid: _ozet(gruplu[oid], bugun) for oid in ogrenci_idler}

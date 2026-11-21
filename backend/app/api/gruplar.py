@@ -6,7 +6,7 @@ from sqlalchemy import delete, exists, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import audit
+from app import audit, bildirim, ders_hakki
 from app.db import get_session
 from app.devam import grup_devamlari
 from app.deps import rol_gerekli
@@ -14,7 +14,7 @@ from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import Ogrenci, OgrenciDurum
 from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
 from app.models.yoklama import Yoklama
-from app.oturumlar import URETIM_GUN, bugun, oturumlari_uret
+from app.oturumlar import URETIM_GUN, bugun, oturumlari_uret, simdi
 from app.schemas.devam import GrupDevami
 from app.schemas.grup import (
     GrupAntrenor,
@@ -295,6 +295,8 @@ async def ogrenci_ekle(
     yonetici: Kullanici = Yonetici,
     session: AsyncSession = Depends(get_session),
 ):
+    # Kilit sırası telafi/ek ders planlama ile aynı: önce öğrenci, sonra grup.
+    await session.execute(select(Ogrenci.id).where(Ogrenci.id == govde.ogrenci_id).with_for_update())
     grup = await _grup_al(session, grup_id, kilitle=True)
     ogrenci = await session.get(Ogrenci, govde.ogrenci_id)
     if ogrenci is None or ogrenci.sentetik:
@@ -315,6 +317,33 @@ async def ogrenci_ekle(
     if await _ogrenci_sayisi(session, grup.id) >= grup.kontenjan:
         raise HTTPException(status.HTTP_409_CONFLICT, "Grup kontenjanı dolu")
     session.add(OgrenciGrup(ogrenci_id=ogrenci.id, grup_id=grup.id))
+    # Üyelik plandan üstündür: öğrencinin bu grubun dersleri için (bugün ve sonrası, yoklaması yok) planları kalkar.
+    an = simdi()
+    planlar = (
+        await session.execute(
+            select(TelafiPlani, DersOturumu)
+            .join(DersOturumu, DersOturumu.id == TelafiPlani.oturum_id)
+            .where(
+                TelafiPlani.ogrenci_id == ogrenci.id,
+                DersOturumu.grup_id == grup.id,
+                DersOturumu.tarih >= bugun(an),
+                ~exists().where(Yoklama.oturum_id == DersOturumu.id, Yoklama.ogrenci_id == ogrenci.id),
+            )
+            .with_for_update(of=TelafiPlani)
+        )
+    ).all()
+    for plan, ot in planlar:
+        tur = plan.tur.value
+        await session.delete(plan)
+        await bildirim.telafi_kaldirildi(session, ogrenci.id, ot.id, ot.tarih, ot.baslangic, grup.ad, an, tur=tur)
+    if planlar:
+        await session.flush()
+        await ders_hakki.telafi_uzlastir(session, ogrenci.id, bugun(an))
+        await audit.kaydet(
+            session, "grup_uyeligi_planlari_kaldirdi", kullanici_id=yonetici.id, hedef_tur="grup", hedef_id=str(grup.id),
+            ip=_ip(request),
+            detay={"ogrenci_id": str(ogrenci.id), "oturumlar": [{"oturum_id": str(o.id), "tur": p.tur.value} for p, o in planlar]},
+        )
     await audit.kaydet(
         session, "grup_ogrenci_eklendi", kullanici_id=yonetici.id, hedef_tur="grup", hedef_id=str(grup.id),
         ip=_ip(request), detay={"ogrenci_id": str(ogrenci.id)},

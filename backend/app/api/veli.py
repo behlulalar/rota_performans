@@ -19,7 +19,7 @@ from app.models.bildirim import BildirimTercihi, PushAbonelik
 from app.models.kullanici import Kullanici, Rol
 from app.models.ogrenci import IletisimKisisi, Ogrenci
 from app.models.paket import Odeme, OgrenciPaketi, OgrenciPaketiDurum, Paket
-from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, OgrenciGrup, OturumDurum, TelafiPlani
+from app.models.program import Antrenor, DersOturumu, Grup, GrupProgrami, KatilimTuru, OgrenciGrup, OturumDurum, TelafiPlani
 from app.models.yoklama import DersHakkiHareketi, HareketTuru, Sayac, Yoklama
 from app.oturumlar import bugun
 from app.schemas.veli import (
@@ -103,16 +103,29 @@ async def _dersler(
     )
     telafi_mi = (
         select(TelafiPlani.id)
-        .where(TelafiPlani.oturum_id == DersOturumu.id, TelafiPlani.ogrenci_id == ogrenci_id)
+        .where(
+            TelafiPlani.oturum_id == DersOturumu.id,
+            TelafiPlani.ogrenci_id == ogrenci_id,
+            TelafiPlani.tur == KatilimTuru.telafi,
+        )
+        .exists()
+    )
+    ek_ders_mi = (
+        select(TelafiPlani.id)
+        .where(
+            TelafiPlani.oturum_id == DersOturumu.id,
+            TelafiPlani.ogrenci_id == ogrenci_id,
+            TelafiPlani.tur == KatilimTuru.ek_ders,
+        )
         .exists()
     )
     yoklama = aliased(Yoklama)
     sira = (DersOturumu.tarih.desc(), DersOturumu.baslangic.desc()) if ters else (DersOturumu.tarih, DersOturumu.baslangic)
     sorgu = (
-        select(DersOturumu, Grup.ad, telafi_mi, yoklama.durum, yoklama.sebep)
+        select(DersOturumu, Grup.ad, telafi_mi, ek_ders_mi, yoklama.durum, yoklama.sebep)
         .join(Grup, Grup.id == DersOturumu.grup_id)
         .outerjoin(yoklama, (yoklama.oturum_id == DersOturumu.id) & (yoklama.ogrenci_id == ogrenci_id))
-        .where(or_(uye_mi, telafi_mi), *kosullar)
+        .where(or_(uye_mi, telafi_mi, ek_ders_mi), *kosullar)
         .order_by(*sira, DersOturumu.id)
     )
     if limit is not None:
@@ -120,9 +133,9 @@ async def _dersler(
     return [
         VeliDers(
             oturum_id=o.id, tarih=o.tarih, baslangic=o.baslangic, bitis=o.bitis, grup_ad=grup_ad,
-            telafi_mi=bool(telafi), durum=o.durum, yoklama=durum, sebep=sebep,
+            telafi_mi=bool(telafi), ek_ders_mi=bool(ek_ders), durum=o.durum, yoklama=durum, sebep=sebep,
         )
-        for o, grup_ad, telafi, durum, sebep in (await session.execute(sorgu)).all()
+        for o, grup_ad, telafi, ek_ders, durum, sebep in (await session.execute(sorgu)).all()
     ]
 
 
@@ -417,6 +430,7 @@ async def _tercih_yaniti(session: AsyncSession, kullanici: Kullanici, t: Bildiri
     return BildirimTercihYaniti(
         ders_gelmedi=t.ders_gelmedi if t else True,
         ders_hakki=t.ders_hakki if t else True,
+        ders_plani=t.ders_plani if t else True,
         whatsapp=t.whatsapp if t else True,
         push=t.push if t else True,
         whatsapp_izni_var=izin is not None,

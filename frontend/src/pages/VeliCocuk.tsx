@@ -60,6 +60,7 @@ function DersSatiri({ d, yoklamaGoster = false }: { d: VeliDers; yoklamaGoster?:
       </div>
       <div className="flex items-center gap-1.5">
         {d.telafi_mi && <span className={rozetBirincil}>Telafi</span>}
+        {d.ek_ders_mi && <span className={rozetBirincil}>Ek ders</span>}
         {yoklamaGoster &&
           (d.yoklama === "geldi" ? (
             <span className={rozetBasari}>Geldi</span>
@@ -87,6 +88,7 @@ function YaklasanSatir({ d, grupGoster }: { d: VeliDers; grupGoster: boolean }) 
         {grupGoster && <div className="text-[13px] text-metin-soluk truncate">{d.grup_ad}</div>}
       </div>
       {d.telafi_mi && <span className={rozetBirincil}>Telafi</span>}
+        {d.ek_ders_mi && <span className={rozetBirincil}>Ek ders</span>}
       {d.yoklama === "gelmedi" && <span className={rozetHata}>{d.sebep ? `Gelmedi · ${SEBEP_AD[d.sebep]}` : "Gelmedi"}</span>}
     </li>
   );
@@ -121,7 +123,7 @@ function YaklasanDersler({ dersler }: { dersler: VeliDers[] }) {
             <span>{haftaAdi(h)}</span>
             <span className="num normal-case tracking-normal font-normal">{ds.length} ders</span>
           </h3>
-          <ul>{ds.map((d) => <YaklasanSatir key={d.oturum_id} d={d} grupGoster={grupGoster || d.telafi_mi} />)}</ul>
+          <ul>{ds.map((d) => <YaklasanSatir key={d.oturum_id} d={d} grupGoster={grupGoster || d.telafi_mi || !!d.ek_ders_mi} />)}</ul>
         </section>
       ))}
       {gizliDers > 0 && (

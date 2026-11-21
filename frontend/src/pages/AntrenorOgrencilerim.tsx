@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { antrenorOgrenciTelafiGetir, type AntrenorOgrenciTelafi } from "../api/antrenorPaneli";
 import { ogrencilerimGetir, type GrupDevami } from "../api/devam";
 import type { TelafiPlani } from "../api/ogrenci";
-import { telafiGeriAl } from "../api/takvim";
+import { ekDersCikar, telafiGeriAl } from "../api/takvim";
 import { DevamKisa, UYARI_ESIGI } from "../components/DevamOzeti";
 import Kart from "../components/Kart";
 import { useOnay } from "../components/OnayPenceresi";
 import SayfaBasligi from "../components/SayfaBasligi";
 import { Pencere, TelafiAdaylari, gunMetni, saat, telafiBasligi } from "../components/TelafiPlanla";
 import { hataMesaji } from "../lib/dogrulama";
-import { hataKutusu, listeSatiri, birincilDugme, dugme, rozetUyari, uyariKutusu } from "../lib/stil";
+import { hataKutusu, listeSatiri, birincilDugme, dugme, rozetBirincil, rozetUyari, uyariKutusu } from "../lib/stil";
 
 const ggAa = (s: string) => `${s.slice(8, 10)}.${s.slice(5, 7)}`;
 
@@ -19,7 +19,7 @@ function TelafiAltPencere({ ogrenciId, ad, onKapat, onDegisti }: { ogrenciId: st
   const [d, setD] = useState<AntrenorOgrenciTelafi | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
-  const [asama, setAsama] = useState<{ tur: "planla" } | { tur: "tasi"; plan: TelafiPlani } | null>(null);
+  const [asama, setAsama] = useState<{ tur: "planla"; katilim: "telafi" | "ek_ders" } | { tur: "tasi"; plan: TelafiPlani } | null>(null);
 
   const yukle = useCallback(async () => {
     try {
@@ -32,11 +32,14 @@ function TelafiAltPencere({ ogrenciId, ad, onKapat, onDegisti }: { ogrenciId: st
   useEffect(() => { void yukle(); }, [yukle]);
 
   async function kaldir(p: TelafiPlani) {
-    if (!(await onayla({ baslik: "Telafiyi kaldır", mesaj: "Telafi planı kaldırılsın mı? Telafi hakkı iade edilir.", onayYazisi: "Kaldır", tehlikeli: true }))) return;
+    const ek = p.tur === "ek_ders";
+    if (!(await onayla(ek
+      ? { baslik: "Ek dersi kaldır", mesaj: "Ek ders planı kaldırılsın mı?", onayYazisi: "Kaldır", tehlikeli: true }
+      : { baslik: "Telafiyi kaldır", mesaj: "Telafi planı kaldırılsın mı? Telafi hakkı iade edilir.", onayYazisi: "Kaldır", tehlikeli: true }))) return;
     setMesgul(true);
     setHata(null);
     try {
-      await telafiGeriAl(p.oturum_id, ogrenciId);
+      await (ek ? ekDersCikar : telafiGeriAl)(p.oturum_id, ogrenciId);
       await yukle();
       onDegisti();
     } catch (e) {
@@ -54,15 +57,19 @@ function TelafiAltPencere({ ogrenciId, ad, onKapat, onDegisti }: { ogrenciId: st
   }
 
   const ana = asama === null;
+  const asamaTur: "telafi" | "ek_ders" = asama === null ? "telafi" : asama.tur === "tasi" ? asama.plan.tur ?? "telafi" : asama.katilim;
   return (
     <Pencere
-      baslik={ana ? ad : telafiBasligi(asama.tur === "tasi" ? asama.plan : undefined)}
+      baslik={ana ? ad : telafiBasligi(asama.tur === "tasi" ? asama.plan : undefined, asamaTur)}
       onKapat={onKapat}
       alt
       geri={ana ? undefined : () => { setAsama(null); setHata(null); }}
       altBolum={ana && d ? (
         <>
-          <button className={`${birincilDugme} w-full min-h-11`} disabled={mesgul || d.kullanilabilir <= 0} onClick={() => setAsama({ tur: "planla" })}>Telafi planla</button>
+          <div className="grid grid-cols-2 gap-2">
+            <button className={`${birincilDugme} w-full min-h-11`} disabled={mesgul || d.kullanilabilir <= 0} onClick={() => setAsama({ tur: "planla", katilim: "telafi" })}>Telafi planla</button>
+            <button className={`${birincilDugme} w-full min-h-11`} disabled={mesgul} onClick={() => setAsama({ tur: "planla", katilim: "ek_ders" })}>Ek ders ekle</button>
+          </div>
           {d.kullanilabilir <= 0 && <p className="mt-2 text-xs text-metin-soluk">Planlanabilir telafi hakkı yok.</p>}
         </>
       ) : undefined}
@@ -71,6 +78,7 @@ function TelafiAltPencere({ ogrenciId, ad, onKapat, onDegisti }: { ogrenciId: st
       {!ana ? (
         <TelafiAdaylari
           ogrenciId={ogrenciId}
+          tur={asamaTur}
           sonKullanma={d?.son_kullanma ?? null}
           tasinan={asama.tur === "tasi" ? asama.plan : undefined}
           onTamam={() => void bitti()}
@@ -84,15 +92,15 @@ function TelafiAltPencere({ ogrenciId, ad, onKapat, onDegisti }: { ogrenciId: st
             {d.son_kullanma && <> · son gün <span className="num font-semibold">{ggAa(d.son_kullanma)}</span></>}
           </p>
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk mb-2">Planlı telafiler</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk mb-2">Planlı telafi ve ek dersler</h3>
             {d.planlar.length === 0 ? (
-              <p className="text-sm text-metin-soluk">Planlı telafi yok.</p>
+              <p className="text-sm text-metin-soluk">Planlı telafi veya ek ders yok.</p>
             ) : (
               <ul className="space-y-2">
                 {d.planlar.map((p) => (
                   <li key={p.oturum_id} className="rounded-[10px] border border-cizgi px-3 py-2.5 text-sm">
                     <div className="num font-medium">{gunMetni(p.tarih)} · {saat(p.baslangic)}–{saat(p.bitis)}</div>
-                    <div className="text-metin-soluk">{p.grup.ad}</div>
+                    <div className="text-metin-soluk flex flex-wrap items-center gap-2">{p.grup.ad} <span className={p.tur === "ek_ders" ? rozetBirincil : rozetUyari}>{p.tur === "ek_ders" ? "Ek ders" : "Telafi"}</span></div>
                     {p.iptal_edilebilir && p.yoklama === null && (
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <button className={`${dugme} min-h-11`} disabled={mesgul} onClick={() => setAsama({ tur: "tasi", plan: p })}>Taşı</button>
@@ -144,7 +152,7 @@ export default function AntrenorOgrencilerim() {
                       type="button"
                       onClick={() => setAcik({ id: s.ogrenci_id, ad: `${s.ad} ${s.soyad}` })}
                       className="w-full min-h-[52px] py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-left"
-                      aria-label={`${s.ad} ${s.soyad}: telafi`}
+                      aria-label={`${s.ad} ${s.soyad}: telafi ve ek ders`}
                     >
                       <span className="flex items-center gap-2 text-sm font-medium">
                         {s.ad} {s.soyad}
@@ -160,7 +168,7 @@ export default function AntrenorOgrencilerim() {
         ))}
       </div>
       {acik && <TelafiAltPencere ogrenciId={acik.id} ad={acik.ad} onKapat={() => setAcik(null)} onDegisti={() => void yukle()} />}
-      <p className="mt-4 text-xs text-metin-soluk">Noktalar son 10 dersi eskiden yeniye gösterir: yeşil geldi, kırmızı gelmedi, sarı halka telafi dersi.</p>
+      <p className="mt-4 text-xs text-metin-soluk">Noktalar son 10 dersi eskiden yeniye gösterir: yeşil geldi, kırmızı gelmedi, sarı halka telafi, mavi halka ek ders.</p>
     </>
   );
 }

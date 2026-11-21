@@ -47,7 +47,7 @@ function SiradakiKart({ d }: { d: BugunDers }) {
       <div className="font-display text-[24px] leading-[1.2] mt-2 break-words">{d.grup.ad}</div>
       <div className="num text-[15px] mt-1 opacity-90">
         {saat(d.baslangic)}–{saat(d.bitis)} · {d.beklenen_ogrenci} öğrenci
-        {d.telafi_sayisi > 0 ? ` (${d.telafi_sayisi} telafi)` : ""}
+        {d.telafi_sayisi > 0 || (d.ek_ders_sayisi ?? 0) > 0 ? ` (${[d.telafi_sayisi > 0 ? `${d.telafi_sayisi} telafi` : "", (d.ek_ders_sayisi ?? 0) > 0 ? `${d.ek_ders_sayisi} ek ders` : ""].filter(Boolean).join(" · ")})` : ""}
       </div>
       {d.yoklama_acik ? (
         <Link
@@ -89,7 +89,9 @@ function DersSatiri({ d, tarihli = false }: { d: BugunDers; tarihli?: boolean })
         <div className={`text-[15px] font-medium break-words ${iptal ? "line-through" : ""}`}>{d.grup.ad}</div>
         <div className="num text-[13px] text-metin-soluk mt-0.5">
           {d.beklenen_ogrenci} öğrenci
-          {d.telafi_sayisi > 0 && <span className={`${rozetNotr} ml-2`}>{d.telafi_sayisi} telafi</span>}
+          {(d.telafi_sayisi > 0 || (d.ek_ders_sayisi ?? 0) > 0) && (
+            <span className={`${rozetNotr} ml-2`}>{[d.telafi_sayisi > 0 ? `${d.telafi_sayisi} telafi` : "", (d.ek_ders_sayisi ?? 0) > 0 ? `${d.ek_ders_sayisi} ek ders` : ""].filter(Boolean).join(" · ")}</span>
+          )}
         </div>
       </div>
       <DurumRozeti d={d} />

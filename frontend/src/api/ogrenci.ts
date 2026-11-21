@@ -132,6 +132,8 @@ export type TelafiPlani = {
   bitis: string;
   grup: { id: string; ad: string };
   yoklama: "geldi" | "gelmedi" | null;
+  /** Eski yanıtlarda yok: telafi sayılır. */
+  tur?: "telafi" | "ek_ders";
   /** Antrenör için: oturum onun ve yoklama alınmamış. Yönetici yanıtında her zaman true. */
   iptal_edilebilir?: boolean;
 };
@@ -141,4 +143,6 @@ export const dersHakkiDuzelt = (id: string, g: { sayac: Sayac; miktar: number; n
   api<{ normal: number; telafi: number }>(`/api/ogrenciler/${id}/ders-hakki/duzeltme`, { method: "POST", body: json(g) });
 export const telafiAdaylariGetir = (id: string, baslangic: string, bitis: string, tasinanOturumId?: string) =>
   api<TelafiAdayi[]>(`/api/ogrenciler/${id}/telafi-adaylari?${new URLSearchParams({ baslangic, bitis, ...(tasinanOturumId ? { tasinan_oturum_id: tasinanOturumId } : {}) })}`);
+export const ekDersAdaylariGetir = (id: string, baslangic: string, bitis: string, tasinanOturumId?: string) =>
+  api<TelafiAdayi[]>(`/api/ogrenciler/${id}/ek-ders-adaylari?${new URLSearchParams({ baslangic, bitis, ...(tasinanOturumId ? { tasinan_oturum_id: tasinanOturumId } : {}) })}`);
 export const telafiPlanlariGetir = (id: string) => api<TelafiPlani[]>(`/api/ogrenciler/${id}/telafi-planlari`);

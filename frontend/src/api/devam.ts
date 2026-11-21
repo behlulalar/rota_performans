@@ -1,7 +1,7 @@
 import { api } from "../lib/api";
 import type { Sebep } from "../lib/sebep";
 
-export type DevamDersi = { tarih: string; durum: "geldi" | "gelmedi"; sebep: Sebep | null; aciklama?: string | null; telafi_mi: boolean; grup_ad: string };
+export type DevamDersi = { tarih: string; durum: "geldi" | "gelmedi"; sebep: Sebep | null; aciklama?: string | null; telafi_mi: boolean; ek_ders_mi?: boolean; grup_ad: string };
 export type GelmediSebepleri = Record<Sebep | "bilinmiyor", number>;
 export type DevamOzeti = {
   katildi: number;

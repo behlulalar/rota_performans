@@ -10,6 +10,7 @@ export type VeliDers = {
   bitis: string;
   grup_ad: string;
   telafi_mi: boolean;
+  ek_ders_mi?: boolean;
   durum: "planli" | "yapildi" | "iptal";
   yoklama: "geldi" | "gelmedi" | null;
   sebep?: Sebep | null;
@@ -75,7 +76,7 @@ export const sifreDegistir = (mevcut: string, yeni: string) =>
     body: JSON.stringify({ mevcut_sifre: mevcut, yeni_sifre: yeni }),
   });
 
-export type BildirimTercihleri = { ders_gelmedi: boolean; ders_hakki: boolean; whatsapp: boolean; push: boolean };
+export type BildirimTercihleri = { ders_gelmedi: boolean; ders_hakki: boolean; ders_plani?: boolean; whatsapp: boolean; push: boolean };
 export type BildirimTercihYaniti = BildirimTercihleri & { whatsapp_izni_var: boolean };
 
 export const bildirimTercihleriGetir = () => api<BildirimTercihYaniti>("/api/benim/bildirim-tercihleri");

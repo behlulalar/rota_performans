@@ -13,6 +13,7 @@ class DevamDersi(BaseModel):
     sebep: DevamsizlikSebebi | None = None  # yalnız gelmedi; eski kayıtlarda boş
     aciklama: str | None = None  # İÇ not: yalnız yönetim/antrenör uçları; veli şemalarına asla konmaz
     telafi_mi: bool
+    ek_ders_mi: bool = False  # devam oranına girmez; yalnız son derslerde görünür
     grup_ad: str
 
 

@@ -22,6 +22,7 @@ export type OturumOgrenci = {
   soyad: string;
   foto_var: boolean;
   telafi_mi: boolean;
+  ek_ders_mi?: boolean;
   yoklama: YoklamaDurum | null;
   sebep: Sebep | null;
   aciklama: string | null;
@@ -58,6 +59,15 @@ export const telafiPlanla = (oturumId: string, ogrenciId: string, tasinanOturumI
   });
 export const telafiGeriAl = (oturumId: string, ogrenciId: string) =>
   api<OturumDetay>(`/api/oturumlar/${oturumId}/telafi/${ogrenciId}`, { method: "DELETE" });
+
+/** `tasinanOturumId` verilirse eski plan aynı işlemde silinir (taşıma). Ücretsiz; ders hakkını etkilemez. */
+export const ekDersEkle = (oturumId: string, ogrenciId: string, tasinanOturumId?: string) =>
+  api<OturumDetay>(`/api/oturumlar/${oturumId}/ek-ders`, {
+    method: "POST",
+    body: json({ ogrenci_id: ogrenciId, ...(tasinanOturumId ? { tasinan_oturum_id: tasinanOturumId } : {}) }),
+  });
+export const ekDersCikar = (oturumId: string, ogrenciId: string) =>
+  api<OturumDetay>(`/api/oturumlar/${oturumId}/ek-ders/${ogrenciId}`, { method: "DELETE" });
 
 export const oturumIptalEt = (id: string, neden?: string) =>
   api<OturumDetay>(`/api/oturumlar/${id}/iptal`, { method: "POST", body: json({ neden: neden || null }) });

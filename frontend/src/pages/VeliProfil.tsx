@@ -76,9 +76,10 @@ function BilgiFormu({ profil, onKaydet }: { profil: Profil; onKaydet: (p: Profil
   );
 }
 
-const TERCIH_SATIRLARI: { anahtar: keyof BildirimTercihleri; etiket: string }[] = [
+const TERCIH_SATIRLARI: { anahtar: keyof BildirimTercihleri; etiket: string; aciklama?: string }[] = [
   { anahtar: "ders_gelmedi", etiket: "Devamsızlık bildirimi" },
   { anahtar: "ders_hakki", etiket: "Ders hakkı hatırlatmaları" },
+  { anahtar: "ders_plani", etiket: "Telafi ve ek ders planları", aciklama: "Telafi veya ek ders planlandığında, taşındığında ya da kaldırıldığında" },
   { anahtar: "whatsapp", etiket: "WhatsApp ile" },
   { anahtar: "push", etiket: "Uygulama bildirimi (push)" },
 ];
@@ -106,8 +107,8 @@ function BildirimFormu() {
     setMesgul(true);
     setHata(null);
     try {
-      const { ders_gelmedi, ders_hakki, whatsapp, push } = tercih;
-      setTercih(await bildirimTercihleriKaydet({ ders_gelmedi, ders_hakki, whatsapp, push }));
+      const { ders_gelmedi, ders_hakki, ders_plani, whatsapp, push } = tercih;
+      setTercih(await bildirimTercihleriKaydet({ ders_gelmedi, ders_hakki, ders_plani, whatsapp, push }));
       setTamam(true);
     } catch (err) {
       setHata(hataMesaji(err));
@@ -121,18 +122,18 @@ function BildirimFormu() {
       <form onSubmit={gonder} className="space-y-3 max-w-md">
         {tercih && (
           <>
-            {TERCIH_SATIRLARI.map(({ anahtar, etiket }) => (
+            {TERCIH_SATIRLARI.map(({ anahtar, etiket, aciklama }) => (
               <label key={anahtar} className="flex items-center gap-3 min-h-11 text-sm">
                 <input
                   type="checkbox"
                   className="size-4"
-                  checked={tercih[anahtar]}
+                  checked={tercih[anahtar] ?? true}
                   onChange={(e) => {
                     setTamam(false);
                     setTercih({ ...tercih, [anahtar]: e.target.checked });
                   }}
                 />
-                {etiket}
+                <span>{etiket}{aciklama && <span className="block text-xs text-metin-soluk">{aciklama}</span>}</span>
               </label>
             ))}
             {!tercih.whatsapp_izni_var && (

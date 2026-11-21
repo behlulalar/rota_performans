@@ -3,10 +3,10 @@ import {
   dersHakkiDuzelt, dersHakkiGetir, ogrenciGetir, telafiPlanlariGetir,
   type DersHakkiDefteri, type HakTur, type OgrenciDetay, type Sayac, type TelafiPlani,
 } from "../api/ogrenci";
-import { telafiGeriAl } from "../api/takvim";
+import { ekDersCikar, telafiGeriAl } from "../api/takvim";
 import { hataMesaji, tarihBicimle } from "../lib/dogrulama";
 import { bugun } from "../lib/tarih";
-import { birincilDugme, dugme, girdi, rozetBasari, rozetHata, rozetNotr } from "../lib/stil";
+import { birincilDugme, dugme, girdi, rozetBasari, rozetBirincil, rozetHata, rozetNotr, rozetUyari } from "../lib/stil";
 import Kart from "./Kart";
 import TelafiPlanla, { Pencere, gunMetni, saat } from "./TelafiPlanla";
 import { gosterilenDers } from "../lib/dersHakki";
@@ -90,7 +90,7 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
   const [gecmisAcik, setGecmisAcik] = useState(false);
   const [defter, setDefter] = useState<DersHakkiDefteri | null>(null);
   const [planlar, setPlanlar] = useState<TelafiPlani[] | null>(null);
-  const [pencere, setPencere] = useState<"duzeltme" | "telafi" | null>(null);
+  const [pencere, setPencere] = useState<"duzeltme" | "telafi" | "ek_ders" | null>(null);
   const [tasinan, setTasinan] = useState<TelafiPlani | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [mesgul, setMesgul] = useState(false);
@@ -115,11 +115,14 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
   }, [id]);
 
   async function geriAl(p: TelafiPlani) {
-    if (!(await onayla({ baslik: "Telafi planını geri al", mesaj: "Telafi planı geri alınsın mı? Telafi hakkı iade edilir.", onayYazisi: "Geri al" }))) return;
+    const ek = p.tur === "ek_ders";
+    if (!(await onayla(ek
+      ? { baslik: "Ek dersi geri al", mesaj: "Ek ders planı geri alınsın mı?", onayYazisi: "Geri al" }
+      : { baslik: "Telafi planını geri al", mesaj: "Telafi planı geri alınsın mı? Telafi hakkı iade edilir.", onayYazisi: "Geri al" }))) return;
     setMesgul(true);
     setHata(null);
     try {
-      await telafiGeriAl(p.oturum_id, id);
+      await (ek ? ekDersCikar : telafiGeriAl)(p.oturum_id, id);
       await yukle();
     } catch (e) {
       setHata(hataMesaji(e));
@@ -169,6 +172,7 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
         )}
         <div className="flex flex-wrap items-center gap-2">
           <button className={dugme} disabled={!planlanabilir || mesgul} onClick={() => { setHata(null); setPencere("telafi"); }}>Telafi planla</button>
+          <button className={dugme} disabled={!aktif || mesgul} onClick={() => { setHata(null); setPencere("ek_ders"); }}>Ek ders ekle</button>
           <button className={dugme} onClick={() => { setHata(null); setPencere("duzeltme"); }}>Elle düzeltme</button>
           {neden && <span className="text-xs text-metin-soluk">{neden}</span>}
         </div>
@@ -176,18 +180,18 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
       </div>
 
       <div className="px-6 py-4 border-b border-cizgi">
-        <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk mb-2">Planlanan telafiler</h3>
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-metin-soluk mb-2">Planlı telafi ve ek dersler</h3>
         {planlar === null ? (
           <p className="text-sm text-metin-soluk">Yükleniyor…</p>
         ) : planlar.length === 0 ? (
-          <p className="text-sm text-metin-soluk">Planlanmış telafi dersi yok.</p>
+          <p className="text-sm text-metin-soluk">Planlanmış telafi veya ek ders yok.</p>
         ) : (
           <ul className="divide-y divide-cizgi border-y border-cizgi">
             {planlar.map((p) => {
               const r = YOKLAMA_ROZET[p.yoklama ?? "null"];
               return (
                 <li key={p.oturum_id} className="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="num">{gunMetni(p.tarih)} · {saat(p.baslangic)}–{saat(p.bitis)} · {p.grup.ad}</span>
+                  <span className="num">{gunMetni(p.tarih)} · {saat(p.baslangic)}–{saat(p.bitis)} · {p.grup.ad} <span className={p.tur === "ek_ders" ? rozetBirincil : rozetUyari}>{p.tur === "ek_ders" ? "Ek ders" : "Telafi"}</span></span>
                   <span className="flex items-center gap-2">
                     <span className={r.sinif}>{r.ad}</span>
                     {p.yoklama === null && p.iptal_edilebilir && <button className={dugme} disabled={mesgul} onClick={() => setTasinan(p)}>Taşı</button>}
@@ -238,7 +242,8 @@ export default function DersHakki({ ogrenci, onYenile }: { ogrenci: OgrenciDetay
 
       {pencere === "duzeltme" && <DuzeltmeFormu ogrenciId={id} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
       {pencere === "telafi" && <TelafiPlanla ogrenciId={id} sonKullanma={enYakinSon} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
-      {tasinan && <TelafiPlanla ogrenciId={id} sonKullanma={enYakinSon} tasinan={tasinan} onKapat={() => setTasinan(null)} onTamam={() => void bitti()} />}
+      {pencere === "ek_ders" && <TelafiPlanla tur="ek_ders" ogrenciId={id} sonKullanma={null} onKapat={() => setPencere(null)} onTamam={() => void bitti()} />}
+      {tasinan && <TelafiPlanla tur={tasinan.tur ?? "telafi"} ogrenciId={id} sonKullanma={enYakinSon} tasinan={tasinan} onKapat={() => setTasinan(null)} onTamam={() => void bitti()} />}
     </Kart>
   );
 }

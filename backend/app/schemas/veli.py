@@ -27,6 +27,7 @@ class VeliDers(BaseModel):
     bitis: time
     grup_ad: str
     telafi_mi: bool
+    ek_ders_mi: bool = False
     durum: OturumDurum
     yoklama: YoklamaDurum | None = None
     # Gelmedi sebebi. Antrenörün iç notu (açıklama) veliye hiçbir zaman gönderilmez.
@@ -132,6 +133,7 @@ class BildirimTercihleri(BaseModel):
 
     ders_gelmedi: bool = True
     ders_hakki: bool = True
+    ders_plani: bool = True
     whatsapp: bool = True
     push: bool = True
 

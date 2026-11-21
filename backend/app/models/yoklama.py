@@ -77,6 +77,8 @@ class Yoklama(Base):
     aciklama: Mapped[str | None] = mapped_column(Text)
     # Öğrenci bu derse kendi grubu için değil, telafi hakkıyla geldi.
     telafi_mi: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Ek ders: ücretsiz, defteri etkilemez. Plandan türetilir, sonradan değişmez.
+    ek_ders_mi: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     isaretleyen_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("kullanici.id", ondelete="SET NULL")
     )
@@ -91,6 +93,7 @@ class Yoklama(Base):
     __table_args__ = (
         UniqueConstraint("oturum_id", "ogrenci_id", name="uq_yoklama_oturum_ogrenci"),
         CheckConstraint("sebep IS NULL OR durum = 'gelmedi'", name="sebep_yalniz_gelmedi"),
+        CheckConstraint("NOT (telafi_mi AND ek_ders_mi)", name="ek_ders_telafi_ayri"),
         CheckConstraint(f"aciklama IS NULL OR length(aciklama) <= {ACIKLAMA_EN_COK}", name="aciklama_uzunlugu"),
         # Arka plan işinin "işlenecekleri bul" sorgusu için küçük, hızlı indeks.
         Index(

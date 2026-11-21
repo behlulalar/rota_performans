@@ -16,6 +16,7 @@ export type BugunDers = {
   yoklama_durumu: YoklamaDurumu;
   yoklama_acik: boolean;
   telafi_sayisi: number;
+  ek_ders_sayisi?: number;
 };
 
 export type BugunYaniti = {

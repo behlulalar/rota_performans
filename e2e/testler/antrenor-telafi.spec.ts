@@ -45,7 +45,7 @@ test.describe("Antrenör telafi planlama", () => {
     // Alt pencere: boş liste, planla.
     await satir.click();
     const sheet = page.getByRole("dialog", { name: new RegExp(o.geldi.ad) });
-    await expect(sheet.getByText("Planlı telafi yok.")).toBeVisible();
+    await expect(sheet.getByText("Planlı telafi veya ek ders yok.")).toBeVisible();
     await expect(sheet.getByText(/Planlanabilir:\s*1/)).toBeVisible();
     await sheet.getByRole("button", { name: "Telafi planla" }).click();
 
@@ -61,7 +61,7 @@ test.describe("Antrenör telafi planlama", () => {
 
     // Kaldır: onay penceresi çıkar (test yardımcısı otomatik onaylar), plan gider ve hak iade edilir.
     await plan.getByRole("button", { name: "Kaldır" }).click();
-    await expect(sheet.getByText("Planlı telafi yok.")).toBeVisible();
+    await expect(sheet.getByText("Planlı telafi veya ek ders yok.")).toBeVisible();
     await expect(sheet.getByText(/Planlanabilir:\s*1/)).toBeVisible();
   });
 });

@@ -41,7 +41,13 @@ DUYURU = "duyuru"
 TELAFI_PLANLANDI = "telafi_planlandi"
 TELAFI_TASINDI = "telafi_tasindi"
 TELAFI_IPTAL = "telafi_iptal_edildi"
+EK_DERS_PLANLANDI = "ek_ders_planlandi"
+EK_DERS_TASINDI = "ek_ders_tasindi"
+EK_DERS_IPTAL = "ek_ders_iptal_edildi"
 TELAFI_SABLONLARI = (TELAFI_PLANLANDI, TELAFI_TASINDI, TELAFI_IPTAL)
+EK_DERS_SABLONLARI = (EK_DERS_PLANLANDI, EK_DERS_TASINDI, EK_DERS_IPTAL)
+# Plan türüne göre (planlandı, taşındı, kaldırıldı) şablonları.
+PLAN_SABLONLARI = {"telafi": TELAFI_SABLONLARI, "ek_ders": EK_DERS_SABLONLARI}
 
 # Devamsızlık sebebinin mesajdaki adı ve sonucu ({sebep}, {sonuc}). Sebepsiz eski kayıtlar eski metinle gider.
 SEBEP_ETIKETI = {"izinli": "İzinli", "raporlu": "Raporlu", "yarisma": "Yarışma", "devamsiz": "Habersiz"}
@@ -68,6 +74,9 @@ SABLONLAR: dict[str, str] = {
     TELAFI_PLANLANDI: "Rota Performans Akademi: {ad} için {tarih} {saat} {grup} dersine telafi planlandı.",
     TELAFI_TASINDI: "Rota Performans Akademi: {ad} için telafi dersi {eski_tarih} {eski_saat} {eski_grup} dersinden {tarih} {saat} {grup} dersine taşındı.",
     TELAFI_IPTAL: "Rota Performans Akademi: {ad} için {tarih} {saat} {grup} dersindeki telafi planı kaldırıldı.",
+    EK_DERS_PLANLANDI: "Rota Performans Akademi: {ad} için {tarih} {saat} {grup} dersine ek ders planlandı.",
+    EK_DERS_TASINDI: "Rota Performans Akademi: {ad} için ek ders {eski_tarih} {eski_saat} {eski_grup} dersinden {tarih} {saat} {grup} dersine taşındı.",
+    EK_DERS_IPTAL: "Rota Performans Akademi: {ad} için {tarih} {saat} {grup} dersindeki ek ders planı kaldırıldı.",
     # Metin yöneticinin yazdığı duyurudur (`duyuru.metin`), `metin_olustur` doğrudan onu döndürür.
     DUYURU: "{metin}",
 }
@@ -101,6 +110,21 @@ SOYLENISLER: dict[str, list[str]] = {
         "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} için {tarih} {saat} {grup} dersine planlanan telafi iptal edildi.",
         "Rota Performans Akademi bilgilendirmesi: {ad} adına {tarih} {saat} {grup} dersindeki telafi planı kaldırılmıştır.",
     ],
+    EK_DERS_PLANLANDI: [
+        "Rota Performans Akademi: {ad} için {tarih} {saat} {grup} dersine ek ders planlandı.",
+        "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} için {tarih} {saat} {grup} dersine ek ders ayarlandı.",
+        "Rota Performans Akademi bilgilendirmesi: {ad} adına {tarih} {saat} {grup} dersinde ek ders planlanmıştır.",
+    ],
+    EK_DERS_TASINDI: [
+        "Rota Performans Akademi: {ad} için ek ders {eski_tarih} {eski_saat} {eski_grup} dersinden {tarih} {saat} {grup} dersine taşındı.",
+        "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} için ek ders değişti: {eski_tarih} {eski_saat} {eski_grup} yerine {tarih} {saat} {grup} dersine katılacak.",
+        "Rota Performans Akademi bilgilendirmesi: {ad} adına ek ders {eski_tarih} {eski_saat} {eski_grup} dersinden {tarih} {saat} {grup} dersine alınmıştır.",
+    ],
+    EK_DERS_IPTAL: [
+        "Rota Performans Akademi: {ad} için {tarih} {saat} {grup} dersindeki ek ders planı kaldırıldı.",
+        "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} için {tarih} {saat} {grup} dersine planlanan ek ders iptal edildi.",
+        "Rota Performans Akademi bilgilendirmesi: {ad} adına {tarih} {saat} {grup} dersindeki ek ders planı kaldırılmıştır.",
+    ],
     DERS_HAKKI_BITTI: [
         "Rota Performans Akademi: {ad} için ders hakkı bitti. Derslere devam için yeni paket almanız gerekir.",
         "Merhaba, Rota Performans Akademi'den yazıyoruz. {ad} için ders hakkı sona erdi; derslere devam için yeni paket gerekiyor.",
@@ -120,8 +144,9 @@ def soylenis_sec(sablon: str, bildirim_id: int) -> str:
 # yalnızca kanal tercihlerine (push / whatsapp açık-kapalı) uyar. Bkz. app/duyuru.py.
 TERCIH_TURU = {
     DERS_GELMEDI: "ders_gelmedi", DERS_HAKKI_AZALDI: "ders_hakki", DERS_HAKKI_BITTI: "ders_hakki",
-    # Telafi planı ders hakkının (telafi hakkı) kullanımıdır: "ders_hakki" tercihine bağlıdır.
-    TELAFI_PLANLANDI: "ders_hakki", TELAFI_TASINDI: "ders_hakki", TELAFI_IPTAL: "ders_hakki",
+    # Telafi ve ek ders planlama bildirimleri ayrı "ders_plani" tercihine bağlıdır (ders hakkı tercihinden bağımsız).
+    TELAFI_PLANLANDI: "ders_plani", TELAFI_TASINDI: "ders_plani", TELAFI_IPTAL: "ders_plani",
+    EK_DERS_PLANLANDI: "ders_plani", EK_DERS_TASINDI: "ders_plani", EK_DERS_IPTAL: "ders_plani",
 }
 
 
@@ -188,15 +213,19 @@ def _ders_parametreleri(tarih: date, baslangic: time, grup_ad: str, onek: str = 
     return {f"{onek}tarih": tarih.isoformat(), f"{onek}baslangic": baslangic.strftime("%H:%M"), f"{onek}grup": grup_ad}
 
 
-async def _bekleyen_telafi(session: AsyncSession, ogrenci_id: uuid.UUID, oturum_id: uuid.UUID) -> list[Bildirim]:
-    """Öğrencinin bu oturum için henüz gönderilmemiş (geri alma penceresindeki) telafi planlandı/taşındı bildirimleri."""
+async def _bekleyen_telafi(
+    session: AsyncSession, ogrenci_id: uuid.UUID, oturum_id: uuid.UUID, tur: str = "telafi"
+) -> list[Bildirim]:
+    """Öğrencinin bu oturum için henüz gönderilmemiş (geri alma penceresindeki) planlandı/taşındı bildirimleri
+    (`tur`: telafi ya da ek_ders)."""
+    planlandi, tasindi, _ = PLAN_SABLONLARI[tur]
     return list(
         (
             await session.execute(
                 select(Bildirim)
                 .where(
                     Bildirim.ogrenci_id == ogrenci_id,
-                    Bildirim.sablon.in_((TELAFI_PLANLANDI, TELAFI_TASINDI)),
+                    Bildirim.sablon.in_((planlandi, tasindi)),
                     Bildirim.durum == BildirimDurum.bekliyor,
                     Bildirim.parametreler["oturum_id"].astext == str(oturum_id),
                 )
@@ -219,53 +248,55 @@ async def _telafi_kuyrugu(session: AsyncSession, ogrenci_id: uuid.UUID, sablon: 
 
 async def telafi_planlandi(
     session: AsyncSession, ogrenci_id: uuid.UUID, oturum_id: uuid.UUID, tarih: date, baslangic: time, grup_ad: str,
-    simdi: datetime,
+    simdi: datetime, tur: str = "telafi",
 ) -> None:
-    """Telafi planlandı: birincil kişiye, geri alma süresi kadar bekletilerek."""
+    """Telafi/ek ders planlandı: birincil kişiye, geri alma süresi kadar bekletilerek."""
     p = {"oturum_id": str(oturum_id), **_ders_parametreleri(tarih, baslangic, grup_ad)}
-    await _telafi_kuyrugu(session, ogrenci_id, TELAFI_PLANLANDI, p, simdi)
+    await _telafi_kuyrugu(session, ogrenci_id, PLAN_SABLONLARI[tur][0], p, simdi)
 
 
 async def telafi_tasindi(
     session: AsyncSession, ogrenci_id: uuid.UUID, eski_oturum_id: uuid.UUID, eski: tuple[date, time, str],
-    oturum_id: uuid.UUID, yeni: tuple[date, time, str], simdi: datetime,
+    oturum_id: uuid.UUID, yeni: tuple[date, time, str], simdi: datetime, tur: str = "telafi",
 ) -> None:
-    """Telafi taşındı. Eski plan için bildirim henüz gitmediyse (veli eskisini hiç görmedi) o iptal edilir:
+    """Telafi/ek ders taşındı. Eski plan için bildirim henüz gitmediyse (veli eskisini hiç görmedi) o iptal edilir:
     planlandı bildirimi ise yeni derse "planlandı", taşındı bildirimi ise ilk eski derse göre "taşındı" gider."""
     eski_p = {**_ders_parametreleri(*eski, onek="eski_"), "eski_oturum_id": str(eski_oturum_id)}
-    sablon = TELAFI_TASINDI
-    for b in await _bekleyen_telafi(session, ogrenci_id, eski_oturum_id):
+    planlandi, tasindi, _ = PLAN_SABLONLARI[tur]
+    sablon = tasindi
+    for b in await _bekleyen_telafi(session, ogrenci_id, eski_oturum_id, tur):
         b.durum = BildirimDurum.iptal
-        if b.sablon == TELAFI_PLANLANDI:
-            sablon = TELAFI_PLANLANDI
+        if b.sablon == planlandi:
+            sablon = planlandi
         else:
             eski_p = {k: v for k, v in (b.parametreler or {}).items() if k.startswith("eski_")}
-            sablon = TELAFI_TASINDI
-    if sablon == TELAFI_TASINDI and eski_p.get("eski_oturum_id") == str(oturum_id):
+            sablon = tasindi
+    if sablon == tasindi and eski_p.get("eski_oturum_id") == str(oturum_id):
         return  # zincir başladığı derse döndü: veli için değişen bir şey yok
     p = {"oturum_id": str(oturum_id), **_ders_parametreleri(*yeni)}
-    if sablon == TELAFI_TASINDI:
+    if sablon == tasindi:
         p |= eski_p
     await _telafi_kuyrugu(session, ogrenci_id, sablon, p, simdi)
 
 
 async def telafi_kaldirildi(
     session: AsyncSession, ogrenci_id: uuid.UUID, oturum_id: uuid.UUID, tarih: date, baslangic: time, grup_ad: str,
-    simdi: datetime,
+    simdi: datetime, tur: str = "telafi",
 ) -> None:
-    """Telafi kaldırıldı. Planlandı bildirimi henüz gitmediyse ikisi de düşer (veli hiçbir şey görmez); taşındı
+    """Telafi/ek ders kaldırıldı. Planlandı bildirimi henüz gitmediyse ikisi de düşer (veli hiçbir şey görmez); taşındı
     bildirimi gitmediyse veli eski dersi bildiği için eski ders iptali gider."""
     gider: dict | None = {"oturum_id": str(oturum_id), **_ders_parametreleri(tarih, baslangic, grup_ad)}
-    for b in await _bekleyen_telafi(session, ogrenci_id, oturum_id):
+    planlandi, _, iptal = PLAN_SABLONLARI[tur]
+    for b in await _bekleyen_telafi(session, ogrenci_id, oturum_id, tur):
         b.durum = BildirimDurum.iptal
-        if b.sablon == TELAFI_PLANLANDI:
+        if b.sablon == planlandi:
             gider = None if gider is not None and "eski" not in gider else gider
         else:
             p = b.parametreler or {}
             gider = {"oturum_id": str(oturum_id), "tarih": p["eski_tarih"], "baslangic": p["eski_baslangic"], "grup": p["eski_grup"], "eski": True}
     if gider is not None:
         gider.pop("eski", None)
-        await _telafi_kuyrugu(session, ogrenci_id, TELAFI_IPTAL, gider, simdi)
+        await _telafi_kuyrugu(session, ogrenci_id, iptal, gider, simdi)
 
 
 async def gelmedi_iptal_et(session: AsyncSession, yoklama_id: uuid.UUID) -> int:
@@ -284,9 +315,9 @@ async def gelmedi_iptal_et(session: AsyncSession, yoklama_id: uuid.UUID) -> int:
 
 
 async def yoklama_isaretlendi(session: AsyncSession, yoklama: Yoklama, simdi: datetime) -> None:
-    """Yoklamanın yeni durumuna göre `ders_gelmedi` kuyruğa alır (telafi dersinde devamsızlık bildirimi yoktur).
+    """Yoklamanın yeni durumuna göre `ders_gelmedi` kuyruğa alır (telafi ve ek derste devamsızlık bildirimi yoktur).
     Bakiye olayları, ders hakkı düşüldüğünde (geldi: hemen, gelmedi: 1 saat sonra işçide) ayrıca kontrol edilir."""
-    if yoklama.telafi_mi:
+    if yoklama.telafi_mi or yoklama.ek_ders_mi:
         return
     if yoklama.durum.value == "gelmedi":
         oturum = await session.get(DersOturumu, yoklama.oturum_id)
