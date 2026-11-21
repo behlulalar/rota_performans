@@ -65,8 +65,8 @@ Arayüz
 
 Dış işler
 - [ ] Müşteri bilgi listesi müşteriye gönderildi
-- [ ] Domain (rotaperformans.com) satın alındı
-- [ ] VDS siparişi verildi
+- [x] Domain (rotaperformans.com) satın alındı
+- [x] VDS siparişi verildi (Netvay; canlı sunucu kuruldu)
 - [ ] Evolution API deneme kurulumu ve test numarası ile deneme
 
 ### Faz 1: Yönetim çekirdeği (16 – 20 Kas)
@@ -127,9 +127,9 @@ Sözleşmede (Ek-1, Madde 2.2, 10.5) yazılı olup sistemde henüz bulunmayan i�
 - [x] **Yoklama kilidi:** ilk kayıttan 1 saat sonra antrenöre kapanır (salt okunur), yönetici düzeltir, denetim kaydına yazılır
 - [x] **Antrenör fotoğrafı:** yalnız yönetici yükler/siler (kırpma), kalıcı rıza kaydı tutulur (rıza geri çekilince foto silinir), giriş yapmış herkes görür, antrenör pasif olunca silinmez
 - [x] **Foto önbelleği:** foto uçlarında `Cache-Control: private, no-cache` + ETag; fotoğraf değişince herkes hemen yenisini görür
-- [ ] **Şifre sıfırlama:** velinin kendisi sıfırlar (e-posta/SMTP veya telefon yöntemi seçilecek); yalnız yönetici sıfırlayabiliyor şu an
-- [ ] **Excel içe aktarma:** müşterinin dosyası gelince (en geç 25 Kas) sütun eşleme, önizleme, hata raporu (Dilim 1.4)
-- [ ] **Yönetici 2 adımlı doğrulama (TOTP):** Faz 0'dan taşındı, kurtarma kodlarıyla birlikte
+- [ ] **Şifre sıfırlama:** velinin kendisi sıfırlar; yalnız yönetici sıfırlayabiliyor şu an. **Karar bekliyor (21 Kas 2026):** güvenlik sebebiyle hiç yapılmaması düşünülüyor; yapılmazsa sözleşme Ek-1'den çıkarılmalı
+- [ ] **Excel içe aktarma:** müşterinin dosyası gelince (en geç 25 Kas; 21 Kas itibarıyla gelmedi, dosya gelmeden başlanmaz) sütun eşleme, önizleme, hata raporu (Dilim 1.4)
+- [ ] **Yönetici 2 adımlı doğrulama (TOTP):** Faz 0'dan taşındı, kurtarma kodlarıyla birlikte. **EN SON, teslimden hemen önce eklenecek** (geliştirme sırasında sık giriş/çıkış yapıldığı için; karar 21 Kas 2026)
 - [ ] Sözleşmedeki sarı alanlar dolduruldu, imzalandı (tarih, IBAN, kimlik/adres, yetkili adı)
 
 Sözleşmeye yeni eklenen ve sistemde zaten bulunan özellikler (Duyurular, ders iptali, gelir raporu, devam özeti, denetim kaydı, destek paneli vb.) Ek-1'de yazılıdır; değişirse sözleşme de güncellenir.
